@@ -7,6 +7,8 @@ import {nickKey} from '../src/nick';
 import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
 import {HEARING_MS} from '../src/politics';
+import {BotTactics} from './BotTactics';
+import type {CampaignBroadcast} from '../src/elections';
 import {BotAgenda} from './BotAgenda';
 import type {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
@@ -22,6 +24,7 @@ type Bot = {
   control:ControlState;
   index:number;
   agenda:BotAgenda;
+  tactics:BotTactics;
   tempo:number;
   nextThink:number;
   destination?:Motion;
@@ -33,7 +36,6 @@ type Bot = {
   foundFraud?:true;
   lastSignRequest?:{id:string;at:number};
   boughtEvidence?:true;
-  cutPower?:true;
   voteReason?:string;
 };
 
@@ -63,7 +65,7 @@ export class PlayerBots {
       const control:ControlState = {player,ack:0,route:[]};
       const index = this.bots.size;
       const tempo = Math.floor(random()*350);
-      this.bots.set(player.id,{control,index,agenda:new BotAgenda(random,now),tempo,nextThink:now+index*125+tempo,retryRouteAt:now});
+      this.bots.set(player.id,{control,index,agenda:new BotAgenda(random,now),tactics:new BotTactics(random,now),tempo,nextThink:now+index*125+tempo,retryRouteAt:now});
       players.set(player.id,control);
     }
   }
@@ -86,7 +88,7 @@ export class PlayerBots {
     bot.routeRequest = undefined;
   }
 
-  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean,realNow=world.now,approachLearner=false) {
+  tick(match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,canSee:(state:ControlState,peer:Player)=>boolean,realNow=world.now,approachLearner=false,broadcast:(ad:CampaignBroadcast)=>void=()=>{}) {
     if (!this.bots.size) return;
     const {now} = world;
     if (match.phase!=='ballot') this.messages = [];
@@ -122,7 +124,6 @@ export class PlayerBots {
         bot.suspicion = undefined;
         bot.foundFraud = undefined;
         bot.boughtEvidence = undefined;
-        bot.cutPower = undefined;
         bot.voteReason = undefined;
       }
       if (view.phase==='ballot') {
@@ -143,7 +144,7 @@ export class PlayerBots {
           const distance = Math.hypot(player.x-learner.x,player.y-learner.y);
           if (distance>22) this.go(bot,{x:learner.x+(player.x-learner.x)*20/distance,y:learner.y+(player.y-learner.y)*20/distance},now);
         }
-      } else this.explore(bot,match,gameplay,world,view,visible);
+      } else this.explore(bot,match,gameplay,world,view,visible,broadcast);
       const phone = gameplay.phoneActivity(id);
       if (bot.routeRequest && (phone==='open' || phone==='game')) {
         gameplay.act(player,{kind:'phone-close'},world);
@@ -177,7 +178,7 @@ export class PlayerBots {
     else this.go(bot,target,now);
   }
 
-  private explore(bot:Bot,match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,view:PlenaryView,visible:Player[]) {
+  private explore(bot:Bot,match:PlenaryMatch,gameplay:Gameplay,world:GameplayWorld,view:PlenaryView,visible:Player[],broadcast:(ad:CampaignBroadcast)=>void) {
     const {player} = bot.control;
     const {now} = world;
     const game = gameplay.view(player,world);
@@ -219,6 +220,7 @@ export class PlayerBots {
       this.stop(bot);
       return;
     }
+    if (bot.tactics.tick(player,view,game,match,world,point=>this.go(bot,point,now),()=>this.stop(bot),act,broadcast)) return;
     if (view.project!==undefined && !view.projectVoteExpired &&
         this.workOnBill(bot,match,view,visible,now)) return;
     const document = game.inventory.find(item=>item.document?.project!==undefined);
@@ -254,14 +256,6 @@ export class PlayerBots {
         this.stop(bot);
         if (!visible.some(peer=>canReachObject(player,peer,{radius:48}))) match.act(player,'fraud',now);
       } else this.go(bot,stations.panel,now);
-      return true;
-    }
-    if (infiltrator && !bot.cutPower && view.canSabotagePower && elapsed>=22 && elapsed<85) {
-      if (canOperatePanel(player,0)) {
-        this.stop(bot);
-        if (!visible.some(peer=>canReachObject(player,peer,{radius:48})) &&
-            match.actOnPower(player,{kind:'sabotage',panel:0},now)) bot.cutPower = true;
-      } else this.go(bot,powerPanels[0],now);
       return true;
     }
     if (view.audit==='fraud' && !view.reportedFraud && !infiltrator) {
