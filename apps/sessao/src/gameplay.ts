@@ -43,6 +43,7 @@ export const objects = {
   document:{exposable:true,name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:`Na primeira instalação, +${decorationPopularity.portrait} de popularidade. Um lugar na parede para a sua própria cara.`},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:`Na primeira instalação, +${decorationPopularity.vip} de popularidade. Uma reserva que os outros podem ignorar.`},
+  nightVision:{name:'Visão noturna',portrait:'retrato-visao-noturna.webp',description:'Liga e desliga sem recarga. Durante o apagão, restaura a visão normal e revela o mapa em preto e branco.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
@@ -114,7 +115,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['plant-mine','supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','toggle-night-vision','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; expectedCash?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -126,7 +127,8 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
   'plant-mine',
-  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','toggle-night-vision','attack','aid','carry','release','inspect-down','treat',
+
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
@@ -151,6 +153,7 @@ export type GameplayView = {
   briefcaseTracking?:{seconds:number; markers:(Motion & {id:number})[]};
   concealmentSeconds?:number;
   binocularSeconds?:number;
+  nightVision?:boolean;
   xrayVision?:{remaining:number;targets:{id:string;x:number;y:number;safe?:true;balance:number}[]};
   stationCooldowns?:Partial<Record<RechargeStation,number>>;
   equipmentCooldowns?:Record<number,number>;

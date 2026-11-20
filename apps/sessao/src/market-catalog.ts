@@ -47,7 +47,7 @@ export const marketKinds = {
 };
 
 export const equipmentCategories = {
-  equipment:{label:'Equipamentos',kinds:['xray','binoculars','voiceModulator','megaphone','vest','runningShoes','baton','briefcaseTracker']},
+  equipment:{label:'Equipamentos',kinds:['xray','nightVision','binoculars','voiceModulator','megaphone','vest','runningShoes','baton','briefcaseTracker']},
   burglary:{label:'Arrombamento',kinds:['lockpick','lockKit','proLockKit','decoder']},
   sabotage:{label:'Sabotagem',kinds:['landMine','mensalUnderwear','incendiary','ghostAdviser']},
   utilities:{label:'Utilidades',kinds:['firstAidKit','forensicKit','doorLock','cabinetLock','wiretap','spyCamera','bugDetector','safeTrap']},

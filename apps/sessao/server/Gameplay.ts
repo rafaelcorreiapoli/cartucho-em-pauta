@@ -87,6 +87,7 @@ export class Gameplay {
   private transport = new Transport();
   private modulator = new VoiceEquipment();
   private serial = 0;
+  private nightVisionItems = new Set<number>();
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
   private trackerReadyAt = new Map<number,number>();
@@ -215,6 +216,7 @@ export class Gameplay {
     this.trackerReadyAt.clear();
     this.scanning.clear();
     this.binocularUse.clear();
+    this.nightVisionItems.clear();
     this.pendingInstallations.clear();
     this.installations.clear();
     this.portraitInstalledAt.clear();
@@ -366,8 +368,13 @@ export class Gameplay {
     return this.wearing(id,'binoculars') ? Math.max(0,(this.binocularUse.get(id)?.activeUntil ?? 0)-now) : 0;
   }
 
+  nightVisionActive(id:string) {
+    const item = this.wearing(id,'nightVision');
+    return !!item && this.nightVisionItems.has(item.id);
+  }
+
   vision(player:Player|undefined,now:number) {
-    return playerVisionRadius(player)*(player && this.binocularRemaining(player.id,now) ? binoculars.multiplier : 1)*(this.powerOut() ? powerRules.visionFactor : 1);
+    return playerVisionRadius(player)*(player && this.binocularRemaining(player.id,now) ? binoculars.multiplier : 1)*(this.powerOut() && !(player && this.nightVisionActive(player.id)) ? powerRules.visionFactor : 1);
   }
 
   private stopBinoculars(id:string) {
@@ -414,6 +421,7 @@ export class Gameplay {
   }
 
   private move(item:Item, place:Place) {
+    if ('equipped' in item.place && item.data.kind==='nightVision') this.nightVisionItems.delete(item.data.id);
     this.hide(item);
     item.place = place;
     this.clearRequests(item.data.id);
@@ -428,6 +436,7 @@ export class Gameplay {
     this.signedProjects.delete(item.data.id);
     this.hide(item);
     this.items.delete(item.data.id);
+    if (item.data.kind==='nightVision') this.nightVisionItems.delete(item.data.id);
     if (item.data.kind==='voiceModulator') this.modulator.deactivate(item.data.id);
     this.clearRequests(item.data.id);
   }
@@ -924,6 +933,7 @@ export class Gameplay {
       installationProgress:this.installationProgress(id,world.now),
       forgeryRemaining:this.forgery.has(id) ? Math.max(0,this.forgery.get(id)!.end-world.now) : undefined,
       megaphoneSeconds:this.megaphoneBroadcast?.owner===id ? Math.ceil((this.megaphoneBroadcast.until-world.now)/1000) : undefined,
+      nightVision:this.nightVisionActive(id) || undefined,
       binocularSeconds:Math.ceil(this.binocularRemaining(id,world.now)/1000) || undefined,
       concealmentSeconds:Math.ceil(Math.max(0,(this.concealedUntil.get(id) ?? 0)-world.now)/1000) || undefined,
       briefcaseTracking:this.briefcaseTracking(id,world),
@@ -1790,6 +1800,14 @@ export class Gameplay {
       this.megaphoneBroadcast = {owner:id,item:item.id,until:world.now+megaphone.duration,sampledAt:world.now};
       this.event(world,player,'megaphone-started',item,undefined,{witnesses:[]});
       return 'Megafone ativo.';
+    }
+    if (action.kind==='toggle-night-vision') {
+      const item = this.wearing(id,'nightVision');
+      if (!item) return this.reject(player,world,'Equipe a Visão noturna.');
+      if (this.nightVisionItems.delete(item.id)) return 'Visão noturna desligada.';
+      this.nightVisionItems.add(item.id);
+      this.event(world,player,'used',item);
+      return 'Visão noturna ligada.';
     }
     if (action.kind==='toggle-modulator') {
       const item = this.wearing(id,'voiceModulator');

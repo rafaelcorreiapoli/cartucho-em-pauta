@@ -10,6 +10,7 @@ import {HudHelp} from './hud-help';
 export const equipmentControls = {
   xray:{key:'X',action:'scan-xray'},
   briefcaseTracker:{key:'R',action:'use-tracker'},
+  nightVision:{key:'N',action:'toggle-night-vision'},
   binoculars:{key:'B',action:'use-binoculars'},
   megaphone:{key:'H',action:'toggle-megaphone'},
   voiceModulator:{key:'U',action:'toggle-modulator'},
@@ -40,18 +41,20 @@ export function equippedGearState(state?:GameplayView) {
       const scan = item.kind==='xray' ? state.xrayVision : undefined;
       const scanning = !!scan;
       const modulating = item.kind==='voiceModulator' && !!state.modulator?.active;
-      const active = !!activeSeconds || scanning || modulating;
+      const nightVision = item.kind==='nightVision' && !!state.nightVision;
+      const active = !!activeSeconds || scanning || modulating || nightVision;
       const time = activeSeconds ? `${activeSeconds} s` : scan ? `${scan.remaining}s · ${charges}` :
         charges || (seconds ? `${secondsLabel.format(seconds)} s` : '');
       const name = objects[item.kind].name;
       const label = activeSeconds ? `${name} · Ativo: ${time}` : seconds ? `${name} · Recarga: ${time}` :
         charges ? `${name} · ${time}` : name;
       const tooltip = weapon ? `${label} · ${weapons[weapon].staminaCost} stamina por golpe` :
+        item.kind==='nightVision' ? `${label} · ${nightVision ? 'Ligada' : 'Desligada'} (N)` :
         item.kind==='voiceModulator' ? `${label} · ${modulating ? 'Ligado' : 'Desligado'} (U)` : label;
-      const toggle = item.kind==='xray' || item.kind==='megaphone' || item.kind==='voiceModulator';
+      const toggle = item.kind==='nightVision' || item.kind==='xray' || item.kind==='megaphone' || item.kind==='voiceModulator';
       return {
         kind:item.kind, control, active, time, tooltip, pressed:toggle ? active : undefined,
-        label:item.kind==='xray' ? `${scanning ? 'Desativar' : 'Ativar'} ${label}` : label,
+        label:item.kind==='nightVision' ? `${nightVision ? 'Desligar' : 'Ligar'} ${label}` : item.kind==='xray' ? `${scanning ? 'Desativar' : 'Ativar'} ${label}` : label,
         hint:control?.key,
       };
     }),
