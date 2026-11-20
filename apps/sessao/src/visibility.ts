@@ -1,6 +1,8 @@
 import {walls,type Motion,type Rect} from './map';
 
-export function wallVision(origin:Motion,radius:number,showWallFaces=false) {
+type Point = {x:number;y:number};
+
+function visionRays(origin:Motion,radius:number) {
   const nearby = [...walls,...(origin.barriers ?? [])].filter(([x,y,w,h])=>
     x<=origin.x+radius && x+w>=origin.x-radius && y<=origin.y+radius && y+h>=origin.y-radius);
   const angles = Array.from({length:48},(_,index)=>index*Math.PI/24-Math.PI);
@@ -10,23 +12,46 @@ export function wallVision(origin:Motion,radius:number,showWallFaces=false) {
   }
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
-    let distance = radius;
-    for (const wall of nearby) distance = Math.min(distance,wallEntry(origin,dx,dy,wall,showWallFaces));
-    return {x:dx*distance,y:dy*distance,dx,dy};
+    let distance = radius, surface:Rect|undefined, face=false;
+    for (const wall of nearby) {
+      const [x,y,w,h] = wall;
+      const [nearX,farX] = slab(origin.x,dx,x,x+w);
+      const [nearY,farY] = slab(origin.y,dy,y,y+h);
+      const near = Math.max(nearX,nearY,0);
+      if (near>Math.min(farX,farY)) continue;
+      // Horizontal artwork faces south. Vertical artwork can be seen from either side.
+      const visibleFace = w>=h ? dy<0 && nearY>=nearX : nearX>=nearY;
+      if (near<distance || near===distance && visibleFace && !face) {
+        distance=near; surface=wall; face=visibleFace;
+      }
+    }
+    return {x:dx*distance,y:dy*distance,dx,dy,surface,face};
   });
 }
 
-function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect,showWallFaces:boolean) {
-  const [nearX,farX] = slab(origin.x,dx,x,x+w);
-  const [nearY,farY] = slab(origin.y,dy,y,y+h);
-  const near = Math.max(nearX,nearY,0);
-  const far = Math.min(farX,farY);
-  if (near>far) return Infinity;
-  // Horizontal wall art depicts its south-facing surface. Reveal that surface
-  // only from the south; from the north it belongs to the room behind the wall.
-  // Vertical walls retain their side visibility, without lighting end-on rays.
-  const broadFace = w>=h ? dy<0 && nearY>=nearX : nearX>=nearY;
-  return showWallFaces && broadFace ? Math.max(near,far) : near;
+export function wallVision(origin:Motion,radius:number) {
+  return visionRays(origin,radius).map(({x,y,dx,dy})=>({x,y,dx,dy}));
+}
+
+// Keep floor occlusion at the physical edge. Illuminate wall artwork separately
+// by carrying only its visible surface span straight across the wall thickness.
+export function wallLight(origin:Motion,radius:number):Point[][] {
+  const rays = visionRays(origin,radius);
+  const polygons:Point[][] = [rays.map(({x,y})=>({x,y}))];
+  for (let index=0;index<rays.length;index++) {
+    const a = rays[index], b = rays[(index+1)%rays.length];
+    if (!a.face || !b.face || !a.surface || a.surface!==b.surface) continue;
+    const [,,w,h] = a.surface;
+    const offset = w>=h ? {x:0,y:-h} : {x:Math.sign(a.dx)*w,y:0};
+    const polygon = [a,b,{x:b.x+offset.x,y:b.y+offset.y},{x:a.x+offset.x,y:a.y+offset.y}];
+    const area = polygon.reduce((sum,p,i)=>{
+      const next = polygon[(i+1)%polygon.length];
+      return sum+p.x*next.y-next.x*p.y;
+    },0);
+    // Matching winding makes a single nonzero fill form the union of the shapes.
+    polygons.push(area<0 ? polygon.reverse() : polygon);
+  }
+  return polygons;
 }
 
 function slab(origin:number,direction:number,min:number,max:number) {

@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {findRoute} from './navigation';
 import {npcs,treasurer} from './npcs';
 import {stations} from './plenary';
-import {shadowOutline,wallVision} from './visibility';
+import {shadowOutline,wallVision,wallLight} from './visibility';
 import {canStand,obstacleBetween,wallBetween,characterVisible,roomAt} from './map';
 
 test('the light ends at the first wall edge and preserves unobstructed rays',()=>{
@@ -106,49 +106,91 @@ test('the relocated services can all be reached from the Secretariat',()=>{
 });
 
 
-test('visual light reveals the wall above the player without exposing floor behind it',()=>{
-  const origin = {x:140,y:146,barriers:[[120,130,40,8]] as const};
-  const north = wallVision(origin,35,true).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
-  expect(north?.y).toBeCloseTo(-16);
-  expect(wallBetween(origin,{x:140,y:125})).toBe(true);
-  expect(characterVisible(origin,{x:140,y:125},35)).toBe(false);
-  const limited = wallVision(origin,10,true).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
-  expect(limited?.y).toBeCloseTo(-10);
-});
-
-test('visual light reveals vertical thickness but stops at walls viewed end-on',()=>{
-  const origin = {x:140,y:146,barriers:[[153,135,3,25]] as const};
-  const east = wallVision(origin,60,true).find(ray=>Math.abs(ray.dy)<1e-8 && ray.dx>0);
-  expect(east?.x).toBeCloseTo(16);
-  const endOn = wallVision({x:140,y:146,barriers:[[153,144,45,4]]},60,true)
-    .find(ray=>Math.abs(ray.dy)<1e-8 && ray.dx>0);
-  expect(endOn?.x).toBeCloseTo(13);
-});
-
+function illuminated(origin:Parameters<typeof wallLight>[0],radius:number,x:number,y:number) {
+  const px=x-origin.x, py=y-origin.y;
+  if (Math.hypot(px,py)>=radius) return false;
+  return wallLight(origin,radius).some(polygon=>{
+    let inside=false;
+    for (let i=0,j=polygon.length-1;i<polygon.length;j=i++) {
+      const a=polygon[i],b=polygon[j];
+      if ((a.y>py)!==(b.y>py) && px<(b.x-a.x)*(py-a.y)/(b.y-a.y)+a.x) inside=!inside;
+    }
+    return inside;
+  });
+}
 
 test('corridor light reveals the upper wall face but keeps the lower room wall face dark',()=>{
-  const origin = {x:140,y:146,barriers:[[120,130,40,8],[120,155,40,8]] as const};
-  const rays = wallVision(origin,35,true);
-  const north = rays.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
-  const south = rays.find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy>0);
-  expect(north?.y).toBeCloseTo(-16);
-  expect(south?.y).toBeCloseTo(9);
-  // Oblique rays must not produce lit triangles inside the lower wall either.
-  for (const ray of rays.filter(ray=>ray.dy>0 && Math.abs(ray.dx/ray.dy)<1)) {
-    expect(ray.y).toBeCloseTo(9);
+  const origin = {x:5020,y:5030,barriers:[[5000,5010,60,8],[5000,5040,60,8]] as const};
+  for (const x of [5002,5010,5020,5030,5050]) {
+    expect(illuminated(origin,60,x,5011)).toBe(true);
+    expect(illuminated(origin,60,x,5017)).toBe(true);
+    expect(illuminated(origin,60,x,5041)).toBe(false);
+    expect(illuminated(origin,60,x,5047)).toBe(false);
+  }
+  expect(illuminated(origin,60,5020,5009)).toBe(false);
+  expect(illuminated(origin,10,5020,5011)).toBe(false);
+  expect(characterVisible(origin,{x:5020,y:5000},60)).toBe(false);
+});
+
+test('the horizontal face becomes visible from its own room to the south',()=>{
+  const barriers = [[5000,5010,60,8]] as const;
+  expect(illuminated({x:5020,y:5000,barriers},60,5020,5014)).toBe(false);
+  expect(illuminated({x:5020,y:5030,barriers},60,5020,5014)).toBe(true);
+});
+
+test('a divider ending in the upper wall cannot shadow its corridor-facing surface',()=>{
+  const horizontal = [5000,5010,60,8] as const;
+  const divider = [5030,4980,4,38] as const;
+  for (const barriers of [[horizontal,divider],[divider,horizontal]] as const) {
+    const origin = {x:5020,y:5040,barriers};
+    for (const x of [5028,5031,5033,5036,5040]) {
+      expect(illuminated(origin,60,x,5011)).toBe(true);
+      expect(illuminated(origin,60,x,5017)).toBe(true);
+    }
+    expect(illuminated(origin,60,5032,5000)).toBe(false);
   }
 });
 
-test('the same horizontal wall face becomes visible from its own room to the south',()=>{
-  // Outside the map so existing dividers cannot mask this two-sided fixture.
-  const wall = [[5000,5010,40,8]] as const;
-  const north = {x:5020,y:5000,barriers:wall};
-  const south = {x:5020,y:5030,barriers:wall};
-  const northSide = wallVision(north,35,true)
-    .find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy>0);
-  const southSide = wallVision(south,35,true)
-    .find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
-  expect(north.y+northSide!.y).toBeCloseTo(5010);
-  expect(south.y+southSide!.y).toBeCloseTo(5010);
-  expect(characterVisible(north,south,35)).toBe(false);
+test('a divider protruding into the corridor still blocks the upper wall face',()=>{
+  const origin = {x:5020,y:5040,barriers:[[5000,5010,60,8],[5018,5000,4,30]] as const};
+  expect(illuminated(origin,60,5020,5014)).toBe(false);
+});
+
+test('lateral doorway shadows start at the near jamb corners while the wall faces stay lit',()=>{
+  const barriers = [[5030,4980,10,30],[5030,5030,10,30]] as const;
+  for (const x of [5010,5060]) {
+    const origin = {x,y:5020,barriers};
+    // Both ends of each wall face stay illuminated through their full thickness.
+    for (const wx of [5031,5035,5039]) {
+      expect(illuminated(origin,100,wx,5009)).toBe(true);
+      expect(illuminated(origin,100,wx,5031)).toBe(true);
+    }
+    // On the floor beyond the doorway, shadows retain the physical near corner.
+    const behind = x<5030 ? 5050 : 5020;
+    expect(illuminated(origin,100,behind,4999)).toBe(false);
+    expect(illuminated(origin,100,behind,5041)).toBe(false);
+    expect(illuminated(origin,100,behind,5020)).toBe(true);
+  }
+});
+
+test('an intervening wall hides the lateral face instead of illuminating the entire divider',()=>{
+  const origin = {x:5000,y:5020,barriers:[[5010,5000,5,40],[5030,5000,10,40]] as const};
+  expect(illuminated(origin,60,5012,5020)).toBe(true);
+  expect(illuminated(origin,60,5035,5020)).toBe(false);
+});
+
+test('an upper doorway illuminates both jamb faces without shifting the cone inside the room',()=>{
+  const origin = {x:5020,y:5040,barriers:[[4980,5010,30,8],[5030,5010,30,8]] as const};
+  for (const x of [5008,5032]) for (const y of [5011,5014,5017]) {
+    expect(illuminated(origin,100,x,y)).toBe(true);
+  }
+  // Near corners bound the opening; wall artwork must not widen its light cone.
+  expect(illuminated(origin,100,5020,4990)).toBe(true);
+  expect(illuminated(origin,100,4996,4990)).toBe(false);
+  expect(illuminated(origin,100,5044,4990)).toBe(false);
+  expect(characterVisible(origin,{x:4996,y:4990},100)).toBe(false);
+  // From inside the room these south-facing surfaces remain hidden.
+  const inside = {...origin,y:4990};
+  expect(illuminated(inside,100,5008,5014)).toBe(false);
+  expect(illuminated(inside,100,5032,5014)).toBe(false);
 });
