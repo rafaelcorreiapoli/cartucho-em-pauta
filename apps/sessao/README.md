@@ -381,3 +381,25 @@ Novas salas começam em Calote, com dois infiltrados, três NPCs, projetos autom
 O smoke `dev/automatic-projects-smoke.js` verifica o padrão do lobby, sigilo, quatro aprovações, imagens, anúncio em 800×450 e histórico. As imagens e seus prompts estão documentados em `docs/automatic-project-images.json` na raiz do repositório.
 
 A trilha de orçamento negativo no Calote é “Hitman”, de Kevin MacLeod (incompetech.com), sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), sem alterações e na velocidade original durante toda a contagem. Créditos disponíveis na entrada do jogo e em `public/assets/audio/CREDITS.md`.
+
+### Laboratório de resolução do Tiririca
+
+Com `bun run dev`, abra `/tiririca-resolution.html` para comparar a caminhada
+atual com uma recriação de maior detalhe nas três direções. A mesma página faz
+parte do build. Não muda o renderer da partida, câmera, percepção ou colisões.
+
+O laboratório carrega a referência de 128 px e somente a variante selecionada:
+128, 256 ou 512 px por quadro. A seleção automática escolhe a menor textura que
+cobre `tamanho CSS × devicePixelRatio`, limitada a 512. Uma tela pequena com alta
+densidade pode precisar da variante maior. Variantes já carregadas ficam em cache;
+a troca só ocorre após o término do carregamento. O controle manual permite
+comparar nitidez e alinhamento, inclusive com a animação pausada.
+
+`tiririca-walk-128.png` contém os primeiros 12 quadros da spritesheet original
+`sprites-expansao.png`. As versões 256/512 são uma recriação experimental por
+ImageGen em 20/11/2026, com alpha, derivadas da mesma imagem de 1448×1086 (362 px
+por quadro), normalizada para grades de 1024×768 e 2048×1536. Portanto, a textura
+512 não contém 512 px de detalhe nativo. A recriação muda alguns traços e poses;
+serve para avaliar o ganho de detalhe, não é uma substituição fiel aprovada.
+Antes de usar na partida, produzir um master realmente maior, revisar identidade,
+baseline e transições e cobrir também combate, celular, cofre e demais animações.
