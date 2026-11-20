@@ -705,6 +705,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }).filter(point=>inPhotoFrame(center,point));
       scene.photoRenderer.draw(canvas,{
         center,breaches,time:scene.time.now,offices:plenaryView?.gameplay?.offices,
+        openSafes:privateOffices.filter(office=>depositingAtSafe(office,players)).map(office=>office.id),
         features:{surveillance:plenaryView?.surveillanceEnabled!==false,projectVoting:plenaryView?.projectVotingEnabled!==false,
           decorations:plenaryView?.decorationsEnabled!==false,portraitsAndVip:plenaryView?.portraitsAndVipEnabled!==false},
         people:players.filter(person=>person.id!==ownId && inPhotoFrame(center,person,true)).map(person=>({

@@ -17,6 +17,7 @@ export type Decoration = Motion & {
   id:number; kind:'portrait'|'vip'|'pizza'|Extract<OfficeGood,'officeTv'|'officeRug'|'officeChair'>; owner:Contact; character:number; marked?:boolean; slices?:number; privateOffice?:string;
 };
 export type PhotoScene = {
+  openSafes?:string[];
   offices?:Pick<OfficeView,'id'|'door'|'cabinetBreached'>[];
   time?:number; features?:{surveillance:boolean;projectVoting:boolean;decorations:boolean;portraitsAndVip:boolean};
   center:Motion; camera?:Motion; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];

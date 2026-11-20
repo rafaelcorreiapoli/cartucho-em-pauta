@@ -67,7 +67,7 @@ export class WorldView {
     }
     for (const office of privateOffices) {
       const art = this.safes.get(office.id);
-      if (art) updateSafeArt(art, depositingAtSafe(office, frame.people));
+      if (art) updateSafeArt(art, frame.openSafes ? frame.openSafes.includes(office.id) : depositingAtSafe(office, frame.people));
     }
     if (frame !== this.frame) {
       if (!frozen) {

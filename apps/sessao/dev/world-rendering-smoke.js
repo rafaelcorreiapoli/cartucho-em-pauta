@@ -36,6 +36,11 @@ async (page) => {
       { ...base.people[0], pocketing: true },
     ])
       comparisons.push(await compare({ ...base, people: [person] }));
+    const safeFrame={...base,center:{x:qa.safe.safe.x,y:qa.safe.safe.y+19},camera:{...qa.safe.safe},people:[],ground:[],openSafes:[qa.safe.id]};
+    comparisons.push(await compare(safeFrame));
+    const openSafe=photo.toDataURL();
+    comparisons.push(await compare({...safeFrame,openSafes:[]}));
+    if(photo.toDataURL()===openSafe) throw new Error('The captured safe state was ignored');
     const furnished = {
       ...base,
       decorations: [

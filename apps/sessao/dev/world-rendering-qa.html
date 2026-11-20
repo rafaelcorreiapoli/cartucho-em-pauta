@@ -8,9 +8,11 @@
       import Phaser from 'phaser';
       import { preloadWorldArt, createWorldAnimations } from '/src/world-art.ts';
       import { WorldView } from '/src/world-view.ts';
+      import {privateOffices} from '/src/private-offices.ts';
       import { PhotoRenderer } from '/src/photo-renderer.ts';
       import { createSurveillanceViewport } from '/src/surveillance-viewport.ts';
       window.qa = {
+        safe:privateOffices[0],
         async pixels(canvas) {
           return [...canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data];
         },

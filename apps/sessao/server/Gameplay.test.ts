@@ -1119,3 +1119,16 @@ test('photos and security frames project the same public visual state and freeze
   expect(subject.moving).toBe(true);
   expect(photo.features).toMatchObject({surveillance:false,portraitsAndVip:false});
 });
+
+
+test('a photo captures open safe state independently of the people left in its crop',()=>{
+  const {alice,bob,game,world} = setup();
+  const office=privateOffices[0];
+  Object.assign(alice,{x:office.safe.x,y:office.safe.y});
+  Object.assign(bob,{...office.safe,pocketing:true});
+  game.act(alice,{kind:'photo'},world);
+  const photo=game.photoView(alice.id,world.now).album[0].photo;
+  expect(photo.openSafes).toContain(office.id);
+  bob.pocketing=false;
+  expect(photo.openSafes).toContain(office.id);
+});
