@@ -366,7 +366,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
     joined.onMessage('mail-result',(message:string|null)=>mail.result(message));
     joined.send('mail-read');
     const projectPicker = mountProjectPicker();
-    const results = mountResults(gameplay.close);
+    const results = mountResults(gameplay.close,role=>audio.cassationResult(role));
     const panel = createPlenaryPanel(joined.sessionId,(channel,action)=>{
       sendCommand(channel,action);
       if (channel!=='bill-vote' && channel!=='cassation-vote') map.focus({preventScroll:true});
