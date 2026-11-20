@@ -216,3 +216,25 @@ test('overlapping wall intersections contribute corners regardless of rectangle 
     expect(illuminated(origin,60,5021,5005)).toBe(false);
   }
 });
+
+test('infirmary doorway faces stay lit continuously while walking south into the corridor',()=>{
+  for (const x of [233,235,240]) for (let y=126;y<=150;y++) {
+    const origin = {x,y};
+    for (const wx of [171.5,198,210,270,280,302]) {
+      if (Math.hypot(wx-x,122.5-y)<86*.8) {
+        expect(illuminated(origin,86,wx,122.5)).toBe(true);
+      }
+    }
+  }
+});
+
+test('a long wall face remains illuminated when both endpoints are outside vision range',()=>{
+  const barriers = [[4900,5010,240,10]] as const;
+  for (let y=5021;y<=5050;y++) {
+    const origin = {x:5020,y,barriers};
+    for (const wx of [5005,5020,5035]) {
+      expect(illuminated(origin,40,wx,5019)).toBe(true);
+    }
+    expect(illuminated(origin,40,5020,5009)).toBe(false);
+  }
+});
