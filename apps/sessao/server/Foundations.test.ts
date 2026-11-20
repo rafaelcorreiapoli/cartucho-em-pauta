@@ -626,12 +626,12 @@ test('first aid kits heal the owner once, cap healing and are kept at full healt
   expect(events.filter(event=>event.type==='used')).toHaveLength(1);
 });
 
-test('identical snacks share a slot and support partial offers and drops',()=>{
+test.each(['chocolates','coffee'] as const)('%s shares a slot and supports partial offers and drops',kind=>{
   const {alice,bob,game,world,openShop,balance,events} = setup();
   Object.assign(alice,npcs.snackVendor.interaction);
-  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:'chocolates',token:openShop(buyer,'snackVendor')},world);
+  const buy = (buyer:Player) => game.act(buyer,{kind:'shop-buy',target:kind,token:openShop(buyer,'snackVendor')},world);
   for (let index=0;index<5;index++) expect(buy(alice)).toBe('Compra guardada no inventário.');
-  expect(balance.get(alice.id)).toBe(2);
+  expect(balance.get(alice.id)).toBe(12-5*foods[kind].price);
   const inventory = (who:Player) => game.view(who,world).inventory;
   expect(inventory(alice)).toHaveLength(1);
   const {id:item} = inventory(alice)[0];
@@ -639,7 +639,12 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   const purchases = events.filter(event=>event.type==='purchased');
   expect(new Set(purchases.map(event=>event.item)).size).toBe(5);
   expect(purchases.map(event=>event.inventoryItem)).toEqual(Array(5).fill(item));
-  expect(game.act(alice,{kind:'use',item,quantity:5},world)).toBe('Objeto utilizado.');
+  if (kind==='coffee') {
+    expect(game.act(alice,{kind:'expose',item},world)).toBe('Objeto exposto.');
+    expect(game.view(alice,world).exposed).toContain(item);
+    expect(inventory(alice)[0].quantity).toBe(5);
+  }
+  expect(game.act(alice,{kind:'use',item,quantity:5},world)).toBe(kind==='coffee' ? 'Café bebido.' : 'Objeto utilizado.');
   expect(inventory(alice)[0].quantity).toBe(4);
 
   Object.assign(bob,npcs.snackVendor.interaction);
@@ -658,14 +663,14 @@ test('identical snacks share a slot and support partial offers and drops',()=>{
   expect(inventory(bob)[0].quantity).toBe(3);
   const received = events.filter(event=>event.type==='item-received');
   expect(received).toEqual([expect.objectContaining({
-    actor:bob.id,target:alice.id,kind:'chocolates',inventoryItem:inventory(bob)[0].id,witnesses:[],
+    actor:bob.id,target:alice.id,kind,inventoryItem:inventory(bob)[0].id,witnesses:[],
   })]);
   expect(received[0].item).not.toBe(inventory(bob)[0].id);
 
 
   expect(game.act(alice,{kind:'drop',item,quantity:1},world)).toBe('Objeto largado.');
   expect(inventory(alice)[0].quantity).toBe(1);
-  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind==='chocolates')!;
+  const dropped = game.view(bob,world).nearby.find(entry=>entry.kind===kind)!;
   expect(dropped.quantity).toBe(1);
   expect(game.act(bob,{kind:'collect',item:dropped.id},world)).toBe('Objeto recolhido.');
   expect(inventory(bob)[0].quantity).toBe(4);

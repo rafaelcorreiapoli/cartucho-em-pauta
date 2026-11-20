@@ -91,7 +91,7 @@ export type DocumentData = {
 };
 export type WorldItem = {id:number; kind:ObjectKind; cash?:number; cashStolenFrom?:{name:string; safe?:true}; charges?:number; quantity?:number; document?:DocumentData};
 export type GroundItem = Pick<WorldItem,'id'|'kind'> & Motion & {title?:string};
-export const canStackItem = (kind:ObjectKind) => isFood(kind) && !('exposable' in foodDefinition(kind));
+export const canStackItem = (kind:ObjectKind) => isFood(kind) && (kind==='coffee' || !('exposable' in foodDefinition(kind)));
 export const itemQuantity = (item:Pick<WorldItem,'quantity'>) => item.quantity ?? 1;
 export function selectedItemQuantity(item:WorldItem, quantity:number) {
   return Math.min(itemQuantity(item),Math.max(1,quantity));
