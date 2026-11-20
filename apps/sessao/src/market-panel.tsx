@@ -1,3 +1,4 @@
+import {assetImageSources} from './world-assets';
 import {isSpyProduct} from './surveillance';
 import {investmentRules} from './public-investments';
 import type {ShortcutEntry} from './action-shortcuts';
@@ -136,7 +137,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     flushSync(()=>root.render(<MarketDialogContent title={vendor.label}>
       <div className="market-toolbar">
         <div className="market-vendor">
-          <img src={import.meta.env.BASE_URL+'assets/'+marketVendorPortrait(npc)} alt=""/>
+          <img {...assetImageSources(marketVendorPortrait(npc), '96px')} alt=""/>
           <div><h2 id="market-catalog-title">{vendor.label}</h2><strong>{vendor.name}</strong><p>{vendor.catalog==='equipment' ? 'Equipamentos, espionagem e utilidades parlamentares.' :
             vendor.catalog==='furniture' ? 'Móveis instalados no seu gabinete.' :
             vendor.catalog==='credentials' ? 'Retratos oficiais e placas para reservar cadeiras.' : 'Lanches e bebidas.'}</p></div>
@@ -159,7 +160,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
           {stock.map(({kind,item,price,hasItem,status},index)=><button type="button" className="market-product-button item-tile"
             key={kind} aria-pressed={selected===index} aria-label={item.name+' · '+money(price)} aria-keyshortcuts={String(index+1)}
             onClick={()=>select(index)}>
-            <img className="market-art" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
+            <img className="market-art" {...assetImageSources(item.portrait, '(max-height: 600px) 96px, 160px')} alt="" draggable={false}/>
             <span className="market-product-caption"><strong>{item.name}</strong><span className="market-product-price">{hasItem ? status : money(price)}</span></span>
             <kbd className="action-key" aria-hidden="true">{index+1}</kbd>
           </button>)}
@@ -167,7 +168,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
         </div>
         {product && <section className="market-detail" aria-label="Produto selecionado">
           <div className="market-detail-content">
-            <img className="market-detail-art" src={import.meta.env.BASE_URL+'assets/'+product.item.portrait} alt="" draggable={false}/>
+            <img className="market-detail-art" {...assetImageSources(product.item.portrait, '(max-width: 700px) 68px, 155px')} alt="" draggable={false}/>
             <h3>{product.item.name}</h3>
             <span className="bag-item-type">{food ? 'Consumível' : isGear(product.kind) ? 'Equipamento' : isOfficeFurniture(product.kind) ? 'Mobília' : 'Utilidade'}</span>
             <p className="market-detail-price"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-wallet"/></svg>{money(product.price)}</p>
@@ -278,7 +279,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
         choices.forEach((choice,index)=>marketKeys.set(String(index+1),{name:choice.label,activate:choice.activate}));
         flushSync(()=>root.render(<MarketDialogContent title={npc.catalog ? npc.name : `${npc.label} · ${npc.name}`}>
           <div className="market-line">
-            <img className="phone-contact-face market-npc-face" src={import.meta.env.BASE_URL+'assets/'+npc.sprite} alt=""/>
+            <img className="phone-contact-face market-npc-face" {...assetImageSources(npc.sprite, '84px')} alt=""/>
             <p>{state.text}</p>
           </div>
           {state.feedback && <p role="status">{state.feedback}</p>}

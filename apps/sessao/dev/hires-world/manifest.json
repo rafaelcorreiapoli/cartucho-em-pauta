@@ -1,0 +1,2716 @@
+[
+  {
+    "id": "alexandre-de-moraes-fall",
+    "original": "alexandre-de-moraes-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-f03f2e42-a5b2-450b-95ea-2f3961cafc4b.png",
+    "sourceSha256": "388e5e1d9cd3f54c747acb4e7adc4505fc1c8230e16c86ec96812e2a4822f592",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-de-moraes-hit",
+    "original": "alexandre-de-moraes-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-8cbeee69-16ce-40de-8bd7-b2c84107ece1.png",
+    "sourceSha256": "adb4b84a88aa70cfff1c45bbf5014630bc4a37d388d03da2d27d89daae6858b1",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "alexandre-de-moraes-walk",
+    "original": "alexandre-de-moraes-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-e4e8e976-fb21-441e-afaf-c28b7d4401e5.png",
+    "sourceSha256": "435ca00e71ae8e68ffa73cde9a92574d34d8765c2403f545cb827829bc0e5b8b",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "balcao-lanchonete",
+    "original": "balcao-lanchonete.webp",
+    "kind": "image",
+    "sourceFile": "exec-6b8dcaf2-049e-44e9-b442-0521ef795cb3.png",
+    "sourceSha256": "33cf378177a8d4b3d5ae960939b1bb0ecc7f74fee755fca4f7791ecc11f35c55",
+    "nativeSize": [
+      1729,
+      910
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1729,
+      910
+    ],
+    "masterSize": [
+      1729,
+      910
+    ]
+  },
+  {
+    "id": "cadeira-reserva",
+    "original": "cadeira-reserva.webp",
+    "kind": "image",
+    "sourceFile": "exec-8e2aa982-4a40-414a-a335-4fef0394685e.png",
+    "sourceSha256": "66558e58972b0aaee1761b1b5f519a21bf39bf5c5f32d313117013d2de978363",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "sourceBox": [
+      887,
+      0,
+      1774,
+      887
+    ],
+    "masterSize": [
+      887,
+      887
+    ]
+  },
+  {
+    "id": "cafeteira",
+    "original": "cafeteira.webp",
+    "kind": "image",
+    "sourceFile": "exec-af56d15b-58c9-4302-96eb-fa574feeecf4.png",
+    "sourceSha256": "dc02c7f48c898d4f0cf0d8a378f08c9ca41b7ad002a8911ae14d937be5fdc0c9",
+    "nativeSize": [
+      1024,
+      1536
+    ],
+    "masterSize": [
+      1024,
+      1536
+    ]
+  },
+  {
+    "id": "campaign-feature",
+    "original": "campaign-feature.webp",
+    "kind": "image",
+    "sourceFile": "exec-1442b988-0a36-4c4f-8f88-75dbcbadf525.png",
+    "sourceSha256": "0fc7d3213a2edeb6132c5445804726af6a32691febfbe40a19095053c418e488",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "campaign-special",
+    "original": "campaign-special.webp",
+    "kind": "image",
+    "sourceFile": "exec-45e37963-a1a0-43a7-9c2a-088d86d58587.png",
+    "sourceSha256": "21118232bd3279665100f73b7e124507f35691da0c185a5526806f15167e6066",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "campaign-spot",
+    "original": "campaign-spot.webp",
+    "kind": "image",
+    "sourceFile": "exec-bf851a90-b02c-4e66-91d9-bc2db3d1440b.png",
+    "sourceSha256": "0100901dbd459eb1df0ef40b00234b28a3f84c8525c90cf111033d25bbe1a67d",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "chapolin-colorado",
+    "original": "chapolin-colorado.webp",
+    "kind": "image",
+    "sourceFile": "exec-4f554e13-46f1-4100-92db-36db51dfff43.png",
+    "sourceSha256": "56dbea7671d428ab5793d4cb918b01be7e38f740f24d86b186406f0ae55c2b70",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "daniel-vorcaro",
+    "original": "daniel-vorcaro.webp",
+    "kind": "image",
+    "sourceFile": "exec-35c1400c-de4c-4678-9906-771bb21d4f17.png",
+    "sourceSha256": "b28dd1627a95a55dd13d84a1416722b969ab4e3c276f318d8990b6eb01da1dc0",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "delcidio-do-amaral-fall",
+    "original": "delcidio-do-amaral-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-3bb24c47-40c8-48d6-baf3-9ea2d51defe3.png",
+    "sourceSha256": "4fcad74626e79214045f32d28b8d71f01aa7c471e43231f6cff6ea5aeb2d1715",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "delcidio-do-amaral-hit",
+    "original": "delcidio-do-amaral-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-a2aaf19c-7c03-4f8c-b002-c60e544607ee.png",
+    "sourceSha256": "ca573a78fc56d45f7fd1e2578f389ecd3b04f40c3e597f77469ea82bd30c28cd",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "delcidio-do-amaral-walk",
+    "original": "delcidio-do-amaral-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-bea5f88a-b12a-44d0-bcce-c3937d84450a.png",
+    "sourceSha256": "66c77415015af21d90ae042659a33e86bc597474ea64790a4114e81eb18c463b",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "documento-legislativo",
+    "original": "documento-legislativo.webp",
+    "kind": "image",
+    "sourceFile": "exec-a10a141f-22ff-4939-9bdf-0d4e60b9bace.png",
+    "sourceSha256": "2ed20ad8b5dcfb5396131b77015681fef5f2e8dff50b45ce7c49cd87c0516f3b",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "duda-mendonca",
+    "original": "duda-mendonca.webp",
+    "kind": "image",
+    "sourceFile": "exec-6a2a2ee8-cd0b-4e9f-af84-661c8359f064.png",
+    "sourceSha256": "c970b54eead105848b125a22cd58342f13fc6ef0c53afbfdca5160b6770a4f4f",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "eduardo-cunha-tesoureiro",
+    "original": "eduardo-cunha-tesoureiro.webp",
+    "kind": "image",
+    "sourceFile": "exec-5631fcc4-b5d1-4081-aed6-d7b0e85f96f1.png",
+    "sourceSha256": "16a43d3c73d41ff78a98932d9fbd56e14934f4434788febb41a0b92690bcb238",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "sourceBox": [
+      0,
+      0,
+      362,
+      362
+    ],
+    "masterSize": [
+      362,
+      362
+    ]
+  },
+  {
+    "id": "eneas-carneiro",
+    "original": "eneas-carneiro.webp",
+    "kind": "image",
+    "sourceFile": "exec-236725d7-d15d-4d6c-b7fb-0b5b90170abb.png",
+    "sourceSha256": "abbefbd95d9f7b50f7d4d94049bfa7c157672eb6332fdc123ac9aedf5aceeb72",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "estante-apoio-tecnico",
+    "original": "estante-apoio-tecnico.webp",
+    "kind": "image",
+    "sourceFile": "exec-b2679a96-6218-4b11-b044-ca53444ab0b9.png",
+    "sourceSha256": "5a9591cc70ee0c41a2c7500ba00b5973698c5765677b34443158f2d523765774",
+    "nativeSize": [
+      1457,
+      1080
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1457,
+      1080
+    ],
+    "masterSize": [
+      1457,
+      1080
+    ]
+  },
+  {
+    "id": "extintor",
+    "original": "extintor.webp",
+    "kind": "image",
+    "sourceKind": "restored",
+    "sourceFile": "exec-9298028b-73b1-4f18-9c22-c4391ae3ccb4.png",
+    "sourceSha256": "ca0a41917ccc241c830e8bb779b4680fabec03d75d4042ee4ffa48735de66424",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompt": "Use case: identity-preserve restoration. Restore this exact game asset extintor at higher resolution on a genuinely transparent canvas, target 1024 pixels on the long edge and the SAME aspect ratio. Preserve exact silhouette, proportions, orientation, colors, object count, screen count and layouts, controls, shading and painting style. For flat illustrated icons retain the simple flat shapes with crisp smooth edges, do not turn them into a detailed realistic object. For the security terminal preserve all six monitor screens and the existing control panel. No redesign, new objects, extra text, grid or background. Keep the full object and shadows within the canvas with transparency around it. Improve contour clarity and fine detail faithfully without altering the design."
+  },
+  {
+    "id": "gabinete-armario",
+    "original": "gabinete-armario.webp",
+    "kind": "image",
+    "sourceFile": "exec-8bc1c312-cc66-42ac-a41a-835edaffe3dc.png",
+    "sourceSha256": "62206af593dc04232b8fbaf82eae7ecd0104ab6f5f08e82e84f0eb957b1857d8",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "sourceBox": [
+      887,
+      0,
+      1774,
+      887
+    ],
+    "masterSize": [
+      887,
+      887
+    ]
+  },
+  {
+    "id": "gabinete-cofre-aberto",
+    "original": "gabinete-cofre-aberto.webp",
+    "kind": "image",
+    "sourceFile": "exec-3f33bcd8-e18c-4cf0-a744-cec1535848b6.png",
+    "sourceSha256": "50ca07c61e40c55b4f77165a5a60f68374c726eb421fba551f194b0b7d811d69",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1536,
+      1024
+    ],
+    "masterSize": [
+      1536,
+      1024
+    ]
+  },
+  {
+    "id": "gabinete-cofre",
+    "original": "gabinete-cofre.webp",
+    "kind": "image",
+    "sourceFile": "exec-8bc1c312-cc66-42ac-a41a-835edaffe3dc.png",
+    "sourceSha256": "62206af593dc04232b8fbaf82eae7ecd0104ab6f5f08e82e84f0eb957b1857d8",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "sourceBox": [
+      0,
+      0,
+      887,
+      887
+    ],
+    "masterSize": [
+      887,
+      887
+    ]
+  },
+  {
+    "id": "gabinete-poltrona",
+    "original": "gabinete-poltrona.webp",
+    "kind": "image",
+    "sourceFile": "exec-3f4d956b-33f3-4f6b-bea6-09325e8eb53a.png",
+    "sourceSha256": "5edafdd0c7ea0e46d115206fcd635c70be67396f36940719f40926b2c7ba2d33",
+    "nativeSize": [
+      2172,
+      724
+    ],
+    "sourceBox": [
+      0,
+      0,
+      724,
+      724
+    ],
+    "masterSize": [
+      724,
+      724
+    ]
+  },
+  {
+    "id": "gabinete-tapete",
+    "original": "gabinete-tapete.webp",
+    "kind": "image",
+    "sourceFile": "exec-ba74afdc-1f2d-4874-bcad-4086bb24975f.png",
+    "sourceSha256": "25b6439dcc488fd264c9a1475430a213b467dcdfb5493f28b1a0dba6edd3b30a",
+    "nativeSize": [
+      1903,
+      826
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1903,
+      826
+    ],
+    "masterSize": [
+      1903,
+      826
+    ]
+  },
+  {
+    "id": "gabinete-tv",
+    "original": "gabinete-tv.webp",
+    "kind": "image",
+    "sourceFile": "exec-3f4d956b-33f3-4f6b-bea6-09325e8eb53a.png",
+    "sourceSha256": "5edafdd0c7ea0e46d115206fcd635c70be67396f36940719f40926b2c7ba2d33",
+    "nativeSize": [
+      2172,
+      724
+    ],
+    "sourceBox": [
+      1448,
+      0,
+      2172,
+      724
+    ],
+    "masterSize": [
+      724,
+      724
+    ]
+  },
+  {
+    "id": "japones-federal-door-breach",
+    "original": "japones-federal-door-breach.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      4
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-282045e7-7130-44b4-8846-915e4991e956.png",
+    "sourceSha256": "2f38a80b1306ddcd05756ef4478aabbce2f02a6731e061c5f6707d276aea86a9",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the exact existing game animation japones-federal-door-breach. Restore this sprite sheet at higher detail with exactly 4 columns x 4 rows, equal square cells and the SAME 16 corresponding frames in row-major order, target 2048x2048 transparent canvas. Preserve identity, painting style, outfit, colors, expression, pose, view direction, handedness, tool shape and grip, and position/ground contact within every corresponding cell. Crisp smooth illustrated outlines and consistent painted details; do not redesign, invent accessories, exchange/duplicate poses or change the action. Keep all hands, feet and tool tips fully inside their cells with a small transparent margin. Remove any detached neighboring-cell fragments. The Federal officer's four direction rows must stay front, right, back, left, each with four crowbar-breaching frames; preserve his standard curved crowbar and sunglasses. Genuine transparent alpha, no background, grids, labels or registration marks."
+  },
+  {
+    "id": "japones-federal-walk",
+    "original": "japones-federal-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-f406170d-0210-4c7d-b23f-94898c3c22d9.png",
+    "sourceSha256": "971bbb5c335df6b9a6b8342b58235aea789c73b6a6ae388b47f5e824c51c0ceb",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joao-santana-fall",
+    "original": "joao-santana-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-ce4e6f5d-26ea-4f0f-8a9f-3914c43b68db.png",
+    "sourceSha256": "237b97ff3764cad6431d6b1ac3a571c57f43b4b421b0225db881a77ebed31a75",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joao-santana-hit",
+    "original": "joao-santana-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-97048042-3443-41aa-b44b-342b282def11.png",
+    "sourceSha256": "c23b857217465ff80583799fa8f6796b2a0e8df018e660230de92ed6902c7390",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joao-santana-walk",
+    "original": "joao-santana-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-9932cccc-8614-4188-ab66-222a495bc1e6.png",
+    "sourceSha256": "762d88dc7db0a018fdfcb6dc776641b2b9462eb9adf0c42b7130e96083323696",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joesley-batista-fall",
+    "original": "joesley-batista-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-caaf0e5d-1aff-4c4b-87bd-39cd9139ddf0.png",
+    "sourceSha256": "b7ce8e8726bfadee787f5e82e1aa800bb61dd8d8a8b2b063790d41479110ef3e",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joesley-batista-hit",
+    "original": "joesley-batista-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-4b3eb0c1-cd36-4227-8a07-2f52d0576df5.png",
+    "sourceSha256": "b194fe5932418868d03f06623e38f6d0725e27fcf52bbcd52c46d1d145f2d712",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "joesley-batista-walk",
+    "original": "joesley-batista-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-ea6bcdc7-58f7-408e-8fe2-11df0c363234.png",
+    "sourceSha256": "aa6c3c4917acf7bd02a048b32740733a77dbc133317c9650d1c2b497a6d4f952",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "luciano-hang-fall",
+    "original": "luciano-hang-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-a3e92755-bcf8-43f7-a3d5-a699f005d26a.png",
+    "sourceSha256": "225dd91f8dd2d468ee5ebb5f49058d9af3a6bb1bc1f729b174932f674d9cddbc",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Edit the provided exact game sprite animation luciano-hang-fall. Restore at higher detail: 4 columns x 3 rows, twelve equal square cells, target 2048x1536 transparent canvas. Preserve every corresponding pose, view direction, facial expression, bald head, green suit, yellow tie, Brazilian pin, proportions, frame order, foot positions and anchors. Same character painted consistently across all frames, matching the second image's canonical walking character when supplied. Crisp illustrated shading and smooth clear outlines; no redesign, no pixelation, no new accessories. Reconstruct only any cut-off body tips minimally and keep each full pose completely inside its own cell with a small transparent margin. Do not copy fragments from neighboring cells. Genuine transparent alpha, no grid, labels, background or colored edge artifacts. Only pose changes across the sequence; keep the identity, painting and costume stable."
+  },
+  {
+    "id": "luciano-hang-hit",
+    "original": "luciano-hang-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-a73e70a8-752e-4561-b2fd-2d58f02829ca.png",
+    "sourceSha256": "51b6fa0821580c7ae520f7871ea4dd610ef5149060c94befb790fdd5aa17aafb",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Edit the provided exact game sprite animation luciano-hang-hit. Restore at higher detail: 4 columns x 3 rows, twelve equal square cells, target 2048x1536 transparent canvas. Preserve every corresponding pose, view direction, facial expression, bald head, green suit, yellow tie, Brazilian pin, proportions, frame order, foot positions and anchors. Same character painted consistently across all frames, matching the second image's canonical walking character when supplied. Crisp illustrated shading and smooth clear outlines; no redesign, no pixelation, no new accessories. Reconstruct only any cut-off body tips minimally and keep each full pose completely inside its own cell with a small transparent margin. Do not copy fragments from neighboring cells. Genuine transparent alpha, no grid, labels, background or colored edge artifacts. Only pose changes across the sequence; keep the identity, painting and costume stable."
+  },
+  {
+    "id": "luciano-hang-walk",
+    "original": "luciano-hang-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-dbda66f8-9bad-4cd7-859f-4f37d76d83c2.png",
+    "sourceSha256": "40cae8ebff06ea0ccf2ae39c1f4ae6f99012b7fd72ea7953bd46242e8f7cba40",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Edit the provided exact game sprite animation luciano-hang-walk. Restore at higher detail: 4 columns x 3 rows, twelve equal square cells, target 2048x1536 transparent canvas. Preserve every corresponding pose, view direction, facial expression, bald head, green suit, yellow tie, Brazilian pin, proportions, frame order, foot positions and anchors. Same character painted consistently across all frames, matching the second image's canonical walking character when supplied. Crisp illustrated shading and smooth clear outlines; no redesign, no pixelation, no new accessories. Reconstruct only any cut-off body tips minimally and keep each full pose completely inside its own cell with a small transparent margin. Do not copy fragments from neighboring cells. Genuine transparent alpha, no grid, labels, background or colored edge artifacts. Only pose changes across the sequence; keep the identity, painting and costume stable."
+  },
+  {
+    "id": "maca-enfermaria",
+    "original": "maca-enfermaria.webp",
+    "kind": "image",
+    "sourceFile": "exec-66eeedb8-da11-48c4-b6c1-de43e576b2bb.png",
+    "sourceSha256": "1e09dc9469361d2215ad5407288d38a983abeb607f8ed7ea248730ae1d36ed1d",
+    "nativeSize": [
+      1672,
+      941
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1672,
+      941
+    ],
+    "masterSize": [
+      1672,
+      941
+    ]
+  },
+  {
+    "id": "marcelo-odebrecht-fall",
+    "original": "marcelo-odebrecht-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-aa86f249-f165-44b2-a449-8d440a93c3a8.png",
+    "sourceSha256": "f178aa0180a9ae8524072a3c39227c97a55446e8b96e6f37fcb9b08d1840808a",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "marcelo-odebrecht-hit",
+    "original": "marcelo-odebrecht-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-02003e37-24e8-4c12-b6bb-3cc08e80c79f.png",
+    "sourceSha256": "e6c1d4d99de5c17f2ab19f86f67944e929fe3820ef2712d5cf2ba6b91864ca4d",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "marcelo-odebrecht-walk",
+    "original": "marcelo-odebrecht-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-2f8b3456-e9a5-4510-b374-a25f90e32c21.png",
+    "sourceSha256": "ce85322e54011626a8eff9c232ecb5ba862b217645e1d4cf16f6ebbcca08aa9e",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "marcos-valerio-fall",
+    "original": "marcos-valerio-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-11f17fb8-5522-4e8b-a14d-6e62b8531642.png",
+    "sourceSha256": "d5e2a8e06eff9eb9cf9da6178a8a0ad3d18d80c730d1e10a3d642afb7eb5f8dd",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "sourceKind": "restored",
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the edit target: a 4 columns by 3 rows twelve-frame falling animation. Its head mistakenly belongs to another character. Image 2 is the canonical identity and painting reference of Marcos Valerio: broad bald crown, thin gray hair only around the sides/back, rounded face, gray suit, burgundy tie. Restore image 1 in higher resolution AND correct ONLY the character identity to match image 2 consistently in every front/right/back row. Preserve every corresponding body pose, hand placement, falling/lying orientation, framing, ground contact and frame order of image 1. All heads must match the bald-crowned Marcos of image 2, not the darker-haired person of image 1. Keep shading, outlines, proportions, clothing and painting stable across all frames. Output 4x3 equal square cells, target2048x1536 with genuinely transparent background. Keep all feet/hands inside each cell, no neighboring-frame fragments, no new accessories, backgrounds, labels or grids."
+  },
+  {
+    "id": "marcos-valerio-hit",
+    "original": "marcos-valerio-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-aa781629-aea5-488f-81e8-b28cde55c556.png",
+    "sourceSha256": "fabd854e179a37d0e0eec6755f6bed5a3597ce4037289b0ec3525aa402440bde",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "marcos-valerio-walk",
+    "original": "marcos-valerio-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-db8c4151-2abd-4370-af8c-b8702991d737.png",
+    "sourceSha256": "61f36c39d0a36da3a77a1e1e3a74111be6fc655c57c89180efc8ffe50e581080",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "moldura-congresso",
+    "original": "moldura-congresso.webp",
+    "kind": "image",
+    "sourceFile": "exec-8e2aa982-4a40-414a-a335-4fef0394685e.png",
+    "sourceSha256": "66558e58972b0aaee1761b1b5f519a21bf39bf5c5f32d313117013d2de978363",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "sourceBox": [
+      0,
+      0,
+      887,
+      887
+    ],
+    "masterSize": [
+      887,
+      887
+    ]
+  },
+  {
+    "id": "nestor-cervero-fall",
+    "original": "nestor-cervero-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-3aa6c12c-68f9-4de7-b5a2-a2d4d76e4a4e.png",
+    "sourceSha256": "30d9114716a247dee1f2e6c16f09a90df522303e3acda3dd230b68e34f0d1d94",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the exact existing game animation nestor-cervero-fall. Restore this sprite sheet at higher detail with exactly 4 columns x 3 rows, equal square cells and the SAME 12 corresponding frames in row-major order, target 2048x1536 transparent canvas. Preserve identity, painting style, outfit, colors, expression, pose, view direction, handedness, tool shape and grip, and position/ground contact within every corresponding cell. Crisp smooth illustrated outlines and consistent painted details; do not redesign, invent accessories, exchange/duplicate poses or change the action. Keep all hands, feet and tool tips fully inside their cells with a small transparent margin. Remove any detached neighboring-cell fragments. The Federal officer's four direction rows must stay front, right, back, left, each with four crowbar-breaching frames; preserve his standard curved crowbar and sunglasses. Genuine transparent alpha, no background, grids, labels or registration marks."
+  },
+  {
+    "id": "nestor-cervero-hit",
+    "original": "nestor-cervero-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceKind": "restored",
+    "sourceFile": "exec-46f1da34-e3ce-4f9f-8415-4911f558219a.png",
+    "sourceSha256": "23ba7dc8da8ce0527c2f68cffc8a225c38ebd9bda2c80d5a73ff255a7007a1cd",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompt": "Use case: identity-preserve restoration. Image 1 is the exact existing game animation nestor-cervero-hit. Restore this sprite sheet at higher detail with exactly 4 columns x 3 rows, equal square cells and the SAME 12 corresponding frames in row-major order, target 2048x1536 transparent canvas. Preserve identity, painting style, outfit, colors, expression, pose, view direction, handedness, tool shape and grip, and position/ground contact within every corresponding cell. Crisp smooth illustrated outlines and consistent painted details; do not redesign, invent accessories, exchange/duplicate poses or change the action. Keep all hands, feet and tool tips fully inside their cells with a small transparent margin. Remove any detached neighboring-cell fragments. The Federal officer's four direction rows must stay front, right, back, left, each with four crowbar-breaching frames; preserve his standard curved crowbar and sunglasses. Genuine transparent alpha, no background, grids, labels or registration marks."
+  },
+  {
+    "id": "nestor-cervero-walk",
+    "original": "nestor-cervero-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-5a88c1e0-b019-4f6e-b918-c31ac205c5b8.png",
+    "sourceSha256": "5920df535957674a2378865e752e7aaae7e41281ebaba7784aa65926370fd2a2",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "pablo-marcal-fall",
+    "original": "pablo-marcal-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-1e593574-8355-4d48-98cc-4dc7d0e67688.png",
+    "sourceSha256": "d7bf8badb4be7de29ba6f8813fddd9ca46d6a12a675cd02c467173ed1e4f3a1f",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "pablo-marcal-hit",
+    "original": "pablo-marcal-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-c17393c5-95ac-4837-b832-2a5c74162064.png",
+    "sourceSha256": "5239826d172172f8fc1e538349bc6b6f62a22be683f46b77cdefacc6cabdaa0c",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "pablo-marcal-walk",
+    "original": "pablo-marcal-walk.png",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "sourceFile": "exec-b1602e3d-d153-43be-b8c1-3771417a909b.png",
+    "sourceSha256": "77f820db8bae017881e6f6ff5154885d8da4ecb4668f159d4122ce2fe5a0092e",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "painel-eletrico",
+    "original": "painel-eletrico.webp",
+    "kind": "image",
+    "sourceFile": "exec-f53a6424-9d13-4457-b11b-38d1124ad292.png",
+    "sourceSha256": "807cb947ea0fa49ffbbaa1934172591b304ff2f5270f719da3a0b2f0390251bb",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ]
+  },
+  {
+    "id": "palmirinha",
+    "original": "palmirinha.webp",
+    "kind": "image",
+    "sourceFile": "exec-c50dbf6c-ac1b-4220-83d2-111471af2b17.png",
+    "sourceSha256": "b45b19da13f7a7de1a60deedbe26e4e6c4a9b27ed095d12a8a905ac446b07e75",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "ratinho",
+    "original": "ratinho.webp",
+    "kind": "image",
+    "sourceFile": "exec-19febf6e-a54e-433e-b5c5-761f35c661a8.png",
+    "sourceSha256": "0495298925b5b4721def13a8b80d472a983d6a34ecd12e44ec71787f99bceefb",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-assessor-fantasma",
+    "original": "retrato-assessor-fantasma.webp",
+    "kind": "image",
+    "sourceFile": "exec-9932cccc-8614-4188-ab66-222a495bc1e6.png",
+    "sourceSha256": "762d88dc7db0a018fdfcb6dc776641b2b9462eb9adf0c42b7130e96083323696",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "sourceBox": [
+      0,
+      0,
+      362,
+      362
+    ],
+    "masterSize": [
+      362,
+      362
+    ]
+  },
+  {
+    "id": "retrato-binoculo",
+    "original": "retrato-binoculo.webp",
+    "kind": "image",
+    "sourceFile": "exec-0546aaa2-72be-404e-b078-30cb08ac6bc0.png",
+    "sourceSha256": "f769f664c910407fdb7e33db4840675d615a88bbf97b903979354494d763dfb4",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      627,
+      627
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "retrato-bombom",
+    "original": "retrato-bombom.webp",
+    "kind": "image",
+    "sourceFile": "exec-55b107c3-5e59-4406-8865-7c139ffd60f1.png",
+    "sourceSha256": "312e066875a733d81176955a10430fb47e25ff73d7b34b2707b171fc93f24c9e",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      512,
+      0,
+      1024,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-cafe",
+    "original": "retrato-cafe.webp",
+    "kind": "image",
+    "sourceFile": "exec-f507d027-7d0e-4561-a213-5f20fe22df06.png",
+    "sourceSha256": "a23af8c324d8422c46d3ad42b4f4ad64989239a4bc82e8a74fb52e9990e69593",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-cafezinho",
+    "original": "retrato-cafezinho.webp",
+    "kind": "image",
+    "sourceFile": "exec-a9fa5841-beb2-4160-a3a9-bab561b23bd9.png",
+    "sourceSha256": "389fdf84951183af60a38b5ad18f812af5ba2544707a3c1281956df6f89b0657",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-camera-escondida",
+    "original": "retrato-camera-escondida.webp",
+    "kind": "image",
+    "sourceFile": "exec-ee7276ff-fd25-4eee-bfe1-6130a0fe0865.png",
+    "sourceSha256": "26705819900267267f93d0522e1fadbada097b7fc29f9fd9c5877b1069aaa56d",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-carmem-carimbo",
+    "original": "retrato-carmem-carimbo.webp",
+    "kind": "image",
+    "sourceFile": "exec-920cfde1-71cb-4f9b-b1ff-8e96fe6ddb6f.png",
+    "sourceSha256": "72b51b08c9532093d35cf872413c0b61b2dd1d286e13571272eb06df857c524c",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      276,
+      1,
+      968,
+      777
+    ],
+    "masterSize": [
+      692,
+      776
+    ]
+  },
+  {
+    "id": "retrato-colete",
+    "original": "retrato-colete.webp",
+    "kind": "image",
+    "sourceFile": "exec-0546aaa2-72be-404e-b078-30cb08ac6bc0.png",
+    "sourceSha256": "f769f664c910407fdb7e33db4840675d615a88bbf97b903979354494d763dfb4",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      627,
+      627,
+      1254
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "retrato-coxinha",
+    "original": "retrato-coxinha.webp",
+    "kind": "image",
+    "sourceFile": "exec-55b107c3-5e59-4406-8865-7c139ffd60f1.png",
+    "sourceSha256": "312e066875a733d81176955a10430fb47e25ff73d7b34b2707b171fc93f24c9e",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      512,
+      512,
+      1024,
+      1024
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-cueca-mensalao",
+    "original": "retrato-cueca-mensalao.webp",
+    "kind": "image",
+    "sourceFile": "exec-176adbc9-4cf8-44d7-83c9-94e87e01ba8f.png",
+    "sourceSha256": "22aa71788de768b1e1ac3b86090b6c1fe26b224d934459f037b66ff055698545",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-daniel-vorcaro",
+    "original": "retrato-daniel-vorcaro.webp",
+    "kind": "image",
+    "sourceFile": "exec-35c1400c-de4c-4678-9906-771bb21d4f17.png",
+    "sourceSha256": "b28dd1627a95a55dd13d84a1416722b969ab4e3c276f318d8990b6eb01da1dc0",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      286,
+      9,
+      965,
+      777
+    ],
+    "masterSize": [
+      679,
+      768
+    ]
+  },
+  {
+    "id": "retrato-decodificador",
+    "original": "retrato-decodificador.webp",
+    "kind": "image",
+    "sourceFile": "exec-ec5d16ef-a576-47e1-96a3-c29e1f5bdbe4.png",
+    "sourceSha256": "f20b4b02b63101ef38b1df35caf6a2240cdfd40436f7eeb3592098932eb45b76",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-detector-escutas",
+    "original": "retrato-detector-escutas.webp",
+    "kind": "image",
+    "sourceFile": "exec-75d879f1-cbb4-4041-bb22-d2cb8ebedbb1.png",
+    "sourceSha256": "609632e1907bc8a027d8f4aadd352fbb0f8dd245b9a65d79db9c98ddc1fa7580",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-documento",
+    "original": "retrato-documento.webp",
+    "kind": "image",
+    "sourceFile": "exec-270ae89b-c5af-4130-ac67-8ad9b4fe6d21.png",
+    "sourceSha256": "82440c88445e24c04a3600aabe32049afac3d3930cad9281afc7fbaeb1738568",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-energetico",
+    "original": "retrato-energetico.webp",
+    "kind": "image",
+    "sourceFile": "exec-b3753442-74fb-4ec6-85c2-fdecf2653c3b.png",
+    "sourceSha256": "e3514a307531676d1f58ea39db8bf1813b7976dad4733ba314bfcc567ac2d419",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      0,
+      384,
+      512
+    ],
+    "masterSize": [
+      384,
+      512
+    ]
+  },
+  {
+    "id": "retrato-fechadura-armario",
+    "original": "retrato-fechadura-armario.webp",
+    "kind": "image",
+    "sourceFile": "exec-73e680d3-c04f-4687-a0c2-69196ce44526.png",
+    "sourceSha256": "c199bec262486bb9569f416153052840ca9374fe4b2311b2b716b8e4669e7fb9",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-fechadura",
+    "original": "retrato-fechadura.webp",
+    "kind": "image",
+    "sourceFile": "exec-7f522372-5d48-46b5-9a9a-8acaaf32083a.png",
+    "sourceSha256": "e6390747b327fd28f4ca26b77736cd9a71c8057a3c1d4ab008555db85f790985",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      512,
+      0,
+      1024,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-ferramenta-especializada",
+    "original": "retrato-ferramenta-especializada.webp",
+    "kind": "image",
+    "sourceFile": "exec-69fa5498-b77f-4e68-8900-ab35a0bf437e.png",
+    "sourceSha256": "fb2668eaf2ae9953b7d9054ce91af3df0dc2d17fd54535123249bb3e377a2365",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-fotografia",
+    "original": "retrato-fotografia.webp",
+    "kind": "image",
+    "sourceFile": "exec-60a06b44-4d3f-46ee-a594-970ae00c2036.png",
+    "sourceSha256": "25cb191ac6d680828c62dea24e76cef91109be8ddd06147a4cbccc9ee60b8159",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-gazua",
+    "original": "retrato-gazua.webp",
+    "kind": "image",
+    "sourceFile": "exec-7f522372-5d48-46b5-9a9a-8acaaf32083a.png",
+    "sourceSha256": "e6390747b327fd28f4ca26b77736cd9a71c8057a3c1d4ab008555db85f790985",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      0,
+      512,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-grampo",
+    "original": "retrato-grampo.webp",
+    "kind": "image",
+    "sourceFile": "exec-dfade82b-bcbc-4715-b9aa-af148721aa54.png",
+    "sourceSha256": "3d3bf3d9fcb090d75ae823d51bd54c4aeea3e76c6f6cfdf8b49a06f08a3967e0",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-incendiario",
+    "original": "retrato-incendiario.webp",
+    "kind": "image",
+    "sourceKind": "restored",
+    "sourceFile": "exec-c32b0b9b-ba26-4c78-ac3e-6150cb0db51e.png",
+    "sourceSha256": "1ccd9a98598c78fb89d52e80a230055492ea7e3452422a40bf315f62f4cfb19d",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompt": "Use case: identity-preserve restoration. Restore this exact game asset retrato-incendiario at higher resolution on a genuinely transparent canvas, target 1024 pixels on the long edge and the SAME aspect ratio. Preserve exact silhouette, proportions, orientation, colors, object count, screen count and layouts, controls, shading and painting style. For flat illustrated icons retain the simple flat shapes with crisp smooth edges, do not turn them into a detailed realistic object. For the security terminal preserve all six monitor screens and the existing control panel. No redesign, new objects, extra text, grid or background. Keep the full object and shadows within the canvas with transparency around it. Improve contour clarity and fine detail faithfully without altering the design."
+  },
+  {
+    "id": "retrato-kit-arrombamento",
+    "original": "retrato-kit-arrombamento.webp",
+    "kind": "image",
+    "sourceFile": "exec-6feff6ce-e2f4-42d6-b277-b6733207d5c2.png",
+    "sourceSha256": "a699797db7c21adc331dec1b5b15f86c3c048a0f3c68a254a740a3bf1defdf8c",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-kit-pericia",
+    "original": "retrato-kit-pericia.webp",
+    "kind": "image",
+    "sourceFile": "exec-810578c3-373f-4f5d-ae58-3a5c93ef1830.png",
+    "sourceSha256": "a792c950e3b9efa5e4f25898f8c7dc88ef3902ad68dfc1ebe35ef5298639bfc1",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-kit-profissional",
+    "original": "retrato-kit-profissional.webp",
+    "kind": "image",
+    "sourceFile": "exec-128d43ab-0506-449a-a8b9-e063b8d264c2.png",
+    "sourceSha256": "8577a1df6e5a2481f45370b918a4610e94f3ce28e3ee26b67faf98049f1c2d65",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-lagosta",
+    "original": "retrato-lagosta.webp",
+    "kind": "image",
+    "sourceFile": "exec-b3753442-74fb-4ec6-85c2-fdecf2653c3b.png",
+    "sourceSha256": "e3514a307531676d1f58ea39db8bf1813b7976dad4733ba314bfcc567ac2d419",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      1024,
+      0,
+      1536,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-leite-condensado",
+    "original": "retrato-leite-condensado.webp",
+    "kind": "image",
+    "sourceFile": "exec-55b107c3-5e59-4406-8865-7c139ffd60f1.png",
+    "sourceSha256": "312e066875a733d81176955a10430fb47e25ff73d7b34b2707b171fc93f24c9e",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      1024,
+      0,
+      1536,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-maco",
+    "original": "retrato-maco.webp",
+    "kind": "image",
+    "sourceFile": "exec-1facc67e-d41d-4c1a-a77c-2d7af0e81670.png",
+    "sourceSha256": "5241336b1620a0c3cfc04824c0beff010af5db71ff0c9d619e0843cf01645025",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-maleta",
+    "original": "retrato-maleta.webp",
+    "kind": "image",
+    "sourceFile": "exec-38aa0fdd-43fe-4c35-a54e-baedbf3c0488.png",
+    "sourceSha256": "2968757464910a7e40a160ecc92b90397b33737d19f760dbd5dca7f032b851b4",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-megafone",
+    "original": "retrato-megafone.webp",
+    "kind": "image",
+    "sourceFile": "exec-5cc8c815-96b3-46cb-b0c0-4c7f28e0ffc4.png",
+    "sourceSha256": "da316307090a7077254ffe23ca023a55fd2d4f6e01b7e2c1a05e32ab7f7c0046",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-modulador",
+    "original": "retrato-modulador.webp",
+    "kind": "image",
+    "sourceFile": "exec-0546aaa2-72be-404e-b078-30cb08ac6bc0.png",
+    "sourceSha256": "f769f664c910407fdb7e33db4840675d615a88bbf97b903979354494d763dfb4",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      627,
+      0,
+      1254,
+      627
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "retrato-nestor-cervero",
+    "original": "retrato-nestor-cervero.webp",
+    "kind": "image",
+    "sourceFile": "exec-987bc6f8-00bd-41a1-86ea-37c055d89895.png",
+    "sourceSha256": "9e2ea6cd42e9a8a17708bc2d13480b223c2a53760adc08260d1ec16e1106d81e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      627,
+      627,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "retrato-pao-mortadela",
+    "original": "retrato-pao-mortadela.webp",
+    "kind": "image",
+    "sourceFile": "exec-b3753442-74fb-4ec6-85c2-fdecf2653c3b.png",
+    "sourceSha256": "e3514a307531676d1f58ea39db8bf1813b7976dad4733ba314bfcc567ac2d419",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      512,
+      0,
+      1024,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-picanha",
+    "original": "retrato-picanha.webp",
+    "kind": "image",
+    "sourceFile": "exec-b3753442-74fb-4ec6-85c2-fdecf2653c3b.png",
+    "sourceSha256": "e3514a307531676d1f58ea39db8bf1813b7976dad4733ba314bfcc567ac2d419",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      512,
+      512,
+      1024
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-pinga",
+    "original": "retrato-pinga.webp",
+    "kind": "image",
+    "sourceFile": "exec-30550f5a-8335-4177-94ec-27ea2864a8c2.png",
+    "sourceSha256": "14f016e10977e37f20a002d76441cd38c38bf7f929b4bbccfa344990b5b6dca7",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-pizza",
+    "original": "retrato-pizza.webp",
+    "kind": "image",
+    "sourceFile": "exec-55b107c3-5e59-4406-8865-7c139ffd60f1.png",
+    "sourceSha256": "312e066875a733d81176955a10430fb47e25ff73d7b34b2707b171fc93f24c9e",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      0,
+      512,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-placa-vip",
+    "original": "retrato-placa-vip.webp",
+    "kind": "image",
+    "sourceFile": "exec-147f3b12-0d13-4530-a1bc-e5ded078e0f0.png",
+    "sourceSha256": "ca96c1cff4b11a346f1cb29c17517e1fb0847eee5edbcdacd403a52cdc9a20c9",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-poltrona",
+    "original": "retrato-poltrona.webp",
+    "kind": "image",
+    "sourceFile": "exec-7f522372-5d48-46b5-9a9a-8acaaf32083a.png",
+    "sourceSha256": "e6390747b327fd28f4ca26b77736cd9a71c8057a3c1d4ab008555db85f790985",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      512,
+      512,
+      1024,
+      1024
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-porrete",
+    "original": "retrato-porrete.webp",
+    "kind": "image",
+    "sourceFile": "exec-8609ac5d-5c88-4832-a161-72c6863f76fa.png",
+    "sourceSha256": "17f564964480f75318e499142c1bbbff3a0a6a5d9867242b055f933ec753cec6",
+    "nativeSize": [
+      1312,
+      1199
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1312,
+      1199
+    ],
+    "masterSize": [
+      1312,
+      1199
+    ]
+  },
+  {
+    "id": "retrato-primeiros-socorros",
+    "original": "retrato-primeiros-socorros.webp",
+    "kind": "image",
+    "sourceFile": "exec-fe7dff1a-f73c-4947-bbf5-9d8d7034019b.png",
+    "sourceSha256": "9ea78dd87e25d58c342253e48240f911ada7cd45e3a8f9c15735209cfb4af309",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-raio-x",
+    "original": "retrato-raio-x.webp",
+    "kind": "image",
+    "sourceFile": "exec-23ef98c0-3359-4c2b-bbc9-b138c17cc68a.png",
+    "sourceSha256": "1e2c955b4854f6d8f7d35d67869913f8beee13395d41b57a7d70caec8ef467d7",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-rastreador-maletas",
+    "original": "retrato-rastreador-maletas.webp",
+    "kind": "image",
+    "sourceFile": "exec-c7997e4a-be22-4e80-93d2-1145661694aa.png",
+    "sourceSha256": "4d6b5b88cf57aa36d4a331ade2e097a47c517ad5761d32471c268e360e77cb3e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-roberto-justus",
+    "original": "retrato-roberto-justus.webp",
+    "kind": "image",
+    "sourceFile": "exec-a98cfe16-73bc-4a5b-9659-77177d21c1c9.png",
+    "sourceSha256": "179a60062257c7cc110bf01727e0b9e458ef3994a6deb3d67981476df2f321c4",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-seguro-antiarrombamento",
+    "original": "retrato-seguro-antiarrombamento.webp",
+    "kind": "image",
+    "sourceFile": "exec-a04d6d70-375f-4f4b-940c-b9f2afe7fc72.png",
+    "sourceSha256": "69d5bc9e737f6a27194b87a104ac32177fe7a9b56b9ec474605ca07645f047f9",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "retrato-tapete",
+    "original": "retrato-tapete.webp",
+    "kind": "image",
+    "sourceFile": "exec-7f522372-5d48-46b5-9a9a-8acaaf32083a.png",
+    "sourceSha256": "e6390747b327fd28f4ca26b77736cd9a71c8057a3c1d4ab008555db85f790985",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      512,
+      512,
+      1024
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-tenis",
+    "original": "retrato-tenis.webp",
+    "kind": "image",
+    "sourceFile": "exec-0f161628-ee43-4441-a1f6-bb73d10f7081.png",
+    "sourceSha256": "71b59e136a077adcb8d6982d86439e00da4358d89baebb578acee74ffab704a2",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1536,
+      1024
+    ],
+    "masterSize": [
+      1536,
+      1024
+    ]
+  },
+  {
+    "id": "retrato-tv",
+    "original": "retrato-tv.webp",
+    "kind": "image",
+    "sourceFile": "exec-7f522372-5d48-46b5-9a9a-8acaaf32083a.png",
+    "sourceSha256": "e6390747b327fd28f4ca26b77736cd9a71c8057a3c1d4ab008555db85f790985",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "sourceBox": [
+      1024,
+      0,
+      1536,
+      512
+    ],
+    "masterSize": [
+      512,
+      512
+    ]
+  },
+  {
+    "id": "retrato-visao-noturna",
+    "original": "retrato-visao-noturna.webp",
+    "kind": "image",
+    "sourceFile": "exec-76645863-989c-4f34-934a-86b0142a02be.png",
+    "sourceSha256": "aa515fbef54e1904ce347ee04f311e5ec18b4c381aa96eb8daca1560c6b403c7",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "roberto-justus",
+    "original": "roberto-justus.webp",
+    "kind": "image",
+    "sourceFile": "exec-a8c4cfea-d4ba-48d2-ad1d-a7e16b368a3b.png",
+    "sourceSha256": "15e8353ab54afdd92d8c8d09a23d4416d24e20a0165b5c8fcf47895bf1cd1e02",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "silvio-santos",
+    "original": "silvio-santos.webp",
+    "kind": "image",
+    "sourceFile": "exec-123c50d3-f523-4b25-b3c4-73e09f1fe2a9.png",
+    "sourceSha256": "d9b9db918d30679735749f905c043c38305857253c61279bd7f566bf6d4f6cf0",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "terminal-seguranca",
+    "original": "terminal-seguranca.webp",
+    "kind": "image",
+    "sourceKind": "restored",
+    "sourceFile": "exec-6d16a404-4c86-440b-a9f1-7165d3e01ffa.png",
+    "sourceSha256": "2efc53d5b2d96defe223a7b2d0babdea023bcbe005be92d118e10c9513f9b9d6",
+    "nativeSize": [
+      1443,
+      1090
+    ],
+    "masterSize": [
+      1443,
+      1090
+    ],
+    "prompt": "Use case: identity-preserve restoration. Restore this exact game asset terminal-seguranca at higher resolution on a genuinely transparent canvas, target 1024 pixels on the long edge and the SAME aspect ratio. Preserve exact silhouette, proportions, orientation, colors, object count, screen count and layouts, controls, shading and painting style. For flat illustrated icons retain the simple flat shapes with crisp smooth edges, do not turn them into a detailed realistic object. For the security terminal preserve all six monitor screens and the existing control panel. No redesign, new objects, extra text, grid or background. Keep the full object and shadows within the canvas with transparency around it. Improve contour clarity and fine detail faithfully without altering the design."
+  },
+  {
+    "id": "office",
+    "original": "office-hd.png",
+    "kind": "atlas",
+    "grid": [
+      3,
+      2
+    ],
+    "frameSize": [
+      192,
+      112
+    ],
+    "sourceFile": "exec-aa763086-a36a-44c4-8abe-d1c4504f2a4e.png",
+    "sourceSha256": "723ecb9cf3d54fb8424625c93fafa6685a2f807e949997cf0c615ee49973d800",
+    "nativeSize": [
+      1536,
+      1024
+    ],
+    "masterSize": [
+      1536,
+      1024
+    ]
+  },
+  {
+    "id": "cast-portrait-0",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 0,
+    "sourceFile": "exec-517adaad-90ab-453b-8937-931fb2895654.png",
+    "sourceSha256": "db1a2cd34df2a63672c269005f3e92e8283d0a03a4d7dc7c4eda61ef4761e9d1",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      627,
+      627
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "cast-portrait-1",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 1,
+    "sourceFile": "exec-517adaad-90ab-453b-8937-931fb2895654.png",
+    "sourceSha256": "db1a2cd34df2a63672c269005f3e92e8283d0a03a4d7dc7c4eda61ef4761e9d1",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      627,
+      0,
+      1254,
+      627
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "cast-portrait-2",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 2,
+    "sourceFile": "exec-094eafab-ed16-4a7e-a4c5-8a72216d6a59.png",
+    "sourceSha256": "827c9746d728373418ec8f51c0fe29d20ec9b8da4b89fa1c11fa1e7e60420321",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "cast-portrait-3",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 3,
+    "sourceFile": "exec-517adaad-90ab-453b-8937-931fb2895654.png",
+    "sourceSha256": "db1a2cd34df2a63672c269005f3e92e8283d0a03a4d7dc7c4eda61ef4761e9d1",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      627,
+      627,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "cast-portrait-4",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 4,
+    "sourceFile": "exec-2e61898c-d62d-4335-a21b-5e0b61f8b4fd.png",
+    "sourceSha256": "c3559b7522e1e7df2fd17b6f7f89dd80271e1d38a07159d1b139d259a01726cd",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "cast-portrait-5",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 5,
+    "sourceFile": "exec-639494fa-037b-4b86-9b18-8409f818ed0f.png",
+    "sourceSha256": "7daab6f21a66713e9cdded427cc9f1cb5d97152007bd9d4cf5a878189a898a0f",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "cast-portrait-6",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 6,
+    "sourceFile": "exec-987bc6f8-00bd-41a1-86ea-37c055d89895.png",
+    "sourceSha256": "9e2ea6cd42e9a8a17708bc2d13480b223c2a53760adc08260d1ec16e1106d81e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      627,
+      627,
+      1254
+    ],
+    "masterSize": [
+      627,
+      627
+    ]
+  },
+  {
+    "id": "cast-portrait-7",
+    "original": "retratos-elenco.webp",
+    "kind": "portrait",
+    "frame": 7,
+    "sourceFile": "exec-707aab3a-7eac-44c6-9f75-6fd47e54ad9c.png",
+    "sourceSha256": "7b620765113b3dc784b0e21cf7aa534c9691fa81b8254ae918a1717ead2e6e62",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      0,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  },
+  {
+    "id": "project-proj-n16",
+    "original": "projetos/proj-n16.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      418,
+      418,
+      836,
+      836
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-wifi-na-praca",
+    "original": "projetos/wifi-na-praca.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      418,
+      0,
+      836,
+      418
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n17",
+    "original": "projetos/proj-n17.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      836,
+      418,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-teto-do-cafezinho",
+    "original": "projetos/teto-do-cafezinho.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      840,
+      4,
+      1250,
+      414
+    ],
+    "masterSize": [
+      410,
+      410
+    ]
+  },
+  {
+    "id": "project-proj-n10",
+    "original": "projetos/proj-n10.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      418,
+      418,
+      836,
+      836
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n11",
+    "original": "projetos/proj-n11.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      418,
+      836,
+      836,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n07",
+    "original": "projetos/proj-n07.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      422,
+      4,
+      832,
+      414
+    ],
+    "masterSize": [
+      410,
+      410
+    ]
+  },
+  {
+    "id": "project-proj-n08",
+    "original": "projetos/proj-n08.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      0,
+      836,
+      418,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n12",
+    "original": "projetos/proj-n12.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      836,
+      0,
+      1254,
+      418
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n04",
+    "original": "projetos/proj-n04.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      4,
+      422,
+      414,
+      832
+    ],
+    "masterSize": [
+      410,
+      410
+    ]
+  },
+  {
+    "id": "project-proj-n05",
+    "original": "projetos/proj-n05.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      836,
+      836,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n13",
+    "original": "projetos/proj-n13.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      836,
+      418,
+      1254,
+      836
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n09",
+    "original": "projetos/proj-n09.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      836,
+      418,
+      1254,
+      836
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n02",
+    "original": "projetos/proj-n02.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      836,
+      836,
+      1254,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-auxilio-churrasco",
+    "original": "projetos/auxilio-churrasco.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      4,
+      4,
+      414,
+      414
+    ],
+    "masterSize": [
+      410,
+      410
+    ]
+  },
+  {
+    "id": "project-proj-n03",
+    "original": "projetos/proj-n03.webp",
+    "kind": "image",
+    "sourceFile": "exec-6688e247-0bba-4301-b5a7-80998a75c5c9.png",
+    "sourceSha256": "a05faa070b32a22d15c6cff49407701db9aeb33d793106bd8605ce3b472f24fa",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      418,
+      836,
+      836,
+      1254
+    ],
+    "masterSize": [
+      418,
+      418
+    ]
+  },
+  {
+    "id": "project-proj-n15",
+    "original": "projetos/proj-n15.webp",
+    "kind": "image",
+    "sourceFile": "exec-20d79703-131f-4e02-9a70-f71e640d11eb.png",
+    "sourceSha256": "605a2158b5899015a27af1ff5f135cbe49519ba9be3afd3f503800813acc0069",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "sourceBox": [
+      4,
+      422,
+      414,
+      832
+    ],
+    "masterSize": [
+      410,
+      410
+    ]
+  },
+  {
+    "id": "mina-terrestre",
+    "original": "mina-terrestre.webp",
+    "kind": "image",
+    "sourceFile": "exec-cafc97f8-d291-4905-840f-0a3fb23f7ae5.png",
+    "sourceSha256": "eafb7142bbce0637cbf4ebe805a4f17ce508f07685091030cae7fa210a65f92e",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ]
+  }
+]

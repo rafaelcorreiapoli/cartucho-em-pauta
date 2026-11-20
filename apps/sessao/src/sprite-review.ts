@@ -1,4 +1,4 @@
-import {spriteCatalog, spriteFrame, spriteSubjectResolution, type SpriteClip} from './sprite-catalog';
+import {spriteCatalog, spriteFrame, spriteSubjectResolution, spriteSubjectHasResolutions, type SpriteClip} from './sprite-catalog';
 import {spriteFrameOffsetX} from './sprite-alignment';
 import {spriteImage, paintFrame, frameEdges} from './sprite-review-renderer';
 
@@ -41,7 +41,7 @@ try {
     }
   }
 } catch { /* A blocked or malformed local store must not block sprite inspection. */ }
-const reviewKey = () => `${subject.id}/${clip.id}${subject.group !== 'Jogadores' || resolution.value === 'original' ? '' : `/${resolution.value}`}`;
+const reviewKey = () => `${subject.id}/${clip.id}${!spriteSubjectHasResolutions(subject) || resolution.value === 'original' ? '' : `/${resolution.value}`}`;
 function options(select: HTMLSelectElement, items: {value: string; text: string}[]) {
   select.replaceChildren(...items.map(({value, text}) => new Option(text, value)));
 }
@@ -50,7 +50,7 @@ function shareLocation() {
   history.replaceState(null, '', `#${values}`);
 }
 function progress() {
-  const reviewed = subject.clips.filter(clip => reviews[`${subject.id}/${clip.id}${subject.group !== 'Jogadores' || resolution.value === 'original' ? '' : `/${resolution.value}`}`]?.status === 'approved').length;
+  const reviewed = subject.clips.filter(clip => reviews[`${subject.id}/${clip.id}${!spriteSubjectHasResolutions(subject) || resolution.value === 'original' ? '' : `/${resolution.value}`}`]?.status === 'approved').length;
   element('progress').textContent = `${reviewed} de ${subject.clips.length} poses aprovadas`;
 }
 function subjectList() {
@@ -118,7 +118,7 @@ async function showSubject() {
   const poseId = clip.id;
   subject = spriteSubjectResolution(subject, resolution.value);
   clip = subject.clips.find(entry => entry.id === poseId) ?? subject.clips[0];
-  resolution.disabled = subject.group !== 'Jogadores';
+  resolution.disabled = !spriteSubjectHasResolutions(subject);
   const current = ++generation;
   setError('');
   reference = undefined;

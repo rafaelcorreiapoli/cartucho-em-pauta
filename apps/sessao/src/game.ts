@@ -1,3 +1,4 @@
+import {updateWorldArt} from './adaptive-world-art';
 import {createMineArt} from './land-mine-art';
 import {createFpsDebug} from './fps-debug';
 import {sprintDust} from './sprint-dust';
@@ -430,6 +431,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
     update(time: number, delta: number) {
       if (this.assetsFailed || inLobby) return;
+      updateWorldArt(this, this.cameras.main.zoom);
       if (!movementPaused() && local.state && time>=nextStep) {
         nextStep = time-nextStep>STEP_MS ? time+STEP_MS : nextStep+STEP_MS;
         const sprint = shiftKeys.size ? true : undefined;

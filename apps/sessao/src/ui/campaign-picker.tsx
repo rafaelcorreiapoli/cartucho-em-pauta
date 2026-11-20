@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {createRoot} from 'react-dom/client';
 import {flushSync} from 'react-dom';
 import {advertisements,type Advertisement} from '../elections';
@@ -26,7 +27,7 @@ function CampaignPicker({wallet,buy,close}:{wallet:number;buy:(format:Advertisem
     {options.map(({format,offer,shortcut,affordable,activate})=><button key={format} type="button"
       className="hud-button hud-button--secondary" disabled={!affordable} aria-keyshortcuts={affordable ? shortcut : undefined}
       onClick={activate}>
-      <img className="item-portrait" src={`${import.meta.env.BASE_URL}assets/campaign-${format}.webp`} width="48" height="48" alt=""/>
+      <img className="item-portrait" {...assetImageSources(`campaign-${format}.webp`)} width="48" height="48" alt=""/>
       <span className="campaign-option-info">
         <strong>{offer.name}</strong>
         <span className="campaign-option-details">{money(offer.cost)}

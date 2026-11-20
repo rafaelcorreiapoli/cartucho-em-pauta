@@ -3,7 +3,7 @@ export const federalPatrolRules = {
 } as const;
 
 export const federalPatrolSheets = ['walk','door-breach'].map(action=>({
-  key:`${federalPatrolRules.skin}-${action}`,path:`assets/${federalPatrolRules.skin}-${action}.png`,
+  key:`${federalPatrolRules.skin}-${action}`,path:action==='walk' ? `assets/${federalPatrolRules.skin}-walk.png` : `assets/world-hd/${federalPatrolRules.skin}-${action}-128.webp`,
 }));
 
 export function federalBreachArt(direction:number,time:number,reducedMotion:boolean) {

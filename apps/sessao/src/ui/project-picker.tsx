@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {formatImpact,impactTone} from './impact-value';
 import {DialogHeader} from './dialog-header';
 import {useDialogKeys} from './use-dialog-keys';
@@ -104,7 +105,7 @@ function ProjectPicker({title,current,unavailable,confirm,stabilityEnabled=true}
           const position = choices.indexOf(index);
           const shortcut = position>=0 && position<9 ? String(position+1) : undefined;
           return <label key={project.id} className="project-picker-option">
-            <img className="project-picker-art" src={import.meta.env.BASE_URL+'assets/'+project.icon} alt=""/>
+            <img className="project-picker-art" {...assetImageSources(project.icon, '96px')} alt=""/>
             <span className="project-picker-copy">
               <strong id={`project-picker-name-${index}`}>{project.name}{unavailable.has(index) && ' · Já votado'}</strong>
               <span id={`project-picker-impact-${index}`}>Se aprovado <ImpactSummary stabilityEnabled={stabilityEnabled} impact={project.yes} budget={approvalBudget(project)}/></span>
@@ -119,7 +120,7 @@ function ProjectPicker({title,current,unavailable,confirm,stabilityEnabled=true}
       <section className="project-picker-details" aria-label="Detalhes do projeto">
         <div ref={detail} className="project-picker-detail-content">
           {bill ? <>
-            <img className="project-picker-icon" src={import.meta.env.BASE_URL+'assets/'+bill.icon} alt=""/>
+            <img className="project-picker-icon" {...assetImageSources(bill.icon, '96px')} alt=""/>
             <h3>{bill.name}</h3>
             <p>{bill.description}</p>
             {effect && <div><h4>Efeito extra se aprovado</h4><p>{effect}</p></div>}

@@ -19,5 +19,5 @@ export const npcRules = {
 export type VisitorAction = {kind:'rob';target:string} | {kind:'cancel-robbery'};
 
 export const visitorSheets = visitorRoster.flatMap(({id})=>
-  (['walk','hit','fall'] as const).map(action=>({key:`${id}-${action}`,path:`assets/${id}-${action}.${action==='walk' ? 'png' : 'webp'}`})),
+  (['walk','hit','fall'] as const).map(action=>({key:`${id}-${action}`,path:`assets/world-hd/${id}-${action}-128.webp`})),
 );

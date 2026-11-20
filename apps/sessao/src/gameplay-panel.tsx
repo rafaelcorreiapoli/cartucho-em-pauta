@@ -1,3 +1,4 @@
+import {assetImageSources} from './world-assets';
 import {HudHelp} from './ui/hud-help';
 import type {ComplaintProof} from './complaints';
 import {createNearbyActions,type NearbyItem} from './ui/nearby-items';
@@ -151,7 +152,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
     let shortcut = 0;
     return <article className="object-card" key={item.id}>
       <div className={isBag ? "bag-item-info" : "object-card-content"}>
-        <h3><img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
+        <h3><img className="item-portrait" {...assetImageSources(definition.portrait)} alt="" draggable={false}/>{itemName(item)}{doc?.project!==undefined && <small> #{item.id}</small>}</h3>
         {bagOpen && chooseQuantity && <>
           <span className="bag-item-type">{isGear(item.kind) ? 'Equipamento' : consumableAction(item) ? 'Consumível' : doc ? 'Documento' : 'Objeto'}</span>
           <p className="bag-description">{doc?.description ?? definition.description}</p>
@@ -354,7 +355,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
               return entry ? <button key={entry.id} type="button" className="item-tile" title={itemName(entry)}
                 aria-label={itemName(entry)} aria-pressed={selection?.id===entry.id}
                 disabled={disabled} onClick={()=>chooseItem(entry)}>
-                <img className="item-portrait" alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
+                <img className="item-portrait" alt="" {...assetImageSources(objects[entry.kind].portrait)}/>
                 {itemQuantity(entry)>1 && <span className="slot-count">×{itemQuantity(entry)}</span>}
               </button> : <span className="item-tile item-tile-empty" aria-hidden="true" key={`empty-${index}`}>+</span>;
             })}
@@ -367,7 +368,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                 if (assigningSlot===undefined) entries.push({name:label,activate:()=>chooseItem(entry)});
                 return <button key={entry.id} type="button" className="item-tile" title={label} aria-label={label}
                   disabled={assigningSlot!==undefined} aria-pressed={selection?.id===entry.id} onClick={()=>chooseItem(entry)}>
-                  <img alt="" src={import.meta.env.BASE_URL+'assets/'+objects[entry.kind].portrait}/>
+                  <img alt="" {...assetImageSources(objects[entry.kind].portrait)}/>
                 </button>;
               })}
             </div>
@@ -387,7 +388,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
                 disabled={!canPin} aria-pressed={!!item && item.id===id}
                 aria-label={label} aria-keyshortcuts={canPin ? `Shift+${index+1}` : undefined} onClick={pin}>
                 <kbd className="slot-key" aria-hidden="true">⇧ {index+1}</kbd>
-                {pinned ? <img alt={itemName(pinned)} src={import.meta.env.BASE_URL+'assets/'+objects[pinned.kind].portrait}/> : <span aria-hidden="true">+</span>}
+                {pinned ? <img alt={itemName(pinned)} {...assetImageSources(objects[pinned.kind].portrait)}/> : <span aria-hidden="true">+</span>}
               </button>;
             })}
           </div>
@@ -541,7 +542,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         aria-label={label} help={`${label} (Shift+${shortcut})`} aria-haspopup={use ? undefined : "dialog"}
         aria-expanded={selection?.source==='inventory' && selection.id===item.id} aria-keyshortcuts={`Shift+${shortcut}`}
         onClick={()=>activateHotbar(index)}>
-        <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[item.kind].portrait} alt="" draggable={false}/>
+        <img className="item-portrait" {...assetImageSources(objects[item.kind].portrait)} alt="" draggable={false}/>
         {itemQuantity(item)>1 && <span className="slot-count">{itemQuantity(item)}</span>}{badge}
       </HudHelp>;
     }));

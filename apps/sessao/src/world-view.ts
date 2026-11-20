@@ -1,3 +1,4 @@
+import {updateWorldArt} from './adaptive-world-art';
 import type Phaser from 'phaser';
 import { PlayerHistory } from './network-movement';
 import { drawMap, updateSafeArt } from './draw-map';
@@ -15,7 +16,7 @@ import {
 import { installationSites } from './installations';
 import { decorPoint, depositingAtSafe, privateOffices, officeDoorPoint } from './private-offices';
 import { mapNpcs, npcEnabled } from './npcs';
-import type { PhotoScene } from './photography';
+import { photoBounds, type PhotoScene } from './photography';
 import type { Player } from './map';
 
 // The map's visual rules are shared; callers control only framing and captured/live time.
@@ -132,5 +133,7 @@ export class WorldView {
         { frozen, pixelScale },
       );
     }
+    const [x, y, width, height] = photoBounds(frame);
+    updateWorldArt(scene, pixelScale, {x, y, width, height});
   }
 }

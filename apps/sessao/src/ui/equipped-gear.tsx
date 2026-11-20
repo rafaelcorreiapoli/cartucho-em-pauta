@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {createRoot} from 'react-dom/client';
 import type {ShortcutEntry} from '../action-shortcuts';
 import {Hand,Shirt,Footprints,Cpu} from 'lucide';
@@ -66,7 +67,7 @@ export function equippedGearState(state?:GameplayView) {
 }
 
 function GearPortrait({kind}:{kind:ObjectKind}) {
-  return <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[kind].portrait} alt="" draggable={false}/>;
+  return <img className="item-portrait" {...assetImageSources(objects[kind].portrait)} alt="" draggable={false}/>;
 }
 
 type GearState = NonNullable<ReturnType<typeof equippedGearState>>;
