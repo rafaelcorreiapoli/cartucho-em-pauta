@@ -1237,14 +1237,14 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(economy.spend(player.id,view().wallet)).toBe(true);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
-  economy.earn(player.id,1.9);
+  economy.earn(player.id,1.4);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
   economy.earn(player.id,.1);
   draw();
   expect(render()).toContain('Consuma dois alimentos diferentes');
   expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.target).toBe(agendaCounts.bandejaGourmet);
-  economy.earn(player.id,2);
+  economy.earn(player.id,2.5);
   game.act(player,{kind:'open-shop',target:'snackVendor'},world);
   game.act(player,{kind:'shop-buy',target:'chocolates',token:game.view(player,world).dialogue?.token},world);
   game.act(player,{kind:'shop-buy',target:'chocolates',token:game.view(player,world).dialogue?.token},world);
