@@ -18,6 +18,13 @@ caminhada; `sergio-moro-safe-breach.webp` para a ação de arrombamento. A folha
 de caminhada gerada foi usada como referência de identidade no arrombamento.
 As saídas foram reduzidas com `sips`, preservando o canal alfa.
 
+Correção de identidade: ambas as folhas usam óculos escuros de lentes opacas
+e armação preta no estilo Wayfarer, conforme a foto fornecida pelo Rafael.
+As folhas originais foram editadas com ImageGen preservando poses e grade.
+Prompt da correção: substituir apenas os óculos transparentes pelos óculos
+escuros da foto em todos os frames frontais e laterais; preservar identidade,
+roupa, ferramenta, direções, proporções, alinhamento e transparência.
+
 ## Prompts finais
 
 Caminhada:
