@@ -30,7 +30,7 @@ async page => {
   const meter = metrics.getByRole('meter',{name:'Orçamento público',exact:true});
   await meter.waitFor();
   if ((await metrics.textContent()).toLocaleLowerCase().includes('estabilidade')) throw Error('Calote leaked stability');
-  await metrics.getByRole('timer',{name:'Tempo restante da sessão'}).waitFor();
+  await page.locator('#session-timers-mount').getByRole('timer',{name:'Tempo restante da sessão'}).waitFor();
   const server = new URL('/qa/budget',new URL(page.url()).searchParams.get('qaServer') ?? 'http://127.0.0.1:26874');
   server.searchParams.set('room',room);
   const setBudget = async (balance,age=0)=>{

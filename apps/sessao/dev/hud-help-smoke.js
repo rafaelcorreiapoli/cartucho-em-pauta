@@ -31,7 +31,7 @@ async page => {
         throw Error('Relógio eleitoral deve ficar logo à direita do título');
       }
     }
-    await page.locator('#congress-dock .congress-payroll').waitFor();
+    await page.locator('#session-timers-mount .congress-payroll').waitFor();
     await page.getByRole('button',{name:'Folha salarial',exact:true}).hover();
     await tooltip.filter({hasText:'Folha salarial: valor total'}).waitFor();
     await stability.hover();
