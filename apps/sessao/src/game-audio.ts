@@ -26,6 +26,7 @@ type MatchTrack = typeof matchTracks[number];
 type MusicTrack = Score | MatchTrack;
 const isFinalScore = (score:MusicTrack) => score==='victory' || score==='defeat';
 export type Cue = Exclude<Sample,MusicTrack | `foot${number}`>;
+const MUSIC_FADE = .7;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
 export class GameAudio {
@@ -35,8 +36,9 @@ export class GameAudio {
   private effectsGain?: GainNode;
   private score:Score = 'lobbyMusic';
   private matchTrack?:MatchTrack;
-  private music?: {score:MusicTrack;source:AudioBufferSourceNode;gain:GainNode;started:number};
-  private fading = new Set<AudioBufferSourceNode>();
+  private music?: {score:MusicTrack;source:AudioBufferSourceNode;gain:GainNode;started:number;offset:number};
+  private positions = new Map<MusicTrack,number>();
+  private fadeUntil = 0;
   private buffers = new Map<Sample,AudioBuffer>();
   private loading?:Promise<void>;
   private playing = false;
@@ -98,7 +100,10 @@ export class GameAudio {
 
   setScore(score:Score) {
     if (this.score===score) return;
-    if (score==='lobbyMusic' || isFinalScore(score)) this.matchTrack = undefined;
+    if (score==='lobbyMusic' || isFinalScore(score)) {
+      this.matchTrack = undefined;
+      this.positions.clear();
+    }
     else this.matchTrack ??= matchTracks[Math.floor(Math.random()*matchTracks.length)];
     this.score = score;
     this.startMusic();
@@ -117,10 +122,10 @@ export class GameAudio {
     this.federalEffect?.stop();
     this.federalEffect = undefined;
     this.lastCashCue = -Infinity;
-    this.stopMusic(0);
-    for (const source of this.fading) source.stop();
-    this.score = 'lobbyMusic';
     this.matchTrack = undefined;
+    this.positions.clear();
+    this.stopMusic(MUSIC_FADE);
+    this.score = 'lobbyMusic';
     this.caloteDanger = 0;
     this.setSpeaking(false);
   }
@@ -130,11 +135,18 @@ export class GameAudio {
     if (!track || !this.context) return;
     this.music = undefined;
     const now = this.context.currentTime;
+    // A replacement may still be waiting for the previous fade-out to finish.
+    const audible = now>track.started;
+    const end = audible ? now+fade : now;
+    if (this.matchTrack && (track.score===this.matchTrack || track.score==='hearingMusic')) {
+      const duration = track.source.buffer!.duration;
+      this.positions.set(track.score,(track.offset+Math.max(0,end-track.started))%duration);
+    }
     track.gain.gain.cancelScheduledValues(now);
-    track.gain.gain.setValueAtTime(Math.min(1,(now-track.started)/.7),now);
-    track.gain.gain.linearRampToValueAtTime(0,now+fade);
-    this.fading.add(track.source);
-    track.source.stop(now+fade);
+    track.gain.gain.setValueAtTime(Math.max(0,Math.min(1,(now-track.started)/MUSIC_FADE)),now);
+    track.gain.gain.linearRampToValueAtTime(0,end);
+    track.source.stop(end);
+    this.fadeUntil = Math.max(this.fadeUntil,end);
   }
 
   private startMusic() {
@@ -142,21 +154,24 @@ export class GameAudio {
       this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'covertAffair' : this.score;
     // Wait for the selected track instead of briefly playing a different one while loading.
     const score = requested;
-    if (!this.buffers.has(requested) && this.music?.score!==requested) this.stopMusic(.7);
+    if (!this.buffers.has(requested) && this.music?.score!==requested) this.stopMusic(MUSIC_FADE);
     const buffer = this.buffers.get(score);
     if (!this.playing || this.music?.score===score || !buffer || !this.context || !this.musicGain) return;
     const now = this.context.currentTime;
-    this.stopMusic(.7);
+    this.stopMusic(MUSIC_FADE);
+    const started = Math.max(now,this.fadeUntil);
+    const offset = this.positions.get(score) ?? 0;
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
     source.buffer = buffer;
     source.loop = !isFinalScore(score);
     gain.gain.setValueAtTime(0,now);
-    gain.gain.linearRampToValueAtTime(1,now+.7);
+    gain.gain.setValueAtTime(0,started);
+    gain.gain.linearRampToValueAtTime(1,started+MUSIC_FADE);
     source.connect(gain).connect(this.musicGain);
-    source.onended = () => { this.fading.delete(source); source.disconnect(); gain.disconnect(); };
-    this.music = {score,source,gain,started:now};
-    source.start(now);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+    this.music = {score,source,gain,started,offset};
+    source.start(started,offset);
   }
 
   cue(name:Cue) {

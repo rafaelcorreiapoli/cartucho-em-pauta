@@ -13,7 +13,7 @@ Para testar sabotagens, rode o servidor com `SESSAO_LOCAL_SOLO=1 bun run server`
 
 Para depurar quedas de desempenho, clique em **FPS** no topo do mapa ou aperte **F8**. O botão passa a mostrar o FPS medido pelo Phaser, atualizado a cada meio segundo. Clique ou aperte F8 novamente para ocultar o valor.
 
-O lobby toca “Corredores de Brasília”. Cada partida sorteia uma trilha entre “Covert Affair” e “Spy Glass” e mantém a escolha entre as fases. As músicas especiais de votação, perigo no Calote e resultado continuam com prioridade.
+O lobby toca “Corredores de Brasília”. Cada partida sorteia uma trilha entre “Covert Affair” e “Spy Glass” e mantém a escolha entre as fases. As músicas especiais de votação, perigo no Calote e resultado continuam com prioridade. A trilha da partida retoma da posição em que parou após uma interrupção; a do Calote sempre começa do início. As transições fazem fade out e depois fade in de 0,7 segundo cada, inclusive entre lobby e partida.
 
 `bun run check` verifica os tipos, testa clientes contra um servidor Bun e gera o build web. Consulte a [arquitetura](ARCHITECTURE.md) para localizar regras, estado e pontos de extensão.
 
