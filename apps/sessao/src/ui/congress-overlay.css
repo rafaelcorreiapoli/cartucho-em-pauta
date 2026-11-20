@@ -549,7 +549,7 @@
   #stations .hud-button, #stations .context-item { transition: border-color 130ms, box-shadow 130ms; }
   #stations #nearby-items:not([hidden]) { animation: congress-app-enter 130ms ease-out; }
 }
-#stations .hud-button { min-width: 0; height: 36px; white-space: normal; }
+#stations .hud-button { min-width: 0; height: auto; min-height: 36px; white-space: normal; }
 
 #command-strip {
   grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
