@@ -35,7 +35,7 @@ function gameWithBots(random:()=>number,featuresEnabled=true,projectVotingEnable
   const events:GameplayEvent[] = [];
   const worldAt = (at:number) => {
     const world = match.gameplayWorld(players,at,()=>false);
-    return {...world,vision:(id:string)=>gameplay.vision(id,at),present:()=>true,
+    return {...world,vision:(id:string)=>gameplay.vision(players.find(player=>player.id===id),at),present:()=>true,
       publish:(event:GameplayEvent)=>{
         if (world.publish(event)) events.push(event);
       }};

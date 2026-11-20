@@ -483,13 +483,30 @@ test('transport is released on an actual socket reconnect and on plenary admissi
     const economy = Reflect.get(match,'economy');
     const account = Reflect.get(economy,'accounts').get(passenger.sessionId);
     account.progression.earn(430);
-    await wait(()=>progression()?.level===4 && progression()?.available===3);
-    const request = {attribute:'stamina',revision:0,matchId:progression()!.matchId};
+    account.progression.grantPoints(3);
+    await wait(()=>progression()?.level===4 && progression()?.available===6);
+    const request = {attribute:'mobility',revision:0,matchId:progression()!.matchId};
     passenger.send('allocate-attribute',request);
     passenger.send('allocate-attribute',request);
     await wait(()=>progression()?.revision===1);
-    expect(progression()).toMatchObject({available:2,invested:{stamina:1}});
+    expect(progression()).toMatchObject({available:5,invested:{mobility:1}});
     expect(snapshots.get(passenger.sessionId)?.staminaMax).toBe(150);
+    expect(positions.get(passenger.sessionId)?.player.movementSpeedBonus).toBe(5);
+    for (const [index,attribute] of ['burglary','concealment','vision','mobility','vision'].entries()) {
+      const revision = index+1;
+      const request = {attribute,revision,matchId:progression()!.matchId};
+      passenger.send('allocate-attribute',request);
+      passenger.send('allocate-attribute',request);
+      await wait(()=>progression()?.revision===revision+1);
+    }
+    await wait(()=>positions.get(passenger.sessionId)?.player.visionBonus===20);
+    expect(progression()).toMatchObject({available:0,invested:{burglary:1,concealment:1,mobility:2,vision:2}});
+    expect(positions.get(passenger.sessionId)?.player).toMatchObject({burglarySpeedBonus:25,cashSpeedBonus:25,
+      movementSpeedBonus:10,staminaMax:200,visionBonus:20});
+    passenger.send('allocate-attribute',{attribute:'mobility',revision:6,matchId:progression()!.matchId});
+    await Bun.sleep(120);
+    expect(progression()?.revision).toBe(6);
+    expect(positions.get(passenger.sessionId)?.player.staminaMax).toBe(200);
     expect(views.get(carrier.sessionId)?.politics?.progression).toMatchObject({level:1,xp:0});
     Object.assign(positions.get(carrier.sessionId)!.player,{x:npcs.vendor.x,y:npcs.vendor.y+11,direction:1});
     Object.assign(positions.get(passenger.sessionId)!.player,{x:240,y:250});

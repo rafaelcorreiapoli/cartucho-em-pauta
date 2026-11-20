@@ -128,19 +128,19 @@ test('equipping changes custody, binocular range and voice battery without stack
   expect(game.view(alice,world).inventory).toEqual([]);
   expect(game.view(alice,world).equipped).toEqual([binocular]);
   expect(game.view(alice,world).equipmentCooldowns).toEqual({});
-  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  expect(game.vision(alice,world.now)).toBe(VISION_RADIUS);
   game.act(alice,{kind:'use-binoculars'},world);
-  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS*1.65);
+  expect(game.vision(alice,world.now)).toBe(VISION_RADIUS*1.65);
   expect(game.view(alice,world).binocularSeconds).toBe(10);
   expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('recarga');
   world.now += 10_000;
-  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  expect(game.vision(alice,world.now)).toBe(VISION_RADIUS);
   expect(game.view(alice,world).equipmentCooldowns?.[binocular.id]).toBe(30);
   world.now += 30_000;
   expect(game.act(alice,{kind:'use-binoculars'},world)).toContain('ativo');
   expect(buyGear(alice,'binoculars')).toBe('Você já tem este equipamento.');
   game.act(alice,{kind:'unequip',item:binocular.id},world);
-  expect(game.vision(alice.id,world.now)).toBe(VISION_RADIUS);
+  expect(game.vision(alice,world.now)).toBe(VISION_RADIUS);
 
   buyGear(alice,'voiceModulator');
   const modulator = game.view(alice,world).inventory.find(item=>item.kind==='voiceModulator')!;
@@ -511,15 +511,17 @@ for (const [kind,hp,stamina] of consumableCases) {
   });
 }
 
-test('fôlego expands sprint capacity and shoes increase walking and sprinting speed',()=>{
+test('mobility expands sprint capacity and shoes increase walking and sprinting speed',()=>{
   const {alice:runner,bob,game,world,buyGear} = setup();
   runner.stamina = 90;
-  game.applyAttribute(runner,'stamina');
+  const baseSpeed = movementSpeed(runner);
+  game.applyAttribute(runner,'mobility');
   expect(runner).toMatchObject({stamina:140,staminaMax:150});
 
   const move = {player:runner,route:[],ack:0};
   const motion = {x:1,y:0};
   const walkingSpeed = movementSpeed(runner);
+  expect(walkingSpeed).toBeCloseTo(baseSpeed*1.05);
   applyInput(move,{seq:1,motion,sprint:true});
   expect(runner).toMatchObject({sprinting:true,stamina:138.75});
   const sprintingSpeed = movementSpeed(runner);
@@ -778,4 +780,50 @@ test('the catalog and gameserver agree on purchases with a full inventory',()=>{
   expect(view().inventory).toHaveLength(INVENTORY_SLOTS);
   expect(slotFor('megaphone')).toBeUndefined();
   expect(buy('megaphone')).toBe('Inventário cheio.');
+});
+
+test('mobility and vision points stack, combine with equipment and reset between matches',()=>{
+  const {alice,bob,game,world,buyGear} = setup();
+  const baseSpeed = movementSpeed(alice);
+  const bobSpeed = movementSpeed(bob);
+  for (let point=1;point<=2;point++) {
+    game.applyAttribute(alice,'mobility');
+    game.applyAttribute(alice,'vision');
+    expect(movementSpeed(alice)).toBeCloseTo(baseSpeed*(1+point*.05));
+    expect(alice.staminaMax).toBe(100+point*50);
+    expect(game.vision(alice,world.now)).toBeCloseTo(VISION_RADIUS*(1+point*.1));
+  }
+  expect(movementSpeed(bob)).toBe(bobSpeed);
+  expect(game.vision(bob,world.now)).toBe(VISION_RADIUS);
+  expect(buyGear(alice,'binoculars')).toBe('Compra guardada no inventário.');
+  const binocular = game.view(alice,world).inventory.find(item=>item.kind==='binoculars')!;
+  game.act(alice,{kind:'equip',item:binocular.id},world);
+  game.act(alice,{kind:'use-binoculars'},world);
+  expect(game.vision(alice,world.now)).toBeCloseTo(VISION_RADIUS*1.2*1.65);
+  game.applyAttribute(alice,'burglary');
+  game.applyAttribute(alice,'concealment');
+  game.reset(world.now,()=>0,[alice,bob],()=>0);
+  expect(movementSpeed(alice)).toBe(baseSpeed);
+  expect(game.vision(alice,world.now)).toBe(VISION_RADIUS);
+  expect(alice).toMatchObject({staminaMax:undefined,movementSpeedBonus:undefined,visionBonus:undefined,
+    cashSpeedBonus:undefined,burglarySpeedBonus:undefined});
+});
+
+test('vision specialization reveals farther objects without bypassing walls or power outages',()=>{
+  let outage = false;
+  const game = new Gameplay(undefined,()=>outage);
+  const observer = player('observer',100,140);
+  const target = {x:195,y:140};
+  game.reset(0,()=>0,[observer],()=>0);
+  expect(worldVisible(observer,target,game.vision(observer,0))).toBe(false);
+  game.applyAttribute(observer,'vision');
+  expect(worldVisible(observer,target,game.vision(observer,0))).toBe(false);
+  game.applyAttribute(observer,'vision');
+  expect(worldVisible(observer,target,game.vision(observer,0))).toBe(true);
+  observer.barriers = [[145,130,10,20]];
+  expect(worldVisible(observer,target,game.vision(observer,0))).toBe(false);
+  observer.barriers = undefined;
+  outage = true;
+  expect(worldVisible(observer,target,game.vision(observer,0))).toBe(false);
+  expect(game.vision(observer,0)).toBeCloseTo(VISION_RADIUS*1.2*.45);
 });

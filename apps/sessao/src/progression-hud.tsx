@@ -7,15 +7,14 @@ import type { CSSProperties } from 'react';
 import type { Player } from './map';
 import type { PlenaryView } from './plenary';
 import { missionReward, money } from './politics';
-import { attributeUpgrades, baseStamina, type Attribute, type AttributeRequest, type Progression } from './progression';
+import { attributeUpgrades, attributeEffect, type Attribute, type AttributeRequest, type Progression } from './progression';
 
 const element = <T extends HTMLElement = HTMLElement>(id:string) => document.querySelector<T>('#'+id)!;
 const pointLabel = (points:number) => points===1 ? '1 ponto' : `${points} pontos`;
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function attributePlayerView(player:Player) {
-  return {character:player.character,stamina:player.stamina===undefined ? undefined : Math.floor(player.stamina),
-    unavailable:!!(player.knockedOut || player.carrying || player.carried)};
+  return {unavailable:!!(player.knockedOut || player.carrying || player.carried)};
 }
 
 export function canSelectAttribute(view:PlenaryView|undefined, player:ReturnType<typeof attributePlayerView>|undefined) {
@@ -47,7 +46,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   const attributesRoot = createRoot(attributes);
   const celebrationRoot = createRoot(celebration);
   const keys = Object.keys(attributeUpgrades) as Attribute[];
-  let selected:Attribute|undefined;
   let attributesKey = '';
 
   let latest:Progression|undefined;
@@ -63,74 +61,48 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
   let completedCount = 0;
 
   const canSpendPoint = () => !!latest?.available && requested!==latest.revision && canSelectAttribute(view,player);
-  function select(attribute:Attribute) {
-    if (!attributes.open || !canSpendPoint()) return;
-    selected = attribute;
-    renderAttributes();
-  }
-  function confirmAttribute() {
-    if (!attributes.open || !latest || !selected || !canSpendPoint()) return;
+  function invest(attribute:Attribute) {
+    if (!attributes.open || !latest || !canSpendPoint()) return;
     requested = latest.revision;
     clearTimeout(requestTimer);
     requestTimer = window.setTimeout(()=>{ requested = undefined; renderAttributes(); },1000);
     renderAttributes();
-    send({attribute:selected,revision:latest.revision,matchId:latest.matchId});
+    send({attribute,revision:latest.revision,matchId:latest.matchId});
   }
-
-  function clearSelection() {
-    selected = undefined;
-    renderAttributes();
-  }
-  attributes.addEventListener('close',clearSelection);
 
   function renderAttributes() {
     if (!latest || !player) return;
-    const {xp,level,nextLevelXp,available,invested} = latest;
-    const staminaMax = baseStamina+invested.stamina*attributeUpgrades.stamina.bonus;
-    const agility = 100+invested.agility*attributeUpgrades.agility.bonus;
-    const stamina = Math.floor(player.stamina ?? staminaMax);
+    const {level,available,invested} = latest;
     const canSpend = canSpendPoint();
-    const key = JSON.stringify([xp,level,nextLevelXp,available,invested,stamina,staminaMax,agility,selected,canSpend]);
+    const key = JSON.stringify([level,available,invested,canSpend]);
     if (key===attributesKey) return;
     attributesKey = key;
     const actionForKey = (key:string) => {
       if (!canSpend) return;
-      if (key==='3') return selected ? confirmAttribute : undefined;
-      const attribute = /^[12]$/.test(key) ? keys[Number(key)-1] : undefined;
-      if (attribute) return ()=>select(attribute);
+      const attribute = /^[1-4]$/.test(key) ? keys[Number(key)-1] : undefined;
+      if (attribute) return ()=>invest(attribute);
     };
     flushSync(()=>attributesRoot.render(<>
-      <header><div><h2 id="attributes-title" className="sr-only">Atributos</h2>
-        <p id="attributes-xp">Nível {level} · {xp} XP totais · {nextLevelXp===undefined ? 'MAX' : `${nextLevelXp-xp} XP para o próximo nível`}</p>
+      <header><div><h2 id="attributes-title">Especializações</h2>
+        <p id="attributes-xp">Nível {level} · Escolha onde investir cada ponto.</p>
       </div><DialogDismiss className="hud-button hud-button--secondary">Fechar</DialogDismiss></header>
       <AvailablePoints points={available} actionForKey={actionForKey}/>
-      <div className="attribute-columns">
-        <section className="attribute-panel" aria-label="Atributos"><div id="attribute-list">
-          {keys.map((attribute,index)=>{
-            const {label,bonus} = attributeUpgrades[attribute];
-            const preview = attribute===selected && !!available;
-            return <section key={attribute} data-attribute={attribute} className={preview ? 'attribute-selected' : undefined}>
-              <div><strong>{label}</strong><small>+1 dá +{bonus}{attribute==='stamina' ? ' de stamina máxima' : '% da velocidade base de interação'}</small></div>
-              <span>{invested[attribute]}</span>
-              <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
-                aria-label={`Investir em ${label}`} aria-pressed={preview} disabled={!canSpend}
-                onClick={()=>select(attribute)}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
-            </section>;
-          })}
-        </div></section>
-        <section className="attribute-panel" aria-label="Efeitos dos atributos"><div id="attribute-resources">
-          {keys.map(attribute=>{
-            const {resource,bonus} = attributeUpgrades[attribute];
-            const current = attribute==='stamina' ? `${stamina}/${staminaMax}` : `${agility}%`;
-            const next = attribute==='stamina' ? `${stamina+bonus}/${staminaMax+bonus}` : `${agility+bonus}%`;
-            const preview = attribute===selected && !!available;
-            return <section key={attribute}><strong>{resource}</strong><span className={preview ? 'attribute-preview' : undefined}>
-              {preview ? current+' → '+next : current}</span></section>;
-          })}
-        </div></section>
-      </div>
-      <div className="progression-buttons"><button id="confirm-attribute" type="button" className="hud-button"
-        aria-keyshortcuts="3" disabled={!canSpend || !selected} onClick={confirmAttribute}><span>Confirmar +1</span><kbd className="action-key" aria-hidden="true">3</kbd></button></div>
+      <section id="attribute-list" aria-label="Especializações">
+        {keys.map((attribute,index)=>{
+          const {label,description} = attributeUpgrades[attribute];
+          const points = invested[attribute];
+          return <section key={attribute} data-attribute={attribute}>
+            <div><strong>{label}</strong><span className="attribute-points">{pointLabel(points)}</span>
+              <small>{description}</small>
+              <p className="attribute-effect"><span className="attribute-current">{attributeEffect(attribute,points)}</span>
+                {!!available && <span className="attribute-next"> → {attributeEffect(attribute,points+1)}</span>}</p>
+            </div>
+            <button type="button" className="hud-button hud-button--secondary" aria-keyshortcuts={String(index+1)}
+              aria-label={`Investir em ${label}`} disabled={!canSpend}
+              onClick={()=>invest(attribute)}><span>+1</span><kbd className="action-key" aria-hidden="true">{index+1}</kbd></button>
+          </section>;
+        })}
+      </section>
     </>));
   }
 
@@ -184,8 +156,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       if (scope!==attributes) return;
       const entries:ShortcutEntry[] = [{name:'Fechar',activate:()=>attributes.close()}];
       if (canSpendPoint()) {
-        entries.push(...keys.map(attribute=>({name:'Investir em '+attributeUpgrades[attribute].label,activate:()=>select(attribute)})));
-        if (selected) entries.push({name:'Confirmar +1',activate:confirmAttribute});
+        entries.push(...keys.map(attribute=>({name:'Investir em '+attributeUpgrades[attribute].label,activate:()=>invest(attribute)})));
       }
       return entries;
     },
@@ -234,7 +205,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
         tryReveal();
       }
       completedCount = next.politics?.missions.completed.length ?? 0;
-      if (!before || progress.revision!==before.revision) selected = undefined;
       if (before && progress.revision>before.revision) {
         play('attribute');
         if (attributes.open) {
@@ -251,7 +221,7 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
     },
     player(snapshot:Player) {
       const next = attributePlayerView(snapshot);
-      if (player?.character===next.character && player.stamina===next.stamina && player.unavailable===next.unavailable) return;
+      if (player?.unavailable===next.unavailable) return;
       player = next;
       if (attributes.open) renderAttributes();
     },
@@ -263,7 +233,6 @@ export function createProgressionHud(send:(request:AttributeRequest)=>void, play
       document.removeEventListener('close',closeOtherDialog,true);
       celebration.removeEventListener('close',closeCelebration);
       celebration.close();
-      attributes.removeEventListener('close',clearSelection);
       attributes.close();
       attributesRoot.unmount();
       celebrationRoot.unmount();

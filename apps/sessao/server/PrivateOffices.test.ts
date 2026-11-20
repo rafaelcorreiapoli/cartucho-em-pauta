@@ -103,7 +103,7 @@ test('cash can only be converted once at the owners safe, with interruption and 
   expect(game.view(owner,world).inventory[0]?.id).toBe(cash.id);
   Object.assign(owner,home.safe);
   Object.assign(visitor,{x:home.safe.x,y:home.safe.y+13});
-  game.applyAttribute(owner,'agility');
+  game.applyAttribute(owner,'concealment');
   const fasterCashMs = officeRules.cashMs/1.25;
   act(owner,'office-cash',home.id,cash.id);
   tick(1000);
@@ -557,4 +557,46 @@ test.each(['door','cabinet'] as const)('reinforcing a %s takes five seconds and 
   expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
   tick(1000);
   expect(events.filter(event=>event.type==='security-upgraded')).toHaveLength(1);
+});
+
+for (const target of ['door','cabinet','safe'] as const) {
+  test.each([0,1,2])(`burglary points speed up ${target} breaches independently of cash specialization (%i points)`,points=>{
+    const {players:[owner,visitor],game,world,act,tick,buy} = setup();
+    const home = privateOffices[0];
+    const tool = buy(visitor,'proLockKit');
+    Object.assign(owner,atDoor(home,true));
+    act(owner,'office-lock',home.id);
+    Object.assign(owner,{x:140,y:146});
+    for (let i=0;i<points;i++) game.applyAttribute(visitor,'burglary');
+    game.applyAttribute(visitor,'concealment');
+    Object.assign(visitor,target==='door' ? atDoor(home,false) : home[target]);
+    const action = `office-breach-${target}` as const;
+    act(visitor,action,home.id,tool);
+    const channel = game.view(visitor,world).officeChannel!;
+    expect(channel?.kind).toBe(action);
+    const base = officeRules.breachTimes[2]; // Professional kit against the initial security level.
+    const duration = Math.ceil(base/(1+points*.25));
+    expect(channel.duration).toBe(duration);
+    tick(duration-1);
+    expect(game.view(visitor,world).officeChannel?.kind).toBe(action);
+    tick(1);
+    expect(game.view(visitor,world).officeChannel).toBeUndefined();
+  });
+}
+
+test.each([0,1,2])('cash specialization only accelerates deposits and stacks per point (%i points)',points=>{
+  const {players:[owner],game,world,act,tick} = setup(1);
+  const home = privateOffices[0];
+  game.giveTrainingItem(owner.id,'briefcase');
+  const item = game.view(owner,world).inventory[0];
+  game.applyAttribute(owner,'burglary');
+  for (let i=0;i<points;i++) game.applyAttribute(owner,'concealment');
+  Object.assign(owner,home.safe);
+  act(owner,'office-cash',home.id,item.id);
+  const duration = Math.ceil(officeRules.cashMs/(1+points*.25));
+  expect(game.view(owner,world).officeChannel?.duration).toBe(duration);
+  tick(duration-1);
+  expect(game.owns(owner.id,'briefcase')).toBe(true);
+  tick(1);
+  expect(game.owns(owner.id,'briefcase')).toBe(false);
 });

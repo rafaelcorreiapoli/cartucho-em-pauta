@@ -177,6 +177,20 @@ Abra `http://127.0.0.1:5217/` no Playwright CLI com a configuração
 O gameserver posiciona o jogador diante das estações. O teste clica nas ações reais
 de cafezinho e verba, mede a animação e confirma a remoção dos efeitos.
 
+## Especializações do personagem
+
+Cada ponto é validado no servidor e aplica um benefício cumulativo nesta partida:
+
+- **Arrombamento:** +25% da velocidade base para arrombar portas, armários e cofres.
+- **Esconder dinheiro:** +25% da velocidade base para depositar dinheiro no próprio cofre.
+- **Movimentação:** +50 de stamina máxima e +5% da velocidade base ao andar e correr.
+- **Visão:** +10% do alcance base de visão; combina com binóculos e respeita paredes e panes elétricas.
+
+Um ponto em velocidade de ação divide a duração por 1,25; dois pontos dividem por 1,50.
+A distribuição usa um botão **+1** por especialização (atalhos **1–4**), com o efeito atual
+e a prévia do próximo ponto na mesma linha. Não há confirmação adicional. Pedidos repetidos,
+pontos inexistentes e pedidos de outra partida são rejeitados. Novas partidas zeram os benefícios.
+
 ## Teste dos atalhos de atributos no Chrome
 
 Execute o gameserver com `SESSAO_LOCAL_SOLO=1 bun dev/attributes-smoke-server.ts`
