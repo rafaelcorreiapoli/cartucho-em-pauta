@@ -58,7 +58,7 @@ export function bindFloorPlan(session:HTMLElement, signal:AbortSignal) {
   const hide = ()=>{host.hidden = true;};
   window.addEventListener('keydown',event=>{
     if (event.code!=='Tab' || session.hidden || session.dataset.phase==='lobby' ||
-        session.dataset.phase==='finished' || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey ||
+        session.dataset.phase==='finished' || event.ctrlKey || event.altKey || event.metaKey ||
         hudConsumesKeys(event.target)) return;
     event.preventDefault();
     if (!event.repeat) {
