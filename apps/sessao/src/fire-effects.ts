@@ -187,3 +187,28 @@ export function createExtinguishEffect(scene:Phaser.Scene) {
     spray.killAll().setPosition(from.x,nozzleY).setRotation(angle).setDepth(y+4).explode(24);
   };
 }
+
+export function showSafeExplosion(scene:Phaser.Scene,point:{x:number;y:number},reduced:boolean) {
+  const {x,y} = point;
+  if (reduced) {
+    const mark = scene.add.circle(x,y-8,12,0xf2b35c,.55).setDepth(y+20);
+    scene.time.delayedCall(180,()=>mark.destroy());
+    return;
+  }
+  const key = smokeTexture(scene);
+  const sparks = scene.add.particles(x,y-8,key,{
+    emitting:false,angle:{min:0,max:360},speed:{min:45,max:155},gravityY:85,
+    lifespan:{min:180,max:550},scale:{start:.24,end:0},alpha:{start:1,end:0},
+    tint:[0xfff0b8,0xffb03b,0xff5729],blendMode:'ADD',maxAliveParticles:36,
+  }).setDepth(y+21);
+  const smoke = scene.add.particles(x,y-10,key,{
+    emitting:false,x:{min:-8,max:8},y:{min:-5,max:5},
+    speedX:{min:-30,max:30},speedY:{min:-45,max:-12},
+    lifespan:{min:850,max:1750},scale:{start:.35,end:1.5},alpha:{start:.75,end:0},
+    tint:[0x504a43,0x787069,0xaaa299],maxAliveParticles:24,
+  }).setDepth(y+20);
+  sparks.explode(36);
+  smoke.explode(24);
+  scene.cameras.main.shake(180,.003);
+  scene.time.delayedCall(1900,()=>{sparks.destroy();smoke.destroy();});
+}

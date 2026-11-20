@@ -261,7 +261,7 @@ async function connect(join: () => Promise<Room>) {
     const reactHud = mountReactHud(settings.open);
     const progression = createProgressionHud(request=>{ if (!ballotCountdown.open) joined.send('allocate-attribute',request); },cue=>audio.progression(cue),reactHud.profileReward);
     let mailPhotos:PhotoAccessView['album'] = [];
-    joined.onMessage('safe-trap-explosion',(point:{x:number;y:number})=>{ game?.showSafeExplosion(point); audio.combat('impact',.9,0); });
+    joined.onMessage('safe-trap-explosion',(point:{x:number;y:number})=>{ game?.showSafeExplosion(point); audio.cue('explosion'); });
     joined.onMessage('photo-state',(photos:PhotoAccessView)=>{
       mailPhotos = photos.album;
       if (gameplay.photoState(photos)) audio.cue('shutter');

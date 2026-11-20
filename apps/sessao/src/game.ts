@@ -4,7 +4,7 @@ import { createInteractionOutline, hitInteractionArt } from './interaction-outli
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
 import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
-import {createRoomFires,createFuseSmoke,createExtinguishEffect} from './fire-effects';
+import {createRoomFires,createFuseSmoke,createExtinguishEffect,showSafeExplosion} from './fire-effects';
 import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
 import { decorPoint, depositingAtSafe, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
@@ -925,10 +925,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
     },
     showSafeExplosion(point:Motion) {
-      if (!scene.sys.isActive() || reducedMotion.matches) return;
-      const burst = scene.add.circle(point.x,point.y,8,0xffc66b,.9).setDepth(10000);
-      scene.tweens.add({targets:burst,scaleX:5,scaleY:5,alpha:0,duration:420,onComplete:()=>burst.destroy()});
-      scene.cameras.main.shake(180,.003);
+      if (scene.sys.isActive()) showSafeExplosion(scene,point,reducedMotion.matches);
     },
     showExtinguishEffect(effect:ExtinguishEffect) {
       if (scene.sys.isActive() && !reducedMotion.matches) scene.extinguishEffect?.(effect);

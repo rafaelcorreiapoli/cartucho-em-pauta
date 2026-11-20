@@ -80,7 +80,7 @@ async page => {
   await checkFill('negative');
   const timer = metrics.getByRole('timer',{name:'Tempo até o calote'});
   await timer.waitFor();
-  await page.waitForFunction(()=>/Calote em\s*(19|20) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
+  await page.waitForFunction(()=>/DERROTA POR CALOTE EM\s*(19|20) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
   await page.screenshot({path:'output/playwright/calote-negative.png'});
   for (const size of [{width:1280,height:720},{width:800,height:450}]) {
     await page.setViewportSize(size);
@@ -94,7 +94,7 @@ async page => {
   await page.waitForFunction(()=>!document.querySelector('.calote-countdown'));
   await setBudget(-16);
   await checkFill('negative');
-  await page.waitForFunction(()=>/Calote em\s*(29|30) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
+  await page.waitForFunction(()=>/(?:Calote em|DERROTA POR CALOTE EM)\s*(29|30) s/.test(document.querySelector('.calote-countdown')?.textContent ?? ''));
   if (await page.evaluate(()=>{cancelAnimationFrame(window.caloteFrame);return window.caloteInvalidFill;})) throw Error('Budget fill crossed the center during updates');
   await setBudget(-16,30_001);
   await page.getByRole('heading',{name:'O Congresso deu calote!',exact:true}).waitFor();

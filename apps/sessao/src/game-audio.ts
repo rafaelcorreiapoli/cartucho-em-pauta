@@ -6,6 +6,7 @@ const files = {
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
+  explosion:'explosao-cofre.wav',
   eat:'comer.wav', drink:'beber.wav',
   stamp:'carimbo.wav', lock:'fechadura.wav', shutter:'obturador.wav',
   swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',
