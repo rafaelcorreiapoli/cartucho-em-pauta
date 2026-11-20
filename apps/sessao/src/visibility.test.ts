@@ -194,3 +194,47 @@ test('an upper doorway illuminates both jamb faces without shifting the cone ins
   expect(illuminated(inside,100,5008,5014)).toBe(false);
   expect(illuminated(inside,100,5032,5014)).toBe(false);
 });
+
+
+test('the overlapping Cafezinho corner leaves all adjacent room floor visible',()=>{
+  const origin = {x:247,y:196};
+  for (let y=172.5;y<181;y++) for (let x=196.5;x<211;x++) {
+    expect(illuminated(origin,100,x,y)).toBe(true);
+  }
+  expect(illuminated(origin,100,195.5,175)).toBe(true); // visible vertical face
+  expect(characterVisible(origin,{x:190,y:175},100)).toBe(false);
+});
+
+test('overlapping wall intersections contribute corners regardless of rectangle order',()=>{
+  const horizontal = [5000,5010,60,10] as const;
+  const vertical = [5010,5010,10,50] as const;
+  for (const barriers of [[horizontal,vertical],[vertical,horizontal]] as const) {
+    const origin = {x:5040,y:5040,barriers};
+    for (let y=5020.5;y<5025;y++) for (let x=5020.5;x<5025;x++) {
+      expect(illuminated(origin,60,x,y)).toBe(true);
+    }
+    expect(illuminated(origin,60,5021,5005)).toBe(false);
+  }
+});
+
+test('infirmary doorway faces stay lit continuously while walking south into the corridor',()=>{
+  for (const x of [233,235,240]) for (let y=126;y<=150;y++) {
+    const origin = {x,y};
+    for (const wx of [171.5,198,210,270,280,302]) {
+      if (Math.hypot(wx-x,122.5-y)<86*.8) {
+        expect(illuminated(origin,86,wx,122.5)).toBe(true);
+      }
+    }
+  }
+});
+
+test('a long wall face remains illuminated when both endpoints are outside vision range',()=>{
+  const barriers = [[4900,5010,240,10]] as const;
+  for (let y=5021;y<=5050;y++) {
+    const origin = {x:5020,y,barriers};
+    for (const wx of [5005,5020,5035]) {
+      expect(illuminated(origin,40,wx,5019)).toBe(true);
+    }
+    expect(illuminated(origin,40,5020,5009)).toBe(false);
+  }
+});

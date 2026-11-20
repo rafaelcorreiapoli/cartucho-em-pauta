@@ -6,9 +6,39 @@ function visionRays(origin:Motion,radius:number) {
   const nearby = [...walls,...(origin.barriers ?? [])].filter(([x,y,w,h])=>
     x<=origin.x+radius && x+w>=origin.x-radius && y<=origin.y+radius && y+h>=origin.y-radius);
   const angles = Array.from({length:48},(_,index)=>index*Math.PI/24-Math.PI);
-  for (const [x,y,w,h] of nearby) for (const [cx,cy] of [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]) {
-    const angle = Math.atan2(cy-origin.y,cx-origin.x);
+  const corners = nearby.map(([x,y,w,h])=>[x,y,x+w,y+h]);
+  // Overlapping wall rectangles create exposed corners at their intersections,
+  // not just at their original endpoints (for example, the Cafezinho junction).
+  for (let i=0;i<nearby.length;i++) for (let j=i+1;j<nearby.length;j++) {
+    const [ax,ay,aw,ah] = nearby[i], [bx,by,bw,bh] = nearby[j];
+    const left=Math.max(ax,bx), top=Math.max(ay,by);
+    const right=Math.min(ax+aw,bx+bw), bottom=Math.min(ay+ah,by+bh);
+    if (left<=right && top<=bottom) corners.push([left,top,right,bottom]);
+  }
+  const addPoint = (x:number,y:number)=>{
+    const angle = Math.atan2(y-origin.y,x-origin.x);
     for (const offset of [-.0001,0,.0001]) angles.push(Math.atan2(Math.sin(angle+offset),Math.cos(angle+offset)));
+  };
+  for (const [left,top,right,bottom] of corners) {
+    for (const [x,y] of [[left,top],[right,top],[right,bottom],[left,bottom]]) addPoint(x,y);
+  }
+  // A long face can enter the light circle while both endpoints remain outside.
+  // Sample its circle crossings so its visible span cannot disappear between rays.
+  for (const [x,y,w,h] of nearby) {
+    for (const edgeY of [y,y+h]) {
+      const squared = radius*radius-(edgeY-origin.y)**2;
+      if (squared<0) continue;
+      for (const edgeX of [origin.x-Math.sqrt(squared),origin.x+Math.sqrt(squared)]) {
+        if (edgeX>=x && edgeX<=x+w) addPoint(edgeX,edgeY);
+      }
+    }
+    for (const edgeX of [x,x+w]) {
+      const squared = radius*radius-(edgeX-origin.x)**2;
+      if (squared<0) continue;
+      for (const edgeY of [origin.y-Math.sqrt(squared),origin.y+Math.sqrt(squared)]) {
+        if (edgeY>=y && edgeY<=y+h) addPoint(edgeX,edgeY);
+      }
+    }
   }
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
