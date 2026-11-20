@@ -56,10 +56,39 @@ Arrombamento:
 > each cell with clear margins. Transparent background, no grid lines, no
 > captions, no scenery.
 
-## Escopo
+## Addon integrado
 
-Esta entrega contém as artes; a integração do addon fica para a implementação
-da mecânica. Regra discutida: ativação no lobby, ronda aleatória de gabinetes,
-arrombamento com o tempo e resistência existentes, flagrante apenas na entrada,
-solitária e perda das maletas carregadas, seguida de continuação da ronda.
-A duração de 10 segundos de prisão foi proposta, ainda sujeita a ajuste.
+A opção **Japonês da Federal** fica em Configurar partida → Addons, desligada
+por padrão. Só o anfitrião pode alterá-la, antes de iniciar. O tutorial não
+ativa a ronda. A configuração permanece disponível para a revanche.
+
+O NPC é independente dos visitantes: não ocupa o limite, não tem carteira,
+mandato, salário ou interação de roubo. A ronda usa o mapa e a navegação
+existentes, sorteando um gabinete diferente a cada entrada. O agente não é
+um alvo de combate e continua a ronda durante a partida; a contagem regressiva
+que congela a exploração também pausa seus movimentos.
+
+Portas abertas permitem a entrada. Portas fechadas e destrancadas são abertas.
+Nas trancadas, ele usa a capacidade máxima de arrombamento já existente:
+5 segundos nos níveis 1–3, 9 no nível 4 e 15 no nível 5. A porta fica arrombada
+pelo prazo normal de 30 segundos. As quatro linhas da folha de arrombamento
+correspondem às quatro direções de movimento, sem espelhamento da ação.
+
+A checagem ocorre somente ao cruzar para dentro do gabinete. Se alguém ainda
+estiver embolsando dinheiro naquele gabinete, a ação é cancelada, todas as
+maletas carregadas são apreendidas e o jogador vai à Sala de Isolamento por
+10 segundos reais, inclusive durante votações. O temporizador nativo da sala
+libera a detenção mesmo quando o relógio legislativo está pausado. Objetos pessoais, dinheiro já embolsado e maletas guardadas no
+armário são preservados. A apreensão entra nas saídas da contabilidade da
+partida. Essa prisão não aplica a perda de popularidade do afastamento.
+
+Terminar de embolsar até o instante da entrada permite escapar. Começar a
+embolsar depois da entrada não gera flagrante por proximidade. Com ou sem
+flagrante, o NPC imediatamente escolhe o próximo gabinete e continua a ronda.
+
+Implementação: `server/FederalPatrol.ts` controla navegação e portas;
+`Gameplay` verifica o flagrante e apreende as maletas; `PlenaryMatch` e
+`PoliticalEconomy` aplicam a detenção; `SessionRoom` sincroniza o lobby e usa
+a transferência e a liberação existentes da solitária. As folhas são
+carregadas em `src/game.ts` e a animação direcional é definida em
+`src/federal-patrol.ts`.

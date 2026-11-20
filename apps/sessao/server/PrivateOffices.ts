@@ -90,6 +90,13 @@ export class PrivateOffices {
     if (difference>=0) return officeRules.breachTimes[Math.min(2,difference)];
   }
 
+  breachDoor(id:string,now:number,actor:string) {
+    const office = this.offices.get(id);
+    if (!office) return;
+    office.doorUntil = now+officeRules.breachMs;
+    office.doorBreachedBy = actor;
+  }
+
   expireDoors(players:Player[],now:number) {
     for (const office of this.offices.values()) {
       if (!office.doorUntil || office.doorUntil>now) continue;
