@@ -11,6 +11,7 @@ const files = {
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
+  fireLoop:'fogo-continuo.wav', extinguish:'extintor.wav',
   explosion:'explosao-cofre.wav', powerDown:'pane-eletrica.wav',
   federalCaught:'federal-siren.mp3', federalIsolation:'federal-trombone.mp3',
   applause:'aplausos.wav',
@@ -26,7 +27,7 @@ const matchTracks = ['covertAffair','spyGlass'] as const;
 type MatchTrack = typeof matchTracks[number];
 type MusicTrack = Score | MatchTrack;
 const isFinalScore = (score:MusicTrack) => score==='victory' || score==='defeat';
-export type Cue = Exclude<Sample,MusicTrack | `foot${number}`>;
+export type Cue = Exclude<Sample,MusicTrack | 'fireLoop' | `foot${number}`>;
 const MUSIC_FADE = .7;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
@@ -50,6 +51,7 @@ export class GameAudio {
   private federalEffect?:AudioBufferSourceNode;
   private eliminationEffect?:AudioBufferSourceNode;
   private revealingCassation = false;
+  private fireEffect?:{source:AudioBufferSourceNode;gain:GainNode};
 
   constructor() {
     this.preferences.subscribe(() => this.updateGain());
@@ -120,7 +122,36 @@ export class GameAudio {
     this.startMusic();
   }
 
+  setFireIntensity(intensity:number) {
+    const {context,effectsGain} = this;
+    const level = Math.max(0,Math.min(1,intensity));
+    if (!this.playing || !context || !effectsGain) return;
+    if (!level) {
+      const effect = this.fireEffect;
+      if (!effect) return;
+      this.fireEffect = undefined;
+      effect.gain.gain.setTargetAtTime(0,context.currentTime,.08);
+      effect.source.stop(context.currentTime+.4);
+      return;
+    }
+    if (!this.fireEffect) {
+      const buffer = this.buffers.get('fireLoop');
+      if (!buffer) return;
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer;
+      source.loop = true;
+      gain.gain.value = 0;
+      source.connect(gain).connect(effectsGain);
+      source.onended = ()=>{source.disconnect();gain.disconnect();};
+      source.start();
+      this.fireEffect = {source,gain};
+    }
+    this.fireEffect.gain.gain.setTargetAtTime(level*.65,context.currentTime,.12);
+  }
+
   leave() {
+    this.setFireIntensity(0);
     this.eliminationEffect?.stop();
     this.eliminationEffect = undefined;
     this.revealingCassation = false;

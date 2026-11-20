@@ -230,7 +230,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
             }
           });
         }
-      });
+      },intensity=>audio.setFireIntensity(intensity));
     joined.onMessage('security-frame',security.frame);
     joined.onDrop(()=>security.render());
     const surveillance = createSurveillancePanel(action=>sendCommand('spy',action));
@@ -307,6 +307,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
       hud.notify('Pix recebido',`${from} enviou ${money(amount)}.`);
     });
     joined.onMessage('fire-extinguished',({actor,room,effect}:import('./fire').FireExtinguished)=>{
+      audio.cue('extinguish');
       hud.notify('Incêndio apagado',`${actor} apagou o incêndio em ${room}.`);
       if (effect) game?.showExtinguishEffect(effect);
     });
