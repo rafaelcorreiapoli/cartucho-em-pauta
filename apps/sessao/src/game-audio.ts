@@ -10,7 +10,7 @@ const files = {
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
-  explosion:'explosao-cofre.wav',
+  explosion:'explosao-cofre.wav', powerDown:'pane-eletrica.wav',
   federalCaught:'federal-siren.mp3', federalIsolation:'federal-trombone.mp3',
   applause:'aplausos.wav',
   eat:'comer.wav', drink:'beber.wav',

@@ -44,3 +44,10 @@ https://creativecommons.org/licenses/by/4.0/
 
 Sources: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Covert%20Affair.mp3,
 https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.
+
+# Pane elétrica
+
+`pane-eletrica.wav`: “powerdown.wav”, faxcorp, Electricity Game Sound Pack.
+Fonte: https://opengameart.org/content/electricity-game-sound-pack
+Arquivo original, sem edição (aproximadamente 2 segundos).
+Licença: CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/

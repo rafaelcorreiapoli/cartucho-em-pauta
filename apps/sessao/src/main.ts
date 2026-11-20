@@ -402,6 +402,10 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
             channel as Parameters<typeof sendCommand>[0],command as Parameters<typeof sendCommand>[1]);
         }
       }
+      if (previousView && view.outage && !previousView.outage) {
+        centerAlert.show('Pane elétrica!','','power-outage');
+        audio.cue('powerDown');
+      }
       if (previousView && caloteAlertLevel(view)>caloteAlertLevel(previousView)) centerAlert.show(
         caloteAlertLevel(view)===2 ? 'CALOTE IMINENTE' : 'ORÇAMENTO NEGATIVO', 'Recupere o saldo na Tesouraria para evitar a derrota.','calote');
       if (previousView && lastInElection(view,joined.sessionId) && !lastInElection(previousView,joined.sessionId)) centerAlert.show(
