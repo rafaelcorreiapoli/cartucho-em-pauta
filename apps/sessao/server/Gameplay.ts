@@ -18,7 +18,7 @@ import { BRIEFCASE_LIMIT, canStackItem, itemQuantity, canReachObject, canVerifyD
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
-import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
+import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, photoPerson, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
 import { bills, canReachStation, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
@@ -991,6 +991,11 @@ export class Gameplay {
     return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point));
   }
 
+  private photoFeatures() {
+    return {surveillance:this.surveillanceEnabled,projectVoting:this.projectVotingEnabled,
+      decorations:this.decorationsEnabled,portraitsAndVip:this.portraitsAndVipEnabled};
+  }
+
   private cameraScene(player:Player, position:Motion, world:GameplayWorld,
     sees:(origin:Motion,point:Motion)=>boolean):PhotoScene {
     const barriers = player.barriers?.filter(([x,y,w,h])=>
@@ -998,10 +1003,10 @@ export class Gameplay {
     const camera = {x:position.x,y:position.y,barriers};
     const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
     const visible = (point:Motion)=>sees(camera,point);
-    return {center,camera,
+    return {center,camera,time:world.now,features:this.photoFeatures(),
+      offices:this.privateOffices.view(world.now,{...player,...camera}).map(({id,door,cabinetBreached})=>({id,door,cabinetBreached})),
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
-        id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,visitor:person.visitor,
-        direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
+        ...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
@@ -1012,13 +1017,15 @@ export class Gameplay {
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
-      .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
-        character:person.character,visitor:person.visitor,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
+      .map(person=>({...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+        direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
       id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
+      time:world.now,features:this.photoFeatures(),
+      offices:this.privateOffices.view(world.now,player).map(({id,door,cabinetBreached})=>({id,door,cabinetBreached})),
       center:{x,y,barriers:player.barriers},breaches:this.officeBreaches(world.now).filter(point=>inPhotoFrame(player,point)),location:roomAt(player),selfie,people,
       ground:this.visibleGround(player,world.now).filter(item=>inPhotoFrame(player,item))
         .map(({id,kind,x,y,document})=>({id,kind,x,y,title:document?.title})),

@@ -23,7 +23,7 @@ import { isGear } from './equipment';
 import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
-import { decorationLabel } from './photo-renderer';
+import { decorationLabel } from './world-art';
 import {PHOTO_LIMIT,type PhotoAccessView,type PhotoScene} from './photography';
 import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';

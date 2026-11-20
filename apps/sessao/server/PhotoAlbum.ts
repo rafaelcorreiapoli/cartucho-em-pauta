@@ -40,7 +40,7 @@ export class PhotoAlbum {
     const album = this.entries(id);
     if (album.size>=PHOTO_LIMIT || this.photos.size>=ROOM_PHOTO_LIMIT) return 'Álbum cheio. Exclua uma foto para liberar espaço.';
     if (now-(this.lastCapture.get(id) ?? -Infinity)<900) return 'Aguarde um instante para tirar outra foto.';
-    const photo = makePhoto(++this.serial);
+    const photo = structuredClone(makePhoto(++this.serial));
     this.lastCapture.set(id,now);
     this.photos.set(photo.id,photo);
     album.add(photo.id);

@@ -80,7 +80,7 @@ jobs:
           flows=("$SMOKE_FLOW")
           if [[ "$SMOKE_FLOW" == exploration-hud ]]; then
             server_entry=dev/classic-room-test-server.ts
-            flows=(tutorial room-entrance asset-loading hud-help action-shortcuts floor-plan phone-apps)
+            flows=(tutorial room-entrance asset-loading hud-help action-shortcuts floor-plan phone-apps world-rendering)
           fi
           PORT=26874 SESSAO_LOCAL_SOLO=1 bun "$server_entry" &
           pids+=("$!")

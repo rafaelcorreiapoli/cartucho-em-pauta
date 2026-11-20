@@ -2,7 +2,7 @@ import {PhoneBackIcon} from './phone-back';
 import {Backpack} from 'lucide';
 import type {GameplayAction} from '../gameplay';
 import type {Decoration} from '../photography';
-import {decorationLabel} from '../photo-renderer';
+import {decorationLabel} from '../world-art';
 import {DialogDismiss} from './dialog-dismiss';
 import {useDialogKeys} from './use-dialog-keys';
 import type {ShortcutEntry} from '../action-shortcuts';
