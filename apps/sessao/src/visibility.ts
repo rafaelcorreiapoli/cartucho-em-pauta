@@ -6,7 +6,16 @@ function visionRays(origin:Motion,radius:number) {
   const nearby = [...walls,...(origin.barriers ?? [])].filter(([x,y,w,h])=>
     x<=origin.x+radius && x+w>=origin.x-radius && y<=origin.y+radius && y+h>=origin.y-radius);
   const angles = Array.from({length:48},(_,index)=>index*Math.PI/24-Math.PI);
-  for (const [x,y,w,h] of nearby) for (const [cx,cy] of [[x,y],[x+w,y],[x+w,y+h],[x,y+h]]) {
+  const corners = nearby.map(([x,y,w,h])=>[x,y,x+w,y+h]);
+  // Overlapping wall rectangles create exposed corners at their intersections,
+  // not just at their original endpoints (for example, the Cafezinho junction).
+  for (let i=0;i<nearby.length;i++) for (let j=i+1;j<nearby.length;j++) {
+    const [ax,ay,aw,ah] = nearby[i], [bx,by,bw,bh] = nearby[j];
+    const left=Math.max(ax,bx), top=Math.max(ay,by);
+    const right=Math.min(ax+aw,bx+bw), bottom=Math.min(ay+ah,by+bh);
+    if (left<=right && top<=bottom) corners.push([left,top,right,bottom]);
+  }
+  for (const [left,top,right,bottom] of corners) for (const [cx,cy] of [[left,top],[right,top],[right,bottom],[left,bottom]]) {
     const angle = Math.atan2(cy-origin.y,cx-origin.x);
     for (const offset of [-.0001,0,.0001]) angles.push(Math.atan2(Math.sin(angle+offset),Math.cos(angle+offset)));
   }
