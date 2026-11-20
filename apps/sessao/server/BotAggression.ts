@@ -54,6 +54,7 @@ export class BotAggression {
     else {
       rest();
       const dx = target.x-player.x,dy = target.y-player.y;
+      player.facingAngle = Math.atan2(dy,dx);
       player.direction = Math.abs(dx)>Math.abs(dy) ? dx>0 ? 1 : 3 : dy>0 ? 0 : 2;
       act({kind:'attack'});
     }
