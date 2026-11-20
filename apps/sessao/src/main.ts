@@ -3,7 +3,7 @@ import {federalAudioStage} from './federal-patrol';
 import {readMatchPreferences,saveMatchPreference} from './match-preferences';
 import {sessionVerdict} from './session-verdict';
 import './lobby-motion.css';
-import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
+import {createCenterAlert,caloteAlertLevel,lastInElection,cassationAnnounced} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
 import {mountAssetLoading} from './ui/asset-loading';
@@ -423,12 +423,17 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
       const scan = view.gameplay?.xrayVision;
       const previousTargets = previousView?.gameplay?.xrayVision?.targets ?? [];
       if (scan?.targets.some(target=>!previousTargets.some(previous=>previous.id===target.id))) audio.cue('pickup');
-      const cassationAnnounced = !!view.cassationIn && !previousView?.cassationIn;
+      if (cassationAnnounced(view,previousView)) {
+        centerAlert.show('CASSAÇÃO CONVOCADA',view.cassationIn ? `Prepare-se: votação no Plenário em ${view.cassationIn} s.` : 'Votação aberta no Plenário.','cassation');
+        audio.cue('cassationSummons');
+      }
+      audio.setScore(view.phase==='lobby' ? 'lobbyMusic' : view.phase==='finished' ? sessionVerdict(view) ?? 'music' :
+        view.cassationIn || view.cassation ? 'cassationMusic' : view.phase==='hearing' ? 'hearingMusic' : 'music');
       const projectAnnounced = !!view.projectWarning && !previousView?.projectWarning;
       if (view.phase==='negotiation' && view.project!==undefined && view.proposer && view.project!==previousView?.project) {
         hud.notify('Projeto em pauta',`${view.proposer} protocolou ${bills[view.project].name}. Votação em ${Math.ceil(view.remaining/60)} min.`);
       }
-      if (view.phase==='negotiation' && (cassationAnnounced || projectAnnounced)) audio.cue('summons');
+      if (view.phase==='negotiation' && projectAnnounced) audio.cue('summons');
       if (view.vote && view.vote!==previousView?.vote || view.cassation?.choice!==undefined && view.cassation.choice!==previousView?.cassation?.choice) audio.cue('vote');
       if (view.reportedFraud && !previousView?.reportedFraud) audio.cue('alert');
       const gains = rewardGains(previousView,view,suppressXpEffect);
@@ -478,7 +483,6 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished' && !sessionVerdict(view)) audio.cue('end');
       phase = view.phase;
-      audio.setScore(phase==='lobby' ? 'lobbyMusic' : phase==='finished' ? sessionVerdict(view) ?? 'music' : phase==='hearing' ? 'hearingMusic' : 'music');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';

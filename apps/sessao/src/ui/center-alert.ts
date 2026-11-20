@@ -13,6 +13,12 @@ export function lastInElection(view:PlenaryView,id:string) {
     !!own && polls.some(candidate=>candidate.estimate>own.estimate) && own.estimate===Math.min(...polls.map(candidate=>candidate.estimate));
 }
 
+export function cassationAnnounced(view:PlenaryView,previous:PlenaryView|undefined) {
+  if (!previous || view.phase==='lobby' || view.phase==='finished') return false;
+  return (!!view.cassationIn && !previous.cassationIn) ||
+    (!!view.cassation && !previous.cassation && !previous.cassationIn);
+}
+
 export function createCenterAlert() {
   const host = document.createElement('div');
   host.className = 'center-game-alert';

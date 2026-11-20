@@ -24,7 +24,7 @@ function fixture() {
   Reflect.set(audio,'playing',true);
   Reflect.set(audio,'score','music');
   Reflect.set(audio,'matchTrack','covertAffair');
-  const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key,duration:120}]));
+  const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','cassationMusic','cassationSummons','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key,duration:120}]));
   Reflect.set(audio,'buffers',buffers);
   return {audio,sources,buffers};
 }
@@ -218,4 +218,36 @@ test('leaving fades the music out instead of forcing an immediate stop',()=>{
   audio.leave();
   expect(sources[0].stopTimes).toEqual([5.7]);
   expect(Reflect.get(audio,'positions').size).toBe(0);
+});
+
+test('cassation music loops through the summons and ballot, restores gameplay, and yields to the finale',()=>{
+  const {audio,sources,buffers} = fixture();
+  Reflect.get(audio,'startMusic').call(audio);
+  Reflect.get(audio,'context').currentTime = 12;
+  audio.setScore('cassationMusic');
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('cassationMusic'));
+  expect(sources.at(-1)?.loop).toBe(true);
+  const count = sources.length;
+  audio.setScore('cassationMusic');
+  audio.setCaloteDanger(5);
+  expect(sources).toHaveLength(count);
+  audio.setCaloteDanger(undefined);
+  audio.setScore('music');
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('covertAffair'));
+  expect(sources.at(-1)?.starts[0][1]).toBeGreaterThan(0);
+  audio.setScore('cassationMusic');
+  expect(sources.at(-1)?.starts[0][1]).toBe(0);
+  audio.setScore('victory');
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('victory'));
+  expect(sources.at(-1)?.loop).toBe(false);
+});
+
+test('dramatic cassation cue uses effects volume and respects mute',()=>{
+  const {audio,sources,buffers} = fixture();
+  audio.cue('cassationSummons');
+  expect(sources.at(-1)?.buffer).toBe(buffers.get('cassationSummons'));
+  expect(sources.at(-1)?.loop).toBe(false);
+  audio.preferences.update({muted:true});
+  audio.cue('cassationSummons');
+  expect(sources).toHaveLength(1);
 });

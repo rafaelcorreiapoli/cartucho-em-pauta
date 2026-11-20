@@ -44,3 +44,15 @@ https://creativecommons.org/licenses/by/4.0/
 
 Sources: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Covert%20Affair.mp3,
 https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.
+
+# Cassação
+
+- `the-escalation.mp3`: “The Escalation” — Kevin MacLeod (incompetech.com).
+  CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+  Source: https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400041
+  Download: https://incompetech.com/music/royalty-free/mp3-royaltyfree/The%20Escalation.mp3
+  Original recording, without modifications. Loops from the summons through the vote.
+- `cassation-summons.mp3`: “Cinematic glass hit suspense” — Mixkit, asset 677.
+  Source: https://mixkit.co/free-sound-effects/cinematic/
+  License: https://mixkit.co/license/modal/sfxFree/
+  Original speed; emitted only into the finished game by the existing Vite audio plugin.
