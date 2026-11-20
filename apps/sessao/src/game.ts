@@ -314,9 +314,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         });
         const [doorX,doorY,doorWidth,doorHeight] = office.door;
         this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
-          fontFamily:'system-ui',fontSize:'3.2px',color:'#eee0ba',backgroundColor:'#152720',
-          align:'left',padding:{x:1.5,y:.5},resolution:4,
-        }).setOrigin(0,.5).setDepth(2);
+          fontFamily:'system-ui',fontSize:'5.2px',fontStyle:'bold',color:'#fff3cd',backgroundColor:'#152720',
+          shadow:{offsetX:0,offsetY:0,color:'#ffd879',blur:3,fill:true,stroke:false},
+          align:'left',padding:{x:2,y:1},resolution:4,
+        }).setOrigin(0,.5).setDepth(3.1); // Keep the illuminated sign above the map fog (depth 3).
       }
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
