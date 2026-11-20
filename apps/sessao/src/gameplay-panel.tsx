@@ -417,6 +417,8 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         if (state.officeStash) act('Guardar no armário particular','office-stash',state.officeStash.id);
         const decorSlot = state.officeDecor?.find(slot=>slot.kind===item.kind);
         if (decorSlot) act('Instalar no gabinete','office-install',decorSlot.id);
+        const safeTrapOption = state.officeOptions?.find(option=>option.kind==='office-trap-safe' && option.item===item.id);
+        if (safeTrapOption) act('Instalar no cofre','office-trap-safe',safeTrapOption.place);
         if (isGear(item.kind) && !!previous?.gameplay) act('Equipar','equip');
         else if (bagOpen) actions.push({label:'Equipar',disabled:true,run:()=>{}});
         const consumable = consumableAction(item);

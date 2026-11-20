@@ -9,7 +9,7 @@ export function lastInElection(view:PlenaryView,id:string) {
   const polls = view.election?.polls ?? [];
   const own = polls.find(candidate=>candidate.id===id);
   const remaining = view.election?.remaining ?? 0;
-  return view.phase!=='finished' && (view.election?.remaining ?? 0)>0 && polls.length>ELECTION_RULES.minimumMandates &&
+  return view.phase!=='finished' && remaining>0 && polls.length>ELECTION_RULES.minimumMandates &&
     !!own && polls.some(candidate=>candidate.estimate>own.estimate) && own.estimate===Math.min(...polls.map(candidate=>candidate.estimate));
 }
 

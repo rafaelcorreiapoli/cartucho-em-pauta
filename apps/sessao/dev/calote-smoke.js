@@ -51,7 +51,7 @@ async page => {
     },direction);
   };
   await setBudget(-1);
-  const central = page.locator('.calote-screen-warning');
+  const central = page.locator('.center-game-alert');
   await central.getByText('ORÇAMENTO NEGATIVO',{exact:true}).waitFor();
   const centralStyle = await central.evaluate(element=>({pointer:getComputedStyle(element).pointerEvents,background:getComputedStyle(element).backgroundColor}));
   if (centralStyle.pointer!=='none' || centralStyle.background!=='rgba(0, 0, 0, 0)') throw Error('Central warning blocks play or has a panel');

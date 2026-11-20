@@ -315,7 +315,8 @@ async function connect(join: () => Promise<Room>) {
       actionFeedbackTimer = setTimeout(clearActionFeedback,2500);
     });
     joined.onMessage('gameplay-feedback',(message:string)=>{
-      if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
+      if (message.startsWith('Seu Seguro Antiarrombamento')) { audio.cue('alert'); hud.notify('Cofre protegido',message); }
+      else if (message.includes('Megafone')) { audio.cue(message.includes('ocupado') ? 'alert' : 'vote'); hud.notify('Megafone',message); }
       else if (message==='Raio X ativado.') audio.cue('vote');
       else if (message.startsWith('Raio X sem cargas')) { audio.cue('alert'); hud.notify('Raio X',message); }
       else if (market.isOpen()) hud.notify(previousView?.gameplay?.dialogue?.npc==='protocol' ? 'Protocolo' : previousView?.gameplay?.dialogue?.npc==='secretary' ? 'Secretaria' : 'Loja',message);
