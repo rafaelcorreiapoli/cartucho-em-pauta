@@ -23,3 +23,10 @@ test('a purchased consumable uses the first free slot without moving a stack or 
   const full = [1,2,3,4,5,6];
   expect(pinPurchasedConsumable(full,12)).toBe(full);
 });
+
+test('only consumables can remain pinned, including after inventory reconciliation',()=>{
+  for (const kind of ['bugDetector','wiretap','spyCamera','document','briefcase','forensicKit'] as const) {
+    expect(reconcileHotbar([5],[{id:5,kind}])).toEqual([undefined]);
+  }
+  expect(reconcileHotbar([5],[{id:5,kind:'coffee'}])).toEqual([5]);
+});

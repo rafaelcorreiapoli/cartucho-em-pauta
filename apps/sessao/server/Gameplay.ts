@@ -926,6 +926,8 @@ export class Gameplay {
   private spyAccess(world:GameplayWorld) {
     return {
       ground:()=>this.groundItems(world.now),
+      players:()=>world.players,
+      equipped:(id:string)=>this.equipped(id).map(({data})=>data),
       inventory:(id:string)=>this.inventory(id).map(({data})=>data),
       consume:(id:string,serial:number)=>{
         const item = this.inventory(id).find(({data})=>data.id===serial);
