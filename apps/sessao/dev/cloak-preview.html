@@ -15,13 +15,20 @@ class Preview extends Phaser.Scene {
     createWorldAnimations(this);
     const frame={time:2400,center:{x:140,y:158},camera:{x:140,y:139},people:[
       {id:'normal',name:'',x:114,y:160,character:0,direction:1,moving:false},
-      {id:'glass',name:'',x:166,y:160,character:0,direction:1,moving:true,sprinting:true,cloaked:true},
+      {id:'glass',name:'',x:166,y:160,character:0,direction:1,moving:true,sprinting:true,cloaked:true,cashInHand:true},
     ],ground:[],decorations:[]};
     this.world=new WorldView(this);
+    this.frame=frame;
     this.world.render(frame,2400,true);
     this.cameras.main.setZoom(5).centerOn(140,139);
-    this.time.addEvent({delay:220,loop:true,callback:()=>sprintDust(this,166,160,1,0)});
+    this.time.addEvent({delay:220,loop:true,callback:()=>sprintDust(this,this.cloakX ?? 166,160,1,0)});
     window.preview={scene:this,frame,world:this.world,ready:true};
+  }
+  update(time){
+    if(!this.frame)return;
+    this.cloakX=142+(time/1000*8)%42;
+    const frame={...this.frame,people:this.frame.people.map(person=>person.cloaked ? {...person,x:this.cloakX} : person)};
+    this.world.render(frame,time,false);
   }
 }
 new Phaser.Game({type:Phaser.AUTO,parent:'map',width:800,height:400,scene:Preview,backgroundColor:'#15211b',audio:{noAudio:true}});

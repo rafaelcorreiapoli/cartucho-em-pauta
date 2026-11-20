@@ -49,6 +49,9 @@ async (page) => {
     ]) {
       comparisons.push(await compare({ ...base, people: [person] }));
       if (person.cloaked) {
+        const actor=qa.world.actors.get(person.id);
+        if(actor.label.alpha!==0 || actor.label.text!=='') throw new Error('Cloak reveals name');
+        if(!actor.briefcase?.visible || actor.briefcase.alpha!==1) throw new Error('Cloak hides the carried briefcase');
         const current = photo.toDataURL();
         if (cloakedImage && current !== cloakedImage) throw new Error('Cloak reveals character identity');
         cloakedImage = current;

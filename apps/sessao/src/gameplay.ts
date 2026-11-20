@@ -47,7 +47,7 @@ export const objects = {
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},
-  invisibilityCloak:{name:'Capa de invisibilidade',portrait:'capa-invisibilidade.webp',description:`Oculta sua identidade numa silhueta de vidro quase invisível por ${invisibilityCloak.duration/1000} s. Recarga de ${invisibilityCloak.cooldown/1000} s após o efeito. Ocupa o tronco.`},
+  invisibilityCloak:{name:'Capa de invisibilidade',portrait:'capa-invisibilidade.webp',description:`Substitui sua aparência por um homem genérico de vidro vazado por ${invisibilityCloak.duration/1000} s. Recarga de ${invisibilityCloak.cooldown/1000} s após o efeito. Ocupa o tronco.`},
   vest:{name:'Colete',portrait:'retrato-colete.webp',description:`Reduz em ${Math.round(equipment.vest.damageReduction*100)}% o dano físico recebido.`},
   runningShoes:{name:'Tênis de Corrida da Senhora',portrait:'retrato-tenis.webp',description:`Aumenta em ${equipment.runningShoes.speedBonus}% a velocidade ao andar e correr.`},
   baton:{name:'Porrete',portrait:'retrato-porrete.webp',description:'Golpeia um jogador próximo.'},
