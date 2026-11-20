@@ -170,3 +170,18 @@ test('a partial deposit that leaves the budget negative does not restart the deb
   match.advance(30_000);
   expect(view(match,30_000).winner).toBe('Infiltrado');
 });
+
+test.each([30,45,60])('selected debt duration %s applies to the deadline and recovery',seconds=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(ids[0],players,0,()=>.9,1,false,false,false,false,false,false,false,false,'calote',false,true,0,12,8,seconds)).toBe(true);
+  budget(match,-1,1_000);
+  expect(view(match,1_000)).toMatchObject({caloteDebtSeconds:seconds,caloteIn:seconds});
+  budget(match,0,10_000);
+  expect(view(match,10_000).caloteIn).toBeUndefined();
+  budget(match,-1,11_000);
+  match.advance(11_000+seconds*1000-1);
+  expect(match.running).toBe(true);
+  expect(view(match,11_000+seconds*1000-1).caloteIn).toBe(1);
+  match.advance(11_000+seconds*1000);
+  expect(view(match,11_000+seconds*1000)).toMatchObject({winner:'Infiltrado',reason:expect.stringContaining(`${seconds} segundos`)});
+});

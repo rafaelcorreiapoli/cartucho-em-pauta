@@ -370,7 +370,7 @@ async function connect(join: () => Promise<Room>) {
         roleIntro.dataset.role = view.role;
         roleTitle.textContent = view.role;
         roleObjective.textContent = view.gameMode==='calote'
-          ? view.role==='Infiltrado' ? 'Mantenha o orçamento negativo por 30 segundos seguidos para provocar o calote.' : 'Evite 30 segundos seguidos no vermelho. Sobreviva até o fim da sessão ou elimine todos os infiltrados.'
+          ? view.role==='Infiltrado' ? `Mantenha o orçamento negativo por ${view.caloteDebtSeconds ?? 30} segundos seguidos para provocar o calote.` : `Evite ${view.caloteDebtSeconds ?? 30} segundos seguidos no vermelho. Sobreviva até o fim da sessão ou elimine todos os infiltrados.`
           : view.role==='Infiltrado'
           ? `Sabote o Congresso sem revelar seu papel. Faça a estabilidade cair a zero ou terminar a sessão abaixo de ${stabilityRules.target}.`
           : `Proteja o Congresso. Termine a sessão com pelo menos ${stabilityRules.target} de estabilidade ou tire de jogo todos os infiltrados.`;

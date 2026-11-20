@@ -17,6 +17,7 @@ type RoomActions = {
   'lobby-initial-wallet':{value:number};
   'lobby-grants':{enabled:boolean};
   'lobby-initial-budget':{value:number};
+  'lobby-calote-debt-seconds':{value:number};
   'lobby-match-minutes':{value:number};
   'lobby-automatic-projects':{enabled:boolean};
   'lobby-npc-count':{count:number};
