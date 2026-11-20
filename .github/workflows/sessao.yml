@@ -45,6 +45,7 @@ jobs:
           - attributes
           - reward
           - phone-pix
+          - cassation-result
           - legislative-modals
           - context-overflow
           - context-progress
@@ -76,6 +77,7 @@ jobs:
           trap cleanup EXIT
           server_fixture="$SMOKE_FLOW"
           if [[ "$SMOKE_FLOW" == megaphone-speech ]]; then server_fixture=market; fi
+          if [[ "$SMOKE_FLOW" == cassation-result ]]; then server_fixture=legislative-modals; fi
           server_entry="dev/$server_fixture-smoke-server.ts"
           flows=("$SMOKE_FLOW")
           if [[ "$SMOKE_FLOW" == exploration-hud ]]; then
@@ -137,6 +139,13 @@ jobs:
         with:
           name: exploration-hud-screenshots
           path: /tmp/sessao-exploration-*.png
+          if-no-files-found: error
+      - name: Keep cassation result screenshots
+        if: matrix.flow == 'cassation-result'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cassation-result-screenshots
+          path: apps/sessao/output/playwright/cassation-result-*.png
           if-no-files-found: error
       - name: Keep full ballot screenshots
         if: matrix.flow == 'vote-history'

@@ -447,6 +447,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
         audio.cue('cash');
         hud.showReward('income',gains.income,rewardHead);
       }
+      results.captureBallot(view,previousView);
       panel.render(view);
       const previousOffers = previousView?.politics?.incoming ?? [];
       if (view.politics?.incoming.some(offer=>!previousOffers.some(previous=>previous.id===offer.id))) {

@@ -211,8 +211,8 @@ async page => {
     await ballot.getByRole('button',{name:'Caio',pressed:true}).waitFor();
     const witnessBallot = witness.getByRole('region',{name:'Votação de cassação'});
     await witnessBallot.getByLabel('Votos em Caio').locator('li[title="Cassação QA"] .portrait').waitFor();
-    const result = page.getByRole('dialog',{name:'Resultados'});
-    const witnessResult = witness.getByRole('dialog',{name:'Resultados'});
+    const result = page.getByRole('dialog',{name:'Resultado da cassação'});
+    const witnessResult = witness.getByRole('dialog',{name:'Resultado da cassação'});
     for (const modal of [result,witnessResult]) {
       await modal.getByText('Ninguém foi cassado. Nenhum suspeito recebeu a maioria dos votos.').waitFor();
     }
