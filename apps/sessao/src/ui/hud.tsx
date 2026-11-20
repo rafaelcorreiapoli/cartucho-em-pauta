@@ -9,6 +9,7 @@ import {powerPanels} from '../power';
 import {settingsApp} from '../hud-apps';
 import { stabilityRules, publicDebtRules, publicDebtStabilityLoss } from '../plenary';
 import { createRoot } from 'react-dom/client';
+import {createPortal} from 'react-dom';
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { createHudModel, type HudModel } from './hud-model';
 import { missionReward, missionTitle, money, timedAgendas, type Mission } from '../politics';
@@ -30,9 +31,9 @@ function Laurel({right=false}:{right?:boolean}) {
   </svg>;
 }
 
-function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudModel['countdown']}) {
+function Parliament({state,countdown,projects,timersTarget}:{state:HudModel['congress'];countdown:HudModel['countdown'];projects:HudModel['automaticProjects'];timersTarget:HTMLElement}) {
   const values = useSyncExternalStore(state.subscribe,state.get);
-  return <><ParliamentMetrics {...values}/><PlenaryCountdown state={countdown}/></>;
+  return <><ParliamentMetrics {...values} timersTarget={timersTarget}><AutomaticProjectsHud channel={projects}/></ParliamentMetrics><PlenaryCountdown state={countdown}/></>;
 }
 
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
@@ -53,17 +54,25 @@ export function BudgetMeter({budget}:{budget:number}) {
   </div>;
 }
 
-export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn,payroll,children,timersTarget}:ReturnType<HudModel['congress']['get']>&{children?:ReactNode;timersTarget?:HTMLElement}) {
   const calote = gameMode==='calote';
+  const timers = <div className="session-timers">
+    {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
+      aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
+      <HudIcon name="clock"/>
+      <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
+    </HudHelp>}
+    <PayrollMetrics payroll={payroll}/>
+  </div>;
   return <section className="congress-meter grid text-center" aria-label="Parlamento" data-game-mode={gameMode}>
     <div className="congress-emblem" aria-hidden="true">
       <svg viewBox="0 0 96 30">
         <path fill="currentColor" d="M39 2h6v25h-6zm9 0h6v25h-6zM2 26a16 11 0 0 1 32 0zm60-9h32a16 10 0 0 1-32 0zM0 28h96v2H0z"/>
       </svg>
     </div>
-    <HudHelp className="congress-meter-label" aria-label={calote ? 'Como funciona o orçamento' : 'Como funciona a estabilidade'}
-      help={calote ? 'Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : `A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>{calote ? 'Orçamento público' : 'Estabilidade institucional'}</HudHelp>
-    <HudHelp as="div" help={calote ? 'Zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
+    {!calote && <HudHelp className="congress-meter-label" aria-label="Como funciona a estabilidade"
+      help={`A meta da sessão é ${stabilityRules.target}. A zero, o Parlamento entra em colapso.`}>Estabilidade institucional</HudHelp>}
+    <HudHelp as="div" aria-label={calote ? 'Como funciona o orçamento' : undefined} help={calote ? 'Orçamento público: zero fica no centro. Verde à direita é saldo positivo; vermelho à esquerda é dívida. Completar o tempo limite no vermelho dá vitória aos infiltrados. Deposite maletas na Tesouraria para recuperar o saldo.' : 'A marca na barra indica a meta de estabilidade.'} className="congress-meter-track flex items-center">
       <Laurel/>
       {calote ? <div className="calote-budget-wrap">
         <strong className="tabular-nums calote-budget-value" data-in-debt={budget<0}>{publicBudgetLabel(budget)}</strong>
@@ -77,32 +86,24 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
     {calote && budget<0 && caloteIn!==undefined && <div className="calote-countdown" data-critical={caloteIn<=10} role="timer" aria-label="Tempo até o calote">
       <HudIcon name="clock"/><span>DERROTA POR CALOTE EM</span><strong>{caloteIn} s</strong>
     </div>}
+    {children}
+    {timersTarget ? createPortal(timers,timersTarget) : timers}
     <div className="congress-summary-row">
     {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
       <HudIcon name="coins"/><strong className="tabular-nums">{budget<0 ? `−${money(-budget)}` : money(budget)}</strong>
     </HudHelp>}
-    {sessionRemaining!==undefined && <HudHelp as="div" help="Tempo até o encerramento da sessão." className="congress-session-clock" role="timer"
-      aria-label="Tempo restante da sessão" data-urgent={sessionRemaining<=60}>
-      <HudIcon name="clock"/>
-      <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
-    </HudHelp>}
     </div>
   </section>;
 }
 
 export function PayrollMetrics({payroll}:{payroll:ReturnType<HudModel['congress']['get']>['payroll']}) {
-  return payroll ? <HudHelp as="div" help="Valor total da folha, pago pelo orçamento público quando o relógio zera." className="congress-payroll" aria-label="Próxima distribuição de salários">
-    <span className="payroll-label"><HudIcon name="wallet"/>Folha salarial</span>
+  return payroll ? <div className="congress-payroll" aria-label="Próxima distribuição de salários">
+    <HudHelp className="payroll-label" aria-label="Folha salarial" help="Folha salarial: valor total pago pelo orçamento público quando o relógio zera."><HudIcon name="wallet"/></HudHelp>
     <strong className="tabular-nums">{money(payroll.cost)}</strong>
-    <span className="payroll-countdown" role="timer"><HudIcon name="clock"/>{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</span>
-  </HudHelp> : null;
-}
-
-function Payroll({state}:{state:HudModel['congress']}) {
-  const {payroll} = useSyncExternalStore(state.subscribe,state.get);
-  return <PayrollMetrics payroll={payroll}/>;
+    <span className="payroll-countdown" role="timer" aria-label="Tempo até a folha salarial">({Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')})</span>
+  </div> : null;
 }
 
 function HudPanel({children}:{children:ReactNode}) {
@@ -303,8 +304,6 @@ export function mountReactHud(openSettings:()=>void) {
   const profileRoot = createRoot(document.getElementById('profile-dock')!);
   profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
-  const payrollRoot = createRoot(document.getElementById('payroll-mount')!);
-  payrollRoot.render(<Payroll state={congress}/>);
   const agendaDock = document.getElementById('agenda-dock')!;
   const agendaRoot = createRoot(agendaDock);
   const session = document.getElementById('session')!;
@@ -319,13 +318,13 @@ export function mountReactHud(openSettings:()=>void) {
   agendaLayout.observe(session);
   agendaLayout.observe(equipment);
   agendaLayout.observe(agendaDock);
-  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
-  agendaRoot.render(<><AutomaticProjectsHud channel={model.automaticProjects}/><AgendaPanel state={agenda}/></>);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown} projects={model.automaticProjects} timersTarget={document.getElementById('session-timers-mount')!}/><PlenarySettingsButton open={openSettings}/></>);
+  agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,
     player: model.player,
     profileReward:model.profileReward.update,
     render: model.render,
-    destroy() { agendaLayout.disconnect(); payrollRoot.unmount(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
+    destroy() { agendaLayout.disconnect(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
   };
 }

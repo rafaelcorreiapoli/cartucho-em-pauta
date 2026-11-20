@@ -4,7 +4,6 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import {NEGOTIATION_MS,stations,type Station} from '../plenary';
 import {ELECTION_RULES} from '../elections';
-import {money} from '../politics';
 import {canStand,type Player} from '../map';
 import {ElectionStationActions,electionStationActions} from './election-station-actions';
 
@@ -17,7 +16,8 @@ test('campaign controls match the current station, voice state and completed act
     <ElectionStationActions {...electionStationActions(match.view(player.id,[player.id],now),station,voice)} send={()=>{}}/>,
   );
   expect(render()).toBe('');
-  expect(render('press')).toContain(money(ELECTION_RULES.advertisementCost));
+  expect(render('press')).not.toContain('em diante');
+  expect(render('press')).not.toContain('<small>');
   expect(render('press')).not.toContain('Discursar');
   expect(match.electionAction({...player,...stations.press},{kind:'advertise'},1,false)).toBeDefined();
   expect(render('press')).toContain('Contratar campanha · Duda Mendonça');

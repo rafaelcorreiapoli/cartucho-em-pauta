@@ -70,7 +70,8 @@ test('an opposition mission shows progress across successive ballots',()=>{
 test('the separate payroll HUD shows the next countdown and total cost',()=>{
   const markup = renderToStaticMarkup(<PayrollMetrics payroll={{remaining:125,cost:18}}/>);
   expect(markup).toContain('Próxima distribuição de salários');
-  expect(markup).toContain('2:05');
+  expect(markup).toContain('(2:05)');
+  expect(markup).not.toContain('#icon-clock');
   expect(markup).toContain('R$ 180 mil');
 });
 
