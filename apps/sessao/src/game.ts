@@ -4,7 +4,7 @@ import {sprintDust} from './sprint-dust';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
-import {wallVision} from './visibility';
+import {wallLight} from './visibility';
 import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke,createExtinguishEffect,showSafeExplosion} from './fire-effects';
 import {powerOption,powerRules,type PowerAction} from './power';
@@ -135,7 +135,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private fogEdge!:Phaser.GameObjects.Image;
     private fogTexture!:Phaser.Textures.CanvasTexture;
     private fogInSession = false;
-    private fogGeometry?: {x:number;y:number;radius:number;powerOut:boolean;barriers:string;points:ReturnType<typeof wallVision>};
+    private fogGeometry?: {x:number;y:number;radius:number;powerOut:boolean;barriers:string;polygons:ReturnType<typeof wallLight>};
     private roomFires!:ReturnType<typeof createRoomFires>;
     extinguishEffect!:ReturnType<typeof createExtinguishEffect>;
     private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
@@ -663,8 +663,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const cached = this.fogGeometry;
             if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.powerOut!==powerOut || cached.barriers!==barriers) {
               this.fogGeometry = {x:wallX,y:wallY,radius,powerOut,barriers,
-                points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius,true)};
-              const {points} = this.fogGeometry;
+                polygons:wallLight({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
+              const {polygons} = this.fogGeometry;
               const size = this.fogTexture.width;
               const center = size/2;
               const half = radius + 2;
@@ -682,8 +682,11 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
               gradient.addColorStop(1,'transparent');
               ctx.fillStyle = gradient;
               ctx.beginPath();
-              for (const point of points) ctx.lineTo(center+point.x*scale,center+point.y*scale);
-              ctx.closePath();
+              for (const polygon of polygons) {
+                ctx.moveTo(center+polygon[0].x*scale,center+polygon[0].y*scale);
+                for (const point of polygon.slice(1)) ctx.lineTo(center+point.x*scale,center+point.y*scale);
+                ctx.closePath();
+              }
               ctx.fill();
               ctx.restore();
               this.fogTexture.refresh();

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { WorldView } from './world-view';
 import { PHOTO_HEIGHT, PHOTO_WIDTH, photoBounds, type PhotoScene, type Photo } from './photography';
 import { VISION_RADIUS } from './map';
-import { wallVision } from './visibility';
+import { wallLight } from './visibility';
 
 type Request = { frame: PhotoScene; scale: number };
 
@@ -84,14 +84,25 @@ export class PhotoRenderer {
       if (!frame.camera) {
         const x = frame.center.x - left,
           y = frame.center.y - top;
-        ctx.fillStyle = '#081710a8';
-        ctx.beginPath();
-        ctx.rect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
-        const [first, ...edge] = wallVision(frame.center, VISION_RADIUS,true);
-        ctx.moveTo(x + first.x, y + first.y);
-        for (const point of edge) ctx.lineTo(x + point.x, y + point.y);
-        ctx.closePath();
-        ctx.fill('evenodd');
+        const fog = document.createElement('canvas');
+        fog.width=canvas.width; fog.height=canvas.height;
+        const mask = fog.getContext('2d')!;
+        mask.scale(scale,scale);
+        mask.fillStyle = '#081710a8';
+        mask.fillRect(0,0,PHOTO_WIDTH,PHOTO_HEIGHT);
+        mask.globalCompositeOperation = 'destination-out';
+        mask.fillStyle = 'black';
+        mask.beginPath();
+        mask.arc(x,y,VISION_RADIUS,0,Math.PI*2);
+        mask.clip();
+        mask.beginPath();
+        for (const polygon of wallLight(frame.center,VISION_RADIUS)) {
+          mask.moveTo(x+polygon[0].x,y+polygon[0].y);
+          for (const point of polygon.slice(1)) mask.lineTo(x+point.x,y+point.y);
+          mask.closePath();
+        }
+        mask.fill();
+        ctx.drawImage(fog,0,0,canvas.width/scale,canvas.height/scale);
       }
       const photo = frame as Photo;
       if (photo.selfie) {
