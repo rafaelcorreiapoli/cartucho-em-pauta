@@ -78,7 +78,7 @@ Consulte os pipelines existentes antes de criar um exportador:
 
 Uma transformação pode esconder a identidade do personagem por regra de jogo.
 Ela continua respeitando proporções, movimento e integração com o elenco.
-Isso não autoriza trocar seu portrait de loja por um ícone vetorial plano.
+Isso não autoriza trocar o portrait do traje na loja por um ícone vetorial plano.
 O antigo ícone vetorial da capa, um manto triangular com estrela e
 preenchimento plano, exemplifica esse desvio e não serve de referência
 para o catálogo pintado.

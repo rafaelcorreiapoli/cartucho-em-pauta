@@ -50,7 +50,7 @@ Caminhos a partir da raiz do repositório:
 - Um corpo vazado mantém anatomia, proporções e caminhada do elenco. O cenário
   aparece através dos espaços vazados; apenas reduzir a opacidade de um rosto
   reconhecível não oculta identidade.
-- Confirme separadamente quais sinais o efeito oculta ou preserva. Na capa:
+- Confirme separadamente quais sinais o efeito oculta ou preserva. No Collant da Invisibilidade:
   nome oculto, maleta carregada visível e fumaça da corrida preservada.
 - A arte da transformação no mapa não é referência de estilo para a imagem
   do produto na loja; esta exige o [guia de itens](portraits-itens.md).

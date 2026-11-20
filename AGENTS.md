@@ -15,6 +15,6 @@ correspondentes:
 | Rosto, busto, avatar ou retrato de uma pessoa | [Portraits de personagens](docs/arte/sessao/portraits-personagens.md) |
 | Imagem de produto, equipamento, comida ou item no HUD/loja | [Portraits de itens](docs/arte/sessao/portraits-itens.md) |
 
-Um mesmo recurso pode exigir mais de um guia: a capa equipada e a imagem da
-capa na loja são assets de categorias diferentes. A exceção visual de um
+Um mesmo recurso pode exigir mais de um guia: o collant equipado e a imagem do
+collant na loja são assets de categorias diferentes. A exceção visual de um
 efeito de gameplay não redefine a direção de arte do catálogo.
