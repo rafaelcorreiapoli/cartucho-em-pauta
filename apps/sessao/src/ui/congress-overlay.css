@@ -1234,3 +1234,8 @@
 #command-strip .election-heading { font:650 13px/1.2 system-ui,sans-serif; gap:8px; }
 #command-strip #election-timer { font-size:15px; font-weight:650; color:var(--color-hud-budget); }
 #command-strip #open-election-polls { padding-top:0; }
+
+@media (max-width:640px) {
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #session-timers-mount { display:none; }
+  #session:is([data-phase="ballot"],[data-phase="hearing"])[data-in-plenary="true"] #command-strip .right-hud { gap:0; }
+}
