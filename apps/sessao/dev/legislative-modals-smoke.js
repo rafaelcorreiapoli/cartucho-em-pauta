@@ -128,14 +128,12 @@ async page => {
   const objectDialog = page.locator('#gameplay-dialog');
   await objectDialog.getByRole('button',{name:/Estatuto da Fila Preferencial/}).click();
   await page.keyboard.press('Shift+Digit1');
-  await page.keyboard.press('Escape');
-  await objectDialog.waitFor({state:'hidden'});
-  await page.keyboard.press('Shift+Digit1');
+  if (await objectDialog.getByRole('button',{name:'Vincular ao slot 1'}).isEnabled()) throw Error('Documento pode ser vinculado à hotbar.');
   await objectDialog.getByRole('heading',{name:'Estatuto da Fila Preferencial'}).waitFor();
   await runShortcut(objectDialog.locator('summary'),/^Inspecionar$/);
   await objectDialog.locator('details[open]').getByText(/Assinaturas 0\//).waitFor();
   await page.keyboard.press('Shift+Digit2');
-  await objectDialog.getByRole('button',{name:'Vincular ao slot 2',pressed:true}).waitFor();
+  if (await objectDialog.getByRole('button',{name:'Vincular ao slot 2'}).isEnabled()) throw Error('Documento pode ser vinculado à hotbar.');
   const drop = objectDialog.getByRole('button',{name:'Largar no chão',exact:true});
   const dropKey = await drop.getAttribute('aria-keyshortcuts');
   await drop.evaluate(button=>{
@@ -246,5 +244,5 @@ async page => {
   await finale.waitFor({state:'hidden'});
   await page.locator('#session[data-phase="finished"]').waitFor();
   return {resolutions:3,projectPickerResolutions:2,cassationVoteReplicatedViaF2:true,
-    staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true,hotbarDocumentInspectedAndDroppedByKeyboard:true};
+    staleCandidateRejected:true,cassationResultDismissedViaF2:true,finaleDismissedViaF2:true,documentExcludedFromHotbarAndInspectedAndDroppedByKeyboard:true};
 }
