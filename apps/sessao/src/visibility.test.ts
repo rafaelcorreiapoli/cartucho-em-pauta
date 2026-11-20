@@ -178,3 +178,19 @@ test('an intervening wall hides the lateral face instead of illuminating the ent
   expect(illuminated(origin,60,5012,5020)).toBe(true);
   expect(illuminated(origin,60,5035,5020)).toBe(false);
 });
+
+test('an upper doorway illuminates both jamb faces without shifting the cone inside the room',()=>{
+  const origin = {x:5020,y:5040,barriers:[[4980,5010,30,8],[5030,5010,30,8]] as const};
+  for (const x of [5008,5032]) for (const y of [5011,5014,5017]) {
+    expect(illuminated(origin,100,x,y)).toBe(true);
+  }
+  // Near corners bound the opening; wall artwork must not widen its light cone.
+  expect(illuminated(origin,100,5020,4990)).toBe(true);
+  expect(illuminated(origin,100,4996,4990)).toBe(false);
+  expect(illuminated(origin,100,5044,4990)).toBe(false);
+  expect(characterVisible(origin,{x:4996,y:4990},100)).toBe(false);
+  // From inside the room these south-facing surfaces remain hidden.
+  const inside = {...origin,y:4990};
+  expect(illuminated(inside,100,5008,5014)).toBe(false);
+  expect(illuminated(inside,100,5032,5014)).toBe(false);
+});
