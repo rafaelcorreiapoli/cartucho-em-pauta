@@ -258,11 +258,11 @@ function PowerNotice({state}:{state:HudModel['outage']}) {
 
 function GhostAdviserNotice({state}:{state:HudModel['ghostAdvisers']}) {
   const incident = useSyncExternalStore(state.subscribe,state.get);
-  return !!incident?.count && <aside className="incident-panel" data-paused={incident.paused}>
+  return <>{incident?.elimination && <div className="ghost-adviser-elimination" role="status"><strong>{incident.elimination.name}</strong> assassinou um gasto extra</div>}{!!incident?.count && <aside className="incident-panel" data-paused={incident.paused}>
     <article className="incident-fire"><div><strong>Assessores fantasmas: {incident.count}</strong>
     <small>Encontre e elimine com porrete.</small></div>
     <p>{incident.paused ? 'Pausado' : `−R$ ${incident.count} mil do orçamento a cada 6 s`}</p></article>
-  </aside>;
+  </aside>}</>;
 }
 
 function ActiveFires({state}:{state:HudModel['fires']}) {

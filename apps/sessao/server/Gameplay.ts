@@ -689,8 +689,10 @@ export class Gameplay {
         publishGameplay(world,attacker,'hit',{...details,damage});
         if (!target.knockedOut) return;
         if (this.ghostAdvisers.has(target.id)) {
-          this.ghostAdvisers.kill(target.id);
+          const hit=target.hit;
           this.combat.leave(target);
+          target.hit=hit;
+          this.ghostAdvisers.kill(target.id,world.incidentNow ?? world.now,attacker.nick);
           world.feedback?.(attacker.id,'Assessor fantasma eliminado. Despesa encerrada.');
           return;
         }

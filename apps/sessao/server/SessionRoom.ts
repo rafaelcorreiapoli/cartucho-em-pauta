@@ -829,7 +829,7 @@ export class SessionRoom extends Room {
           continue;
         }
         const view = this.match.view(id,ids,realNow,this.match.contacts(state.player,players));
-        if (this.match.running) view.ghostAdvisers = {count:this.gameplay.ghostAdvisers.players.length,paused:this.match.phase!=='negotiation'};
+        if (this.match.running) view.ghostAdvisers = this.gameplay.ghostAdvisers.view(world.incidentNow ?? world.now,this.match.phase!=='negotiation');
         if (broadcaster && broadcaster!==id) view.megaphoneActive = true;
         if (this.match.running) {
           const atDesk = this.match.canFileComplaint(state.player,now);
