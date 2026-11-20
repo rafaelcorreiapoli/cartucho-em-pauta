@@ -384,7 +384,7 @@ test('cleanup requires a private discovery, works without the detector and expir
     const token = game.view(player,world).dialogue?.token;
     game.act(player,{kind:'shop-buy',target:kind,token},world);
     const view = game.view(player,world);
-    return [...view.inventory,...view.equipped].find(item=>item.kind===kind)!;
+    return [...view.inventory,...(view.equipped ?? [])].find(item=>item.kind===kind)!;
   };
   const camera = buy(owner,'spyCamera');
   const detector = buy(detective,'bugDetector');
