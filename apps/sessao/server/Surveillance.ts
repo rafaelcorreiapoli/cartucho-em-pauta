@@ -6,6 +6,8 @@ type Hardware = {id:number; discoveredBy:Set<string>};
 type Device = SpyChannel & {owner:string; hardware:Hardware; site:Hideout; until:number; alertAt:number; installedAt:number};
 type Job = {kind:'install'|'inspect'|'remove'|'recover'; site:Hideout; item?:number; target?:number; x:number;y:number; ends:number};
 type Access = {inventory:(id:string)=>WorldItem[]; consume:(id:string,item:number)=>boolean; feedback:(id:string,text:string)=>void;
+  players?:()=>readonly Player[];
+  equipped?:(id:string)=>WorldItem[];
   actionFailed?:(id:string,text:string)=>void;
   restore?:(id:string,kind:SpyDevice)=>WorldItem|undefined;
   ground?:()=>readonly (WorldItem & {x:number;y:number})[];
@@ -101,6 +103,12 @@ export class Surveillance {
       localPerception(this.origin(device,barriers),talker).volume : 0;
   }
 
+  private sites(player:Player,access:Access):Hideout[] {
+    return [...hideouts,...(access.players?.() ?? []).filter(target=>target.id!==player.id).map(target=>({
+      id:`player:${target.id}`,name:target.nick,room:'Jogador',x:target.x,y:target.y,accepts:[] as SpyDevice[],
+    }))];
+  }
+
   view(player:Player,now:number,access:Access,exploring:boolean):SpyView {
     const id = player.id;
     const channels = [...this.devices.values()].filter(device=>device.owner===id)
@@ -108,7 +116,7 @@ export class Surveillance {
     const options:SpyView['options'] = [];
     const job = this.jobs.get(id);
     if (job) options.push({label:'Cancelar',kind:'cancel'});
-    else if (exploring) for (const site of hideouts) {
+    else if (exploring) for (const site of this.sites(player,access)) {
       if (!this.near(player,site)) continue;
       const device = this.occupied.get(site.id);
       const known = device && this.known(id,device);
@@ -120,7 +128,7 @@ export class Surveillance {
         options.push({label:`Remover dispositivo · ${site.name}`,kind:'remove',site:site.id});
         options.push({label:'Deixar instalado',kind:'keep',site:site.id});
       }
-      for (const item of inventory) {
+      for (const item of [...inventory,...(access.equipped?.(id) ?? [])]) {
         if (item.kind==='bugDetector') options.push({label:`Inspecionar · ${site.name}`,kind:'inspect',site:site.id,item:item.id});
         if ((item.kind==='wiretap' || item.kind==='spyCamera') && (site.accepts as readonly SpyDevice[]).includes(item.kind)) options.push({
           label:`Instalar ${item.kind==='wiretap' ? 'grampo' : 'câmera'} · ${site.name}`,kind:'install',site:site.id,item:item.id,
@@ -168,9 +176,9 @@ export class Surveillance {
     }
     if (raw.kind!=='recover' && raw.kind!=='install' && raw.kind!=='inspect' && raw.kind!=='remove') return;
     if (this.jobs.has(id)) return 'Você já está interagindo com um dispositivo.';
-    const site = 'site' in raw ? hideouts.find(site=>site.id===raw.site) : undefined;
+    const site = 'site' in raw ? this.sites(player,access).find(site=>site.id===raw.site) : undefined;
     if (!site || !this.near(player,site)) return 'Aproxime-se do local.';
-    const item = 'item' in raw ? access.inventory(id).find(item=>item.id===raw.item) : undefined;
+    const item = 'item' in raw ? [...access.inventory(id),...(access.equipped?.(id) ?? [])].find(item=>item.id===raw.item) : undefined;
     const device = this.occupied.get(site.id);
     if (raw.kind==='install') {
       if (device?.owner===id) return 'Você já possui um dispositivo instalado aqui.';
@@ -193,7 +201,7 @@ export class Surveillance {
     if (!exploring) { this.jobs.clear(); this.selected.clear(); this.deliveredCameraFrames.clear(); this.listening.clear(); this.muted.clear(); return; }
     for (const [id,job] of this.jobs) {
       const player = players.find(player=>player.id===id);
-      if (!player || !present(id) || !this.near(player,job.site) || player.x!==job.x || player.y!==job.y) {
+      if (!player || !present(id) || !this.sites(player,access).some(site=>site.id===job.site.id && this.near(player,site)) || player.x!==job.x || player.y!==job.y) {
         this.jobs.delete(id); (access.actionFailed ?? access.feedback)(id,'Interação interrompida.'); continue;
       }
       if (now<job.ends) continue;
@@ -238,7 +246,7 @@ export class Surveillance {
 
   private finish(player:Player,job:Job,now:number,access:Access) {
     const id = player.id;
-    const item = access.inventory(id).find(item=>item.id===job.item);
+    const item = [...access.inventory(id),...(access.equipped?.(id) ?? [])].find(item=>item.id===job.item);
     const device = this.occupied.get(job.site.id);
     if (job.kind==='install') {
       if (!device && (item?.kind==='wiretap' || item?.kind==='spyCamera') &&

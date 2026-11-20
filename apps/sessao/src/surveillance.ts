@@ -6,7 +6,7 @@ import { obstacleBetween, securityRoom, type Motion } from './map';
 export const spyProducts = {
   wiretap:{name:'Grampo',price:2,portrait:'retrato-grampo.webp',description:'Escuta remota ao redor de um esconderijo.'},
   spyCamera:{name:'Câmera escondida',price:3,portrait:'retrato-camera-escondida.webp',description:'Vigilância remota em um esconderijo.'},
-  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-detector-escutas.webp',description:'Inspeciona esconderijos sem ser consumido.'},
+  bugDetector:{name:'Detector de Escutas',price:2,portrait:'retrato-detector-escutas.webp',description:'Equipamento reutilizável. Inspeciona jogadores e esconderijos próximos pelas ações contextuais.'},
 } as const;
 export type SpyProduct = keyof typeof spyProducts;
 export type SpyDevice = Exclude<SpyProduct,'bugDetector'>;
@@ -21,7 +21,7 @@ export const hideouts = [
   {id:'library',name:'Estante',room:'Biblioteca',x:433,y:465,accepts:both},
   ...privateOffices.map(office=>({id:'office-'+office.id,name:'Armário',room:office.name,...office.cabinet,accepts:both})),
 ];
-export type Hideout = typeof hideouts[number];
+export type Hideout = {id:string;name:string;room:string;x:number;y:number;accepts:readonly SpyDevice[]};
 
 export function cameraSees(origin:Motion,subject:Motion) {
   return Math.hypot(subject.x-origin.x,subject.y-origin.y)<=spyRules.range && !obstacleBetween(origin,subject);

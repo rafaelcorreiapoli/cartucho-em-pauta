@@ -181,11 +181,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </div>}
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
-        {chooseQuantity && bagOpen && !offerTarget && <button type="button" className="bag-pin hud-button"
+        {chooseQuantity && bagOpen && !offerTarget && canPinToHotbar(item) && <button type="button" className="bag-pin hud-button"
           disabled={!canPinToHotbar(item)} onClick={focusHotbar}>
           <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
-        {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+        {canPin && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
           {hotbar.map((id,index)=>{
             const label = `Vincular ao slot ${index+1}`;
