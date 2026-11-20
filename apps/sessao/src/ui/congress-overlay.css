@@ -1228,7 +1228,8 @@
 /* Right-align the session clock, payroll and election countdown as one stack. */
 #command-strip .right-hud { gap:16px; }
 #session-timers-mount { width:100%; }
-.session-timers { display:grid; justify-items:end; gap:14px; font:650 13px/1.2 system-ui,sans-serif; }
+.session-timers { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px 16px; font:650 13px/1.2 system-ui,sans-serif; }
+.session-timers .congress-payroll { order:-1; }
 .session-timers .congress-session-clock, .session-timers .congress-payroll { margin:0; font:inherit; gap:.4em; }
 .session-timers .congress-session-clock strong { font-size:15px; }
 #command-strip .election-heading { font:650 13px/1.2 system-ui,sans-serif; gap:8px; }
