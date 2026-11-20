@@ -522,3 +522,20 @@ test('delayed work cannot change the final Agenda, XP, wallet or budget',()=>{
   expect(hud.resources.get()).toBe(resources);
   expect(hud.congress.get()).toBe(congress);
 });
+
+test('the agenda keeps only the latest completion while preserving active objectives',()=>{
+  const hud = createHudModel();
+  const match = new PlenaryMatch(1);
+  match.start(player.id,[{...player}],0,()=>0);
+  const view = match.view(player.id,[player.id],0);
+  const missions = view.politics!.missions;
+  const [first,second] = missions.active;
+  expect(second).toBeDefined();
+  missions.completed = [first,second];
+  hud.render(view);
+  expect(hud.agenda.get()?.recent).toEqual([second]);
+  expect(hud.agenda.get()?.active).toEqual(missions.active);
+  missions.completed = [first];
+  hud.render(view);
+  expect(hud.agenda.get()?.recent).toEqual([first]);
+});

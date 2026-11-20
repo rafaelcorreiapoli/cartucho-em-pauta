@@ -30,9 +30,9 @@ function Laurel({right=false}:{right?:boolean}) {
   </svg>;
 }
 
-function Parliament({state,countdown}:{state:HudModel['congress'];countdown:HudModel['countdown']}) {
+function Parliament({state,countdown,projects}:{state:HudModel['congress'];countdown:HudModel['countdown'];projects:HudModel['automaticProjects']}) {
   const values = useSyncExternalStore(state.subscribe,state.get);
-  return <><ParliamentMetrics {...values}/><PlenaryCountdown state={countdown}/></>;
+  return <><ParliamentMetrics {...values}><AutomaticProjectsHud channel={projects}/><PayrollMetrics payroll={values.payroll}/></ParliamentMetrics><PlenaryCountdown state={countdown}/></>;
 }
 
 function PlenaryCountdown({state}:{state:HudModel['countdown']}) {
@@ -53,7 +53,7 @@ export function BudgetMeter({budget}:{budget:number}) {
   </div>;
 }
 
-export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn}:ReturnType<HudModel['congress']['get']>) {
+export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,sessionRemaining,debtPenaltyIn,children}:ReturnType<HudModel['congress']['get']>&{children?:ReactNode}) {
   const calote = gameMode==='calote';
   return <section className="congress-meter grid text-center" aria-label="Parlamento" data-game-mode={gameMode}>
     <div className="congress-emblem" aria-hidden="true">
@@ -77,6 +77,7 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
     {calote && budget<0 && caloteIn!==undefined && <div className="calote-countdown" data-critical={caloteIn<=10} role="timer" aria-label="Tempo até o calote">
       <HudIcon name="clock"/><span>DERROTA POR CALOTE EM</span><strong>{caloteIn} s</strong>
     </div>}
+    {children}
     <div className="congress-summary-row">
     {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
@@ -93,16 +94,11 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
 }
 
 export function PayrollMetrics({payroll}:{payroll:ReturnType<HudModel['congress']['get']>['payroll']}) {
-  return payroll ? <HudHelp as="div" help="Valor total da folha, pago pelo orçamento público quando o relógio zera." className="congress-payroll" aria-label="Próxima distribuição de salários">
-    <span className="payroll-label"><HudIcon name="wallet"/>Folha salarial</span>
+  return payroll ? <div className="congress-payroll" aria-label="Próxima distribuição de salários">
+    <HudHelp className="payroll-label" aria-label="Folha salarial" help="Folha salarial: valor total pago pelo orçamento público quando o relógio zera."><HudIcon name="wallet"/></HudHelp>
     <strong className="tabular-nums">{money(payroll.cost)}</strong>
     <span className="payroll-countdown" role="timer"><HudIcon name="clock"/>{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</span>
-  </HudHelp> : null;
-}
-
-function Payroll({state}:{state:HudModel['congress']}) {
-  const {payroll} = useSyncExternalStore(state.subscribe,state.get);
-  return <PayrollMetrics payroll={payroll}/>;
+  </div> : null;
 }
 
 function HudPanel({children}:{children:ReactNode}) {
@@ -303,8 +299,6 @@ export function mountReactHud(openSettings:()=>void) {
   const profileRoot = createRoot(document.getElementById('profile-dock')!);
   profileRoot.render(<CharacterProfile model={model}/>);
   const parliamentRoot = createRoot(document.getElementById('congress-dock')!);
-  const payrollRoot = createRoot(document.getElementById('payroll-mount')!);
-  payrollRoot.render(<Payroll state={congress}/>);
   const agendaDock = document.getElementById('agenda-dock')!;
   const agendaRoot = createRoot(agendaDock);
   const session = document.getElementById('session')!;
@@ -319,13 +313,13 @@ export function mountReactHud(openSettings:()=>void) {
   agendaLayout.observe(session);
   agendaLayout.observe(equipment);
   agendaLayout.observe(agendaDock);
-  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown}/><PlenarySettingsButton open={openSettings}/></>);
-  agendaRoot.render(<><AutomaticProjectsHud channel={model.automaticProjects}/><AgendaPanel state={agenda}/></>);
+  parliamentRoot.render(<><Parliament state={congress} countdown={model.countdown} projects={model.automaticProjects}/><PlenarySettingsButton open={openSettings}/></>);
+  agendaRoot.render(<AgendaPanel state={agenda}/>);
   return {
     broadcast: broadcast.update,
     player: model.player,
     profileReward:model.profileReward.update,
     render: model.render,
-    destroy() { agendaLayout.disconnect(); payrollRoot.unmount(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
+    destroy() { agendaLayout.disconnect(); televisionRoot.unmount(); fireRoot.unmount(); outageRoot.unmount(); broadcastRoot.unmount(); parliamentRoot.unmount(); agendaRoot.unmount(); profileRoot.unmount(); },
   };
 }

@@ -80,7 +80,7 @@ export function createHudModel() {
         xp:progress.xp,start:progress.levelStart,next:progress.nextLevelXp,level:progress.level});
       const missions = view.phase==='lobby' ? undefined : view.politics?.missions;
       if (!missions) { agenda.update(undefined); return; }
-      const recent = missions.completed.slice(-2);
+      const recent = missions.completed.slice(-1);
       const fresh = previous ? recent.filter(mission=>!previous.recent.some(done=>done.id===mission.id)) : [];
       agenda.update({active:missions.active,recent,announcement:fresh.length
         ? fresh.map(mission=>'Concluído: '+missionTitle(mission)).join('. ') : previous?.announcement ?? ''});
