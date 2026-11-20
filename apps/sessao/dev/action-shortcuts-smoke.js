@@ -36,6 +36,7 @@ async page => {
     ?.checkVisibility({visibilityProperty:true,opacityProperty:true}));
   await page.keyboard.press('u');
   await apps.waitFor();
+  if (await page.locator('#election-dock').isVisible()) throw Error('Pesquisa eleitoral deve recolher com aplicativos abertos');
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await palette.waitFor();

@@ -1244,6 +1244,7 @@
 
 /* Keep the electoral standing just above the two hotbar rows. */
 #election-indicator-mount {
+  display:block;
   position:fixed;
   right:var(--hud-edge);
   bottom:calc(var(--hud-edge) + 2 * var(--hot-slot) + var(--hot-gap) + 16px);
