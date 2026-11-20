@@ -32,7 +32,7 @@ export const stations = {
   secretary:npcs.secretary.interaction,
   archive:{x:128,y:364},
   audit: npcs.corregedor.interaction,
-  panel: {x:548,y:620},
+  panel: {x:480,y:590},
   press: {x:863,y:245},
   tv: {x:915,y:200},
 } as const;
