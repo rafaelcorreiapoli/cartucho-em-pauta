@@ -25,7 +25,7 @@ async page => {
   const hang = visitors.find(player=>player.visitor==='luciano-hang');
   if (hang?.nick!=='Véio da Havan' || hang.wallet!==16) throw Error('Hang profile was not registered');
   for (const visitor of visitors) for (const action of ['walk','hit','fall']) {
-    const file = `${visitor.visitor}-${action}.${action==='walk'?'png':'webp'}`;
+    const file = `${visitor.visitor}-${action}-128.webp`;
     if (!loaded.has(file)) throw Error(`Missing sprite: ${file}`);
   }
   if (await page.getByRole('button',{name:/^Conversar ·/}).count()) throw Error('Visitor negotiation still offered');
