@@ -17,7 +17,7 @@ Caminhos a partir da raiz do repositório:
 - Para alimentos, abra também `apps/sessao/food-portraits.md` e a xícara do
   catálogo como referência da família.
 
-Antes de gerar uma capa de invisibilidade para a loja, abra os portraits do
+Antes de gerar um traje de invisibilidade para a loja, abra os portraits do
 Raio X, da Visão noturna e do Colete. O antigo ícone vetorial da capa,
 um manto triangular com estrela e preenchimento plano, exemplifica um
 desenho fora desse padrão e não é referência aprovada.
@@ -27,6 +27,13 @@ desenho fora desse padrão e não é referência aprovada.
 - Um objeto principal, isolado, com acabamento raster ilustrado e pintado,
   volume convincente e contorno escuro. Ele deve parecer parte do mesmo
   catálogo que Raio X e Visão noturna.
+- Caricatura também na forma do objeto: proporções exageradas, silhueta
+  expressiva e detalhes cômicos coerentes com sua função. O acabamento pintado
+  não deve transformar o item num produto fotográfico ou numa peça de fantasia
+  solene. No Collant da Invisibilidade, a graça é o traje inteiro apertado,
+  com proporções próximas às do boneco genérico do mapa.
+- Modele com massas de luz e sombra legíveis. Textura fina fica subordinada
+  às formas; uma trama de tecido fotorrealista não substitui o exagero cômico.
 - Perspectiva em três quartos ou vista de produto compatível com a família.
   Dê espessura, dobras, costuras, encaixes e sobreposições coerentes com a peça.
 - Materiais legíveis: metal tem planos e reflexos; couro/tecido têm dobras,
@@ -67,7 +74,8 @@ ilustrada. Motivos simbólicos podem existir como detalhes pintados da peça.
 ## Critérios de conclusão
 
 - Abra o card na loja real, ao lado de pelo menos dois produtos existentes da
-  mesma categoria. Compare pintura, volume, contorno, perspectiva e escala;
+  mesma categoria. Compare pintura, volume, contorno, perspectiva, escala
+  e grau de exagero caricato e cômico;
   ver a imagem isolada sobre transparência não conclui a revisão.
 - Abra também o item no inventário/equipamento: silhueta e detalhe principal
   continuam reconhecíveis no menor tamanho usado.

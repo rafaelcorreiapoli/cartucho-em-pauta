@@ -20,6 +20,8 @@ para o mapa e de outro enquadramento para seu portrait de loja.
 
 - Ilustração raster pintada, caricata e com volume; acabamento consistente com
   as referências visuais nomeadas em cada guia.
+- Exagero caricato e humor também nos objetos: formas expressivas e leitura
+  divertida antes de microtextura ou realismo de fotografia de produto.
 - Contornos escuros desenhados, materiais reconhecíveis, sombras e reflexos
   modelando a forma; detalhes subordinados à leitura no tamanho de uso.
 - Luz, paleta, perspectiva e nível de exagero acompanhando a família escolhida.
