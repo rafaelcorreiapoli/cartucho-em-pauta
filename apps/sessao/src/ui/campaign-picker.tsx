@@ -21,7 +21,7 @@ function CampaignPicker({wallet,buy,close}:{wallet:number;buy:(format:Advertisem
     }))],
   );
   return <div ref={keys} className="campaign-picker">
-    <DialogHeader id="campaign-picker-title" title="Veicular propaganda" dismissLabel="Fechar propaganda" onDismiss={close}/>
+    <DialogHeader id="campaign-picker-title" title="Duda Mendonça" dismissLabel="Fechar propaganda" onDismiss={close}/>
     <p>Na carteira <strong>{money(wallet)}</strong></p>
     {options.map(({format,offer,shortcut,affordable,activate})=><button key={format} type="button"
       className="hud-button hud-button--secondary" disabled={!affordable} aria-keyshortcuts={affordable ? shortcut : undefined}

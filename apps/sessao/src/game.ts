@@ -23,7 +23,7 @@ import {preloadWorldArt,createWorldAnimations,createActorView,updateActorView,cr
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
-import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
+import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, playerVisionRadius, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 const rechargeFixtures = (Object.keys(stationRecharge) as RechargeStation[]).flatMap(station=>{
   const {texture,duration} = stationRecharge[station];
@@ -460,7 +460,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const powerOut = !!plenaryView?.outage;
-      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
+      const visionRadius = playerVisionRadius(ownPlayer)*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
         (powerOut ? powerRules.visionFactor : 1);
       const cooldowns = plenaryView?.gameplay?.stationCooldowns;
       if (negotiating && ownPlayer && cooldowns) {

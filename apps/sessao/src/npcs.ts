@@ -11,6 +11,8 @@ export const cassationFee = 0;
 export const cassationCooldownMs = 60_000;
 
 export const npcs = {
+  campaignVendor:{name:'Duda Mendonça',sprite:'duda-mendonca.webp',x:863,y:209,direction:0,
+    interaction:{x:863,y:245},dialogue:'campaign',label:'Campanhas políticas',catalog:undefined},
   corregedor:{name:'Chapolin Colorado',sprite:'chapolin-colorado.webp',x:808,y:72,direction:0,
     interaction:{x:808,y:93},dialogue:'corregedoria',label:'Corregedoria',catalog:undefined},
   vendor:{name:'Daniel Vorcaro',sprite:'daniel-vorcaro.webp',portrait:'retrato-daniel-vorcaro.webp',x:675,y:231,direction:0,dialogue:'convenience',label:'Apoio Técnico',catalog:'equipment'},
@@ -60,6 +62,8 @@ export type DialogueOption = {
 };
 export type DialogueNode = {text:string; options:readonly DialogueOption[]};
 export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNode>>>> = {
+  campaign:{start:{text:'Vamos colocar sua campanha no ar? Escolha o formato da propaganda.',
+    options:[{id:'leave',label:'Voltar depois',action:'close'}]}},
   corregedoria:{
     start:{
       text:'A convocação avisa o Plenário. Cada eleitor poderá votar em quem suspeita ser infiltrado.',

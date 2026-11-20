@@ -476,8 +476,8 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   const {alice,bob,game,world,events} = setup();
   world.spend = ()=>true;
   alice.character = 4;
-  game.applyAttribute(alice,'agility');
-  const duration = decorationInstallMs/1.25;
+  game.applyAttribute(alice,'burglary');
+  const duration = decorationInstallMs;
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
     Object.assign(alice,npcs.credentialsVendor.interaction);
@@ -1145,4 +1145,29 @@ test('institutional frames include the far side of a camera region and exclude a
   expect(frame.camera).toMatchObject({x:x+w/2,y:y+h/2});
   expect(frame.people.map(person=>person.id)).toContain(bob.id);
   expect(frame.people.map(person=>person.id)).not.toContain(watcher.id);
+});
+
+test('an equipped detector inspects nearby players and fixed hideouts without being consumed',()=>{
+  const {alice,bob,game,world} = setup();
+  world.spend = ()=>true;
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(alice,{kind:'talk',target:'vendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  game.act(alice,{kind:'shop-buy',target:'bugDetector',token:game.view(alice,world).dialogue?.token},world);
+  const detector = game.view(alice,world).inventory.find(item=>item.kind==='bugDetector')!;
+  game.act(alice,{kind:'equip',item:detector.id},world);
+  expect(game.view(alice,world).equipped).toContainEqual(detector);
+  Object.assign(alice,{x:247,y:250});
+  Object.assign(bob,{x:250,y:250});
+  const options = game.spyView(alice,world).options;
+  expect(options).toContainEqual(expect.objectContaining({kind:'inspect',site:'coffee',item:detector.id}));
+  const inspect = options.find(option=>option.site===`player:${bob.id}`)!;
+  expect(inspect.kind).toBe('inspect');
+  expect(game.spyAction(alice,inspect,world)).toBeUndefined();
+  world.now += 3000;
+  game.tick(world,true);
+  expect(game.spyView(alice,world).progress).toBeUndefined();
+  expect(game.view(alice,world).equipped).toContainEqual(detector);
+  Object.assign(bob,{x:900,y:500});
+  expect(game.spyAction(alice,inspect,world)).toBe('Aproxime-se do local.');
 });

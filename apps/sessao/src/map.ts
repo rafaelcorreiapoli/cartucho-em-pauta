@@ -42,7 +42,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; breachingSafe?:true; breachingDoor?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; interactionSpeedBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; breachingSafe?:true; breachingDoor?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; burglarySpeedBonus?:number; cashSpeedBonus?:number; movementSpeedBonus?:number; visionBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 
@@ -79,7 +79,7 @@ export const sprintMultiplier = 1.5;
 
 export function movementSpeed(player:Player) {
   const transport = player.publicTransport && !player.sprinting ? 1+investmentRules.transportSpeedBonus/100 : 1;
-  return transport*(player.speed ?? SPEED)*(player.runningShoes ? 1+equipment.runningShoes.speedBonus/100 : 1)*(player.speedModifier?.factor ?? 1)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
+  return transport*(player.speed ?? SPEED)*(1+(player.movementSpeedBonus ?? 0)/100)*(player.runningShoes ? 1+equipment.runningShoes.speedBonus/100 : 1)*(player.speedModifier?.factor ?? 1)*(player.carrying ? carrySpeedFactor : player.sprinting ? sprintMultiplier : 1);
 }
 
 export function move(player: Player, input: Motion, seconds: number, stand = canStand) {
@@ -98,6 +98,8 @@ export function move(player: Player, input: Motion, seconds: number, stand = can
 }
 
 export const VISION_RADIUS = 86;
+export const playerVisionRadius = (player:Pick<Player,'visionBonus'>|undefined) =>
+  VISION_RADIUS*(1+(player?.visionBonus ?? 0)/100);
 const HEARING_RADIUS = 114;
 
 export function segmentIntersects(a:Motion, b:Motion, [x,y,w,h]:Rect) {

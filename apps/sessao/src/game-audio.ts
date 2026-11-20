@@ -11,6 +11,7 @@ const files = {
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
   explosion:'explosao-cofre.wav',
   federalCaught:'federal-siren.mp3', federalIsolation:'federal-trombone.mp3',
+  applause:'aplausos.wav',
   eat:'comer.wav', drink:'beber.wav',
   stamp:'carimbo.wav', lock:'fechadura.wav', shutter:'obturador.wav',
   swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',

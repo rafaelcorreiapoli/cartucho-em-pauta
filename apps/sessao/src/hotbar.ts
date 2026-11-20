@@ -1,9 +1,8 @@
-import {isGear} from './equipment';
-import {occupiesInventorySlot, type WorldItem} from './gameplay';
+import {consumableAction, type WorldItem} from './gameplay';
 
 export const HOTBAR_SLOTS = 6;
 
-export const canPinToHotbar = (item:Pick<WorldItem,'kind'>) => occupiesInventorySlot(item) && !isGear(item.kind);
+export const canPinToHotbar = (item:Pick<WorldItem,'kind'>) => !!consumableAction({id:0,...item});
 
 export function assignHotbarSlot(slots:readonly (number|undefined)[], index:number, item:number) {
   return slots.map((id,slot)=>slot===index ? item : id===item ? undefined : id);

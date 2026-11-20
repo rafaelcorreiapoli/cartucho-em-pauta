@@ -5,7 +5,7 @@ import {money} from '../politics';
 import {ContextActionButton} from './context-action-button';
 
 export const electionButtons = {
-  advertise:{station:'press',label:'Veicular propaganda',icon:'chart',detail:`${money(ELECTION_RULES.advertisementCost)} em diante`},
+  advertise:{station:'press',label:'Contratar campanha · Duda Mendonça',icon:'chart',detail:`${money(ELECTION_RULES.advertisementCost)} em diante`},
   speech:{station:'panel',label:'Discursar',icon:'mic'},
   interview:{station:'tv',label:'Entrevista ao vivo',icon:'mic'},
   object:{station:'panel',label:'Contestar projeto',icon:'cross'},

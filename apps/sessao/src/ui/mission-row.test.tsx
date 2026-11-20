@@ -383,7 +383,8 @@ test('cleanup requires a private discovery, works without the detector and expir
     game.act(player,{kind:'open-shop',target:'vendor'},world);
     const token = game.view(player,world).dialogue?.token;
     game.act(player,{kind:'shop-buy',target:kind,token},world);
-    return game.view(player,world).inventory.find(item=>item.kind===kind)!;
+    const view = game.view(player,world);
+    return [...view.inventory,...(view.equipped ?? [])].find(item=>item.kind===kind)!;
   };
   const camera = buy(owner,'spyCamera');
   const detector = buy(detective,'bugDetector');
@@ -429,6 +430,7 @@ test('cleanup requires a private discovery, works without the detector and expir
   const scan = missions(detective,discovered).active.find(mission=>mission.kind==='varredura')!;
   expect(scan.current).toBe(0);
   expect(renderToStaticMarkup(<MissionRow mission={scan}/>)).not.toContain('data-done="true"');
+  game.act(detective,{kind:'unequip',item:detector.id},at(discovered));
   game.act(detective,{kind:'drop',item:detector.id},at(discovered));
   expect(game.owns(detective.id,'bugDetector')).toBe(false);
   expect(economy.spend(detective.id,match.view(detective.id,ids,discovered).politics!.wallet)).toBe(true);

@@ -304,6 +304,7 @@ export function createMatchHud(id:string, stationFeedback:(station:Station) => v
       previous = view;
       actions(view);
     },
+    openCampaign() { campaign.open(); },
     players(players:Player[]) {
       roster = players;
       own = players.find(player => player.id===id);

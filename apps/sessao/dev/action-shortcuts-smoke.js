@@ -111,7 +111,7 @@ async page => {
   await page.locator('#action-shortcuts').getByRole('button',{name:/Fechar configurações/}).click();
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('p');
-  const attributes = page.getByRole('dialog',{name:/Atributos/i});
+  const attributes = page.getByRole('dialog',{name:/Especializações/i});
   await attributes.waitFor();
   await page.keyboard.press('F2');
   await palette.waitFor();

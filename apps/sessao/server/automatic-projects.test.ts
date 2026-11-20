@@ -108,10 +108,10 @@ test('bonus points allocate without XP, cannot be replayed and disappear in a fr
   const progression = new CharacterProgression(1);
   progression.grantPoints(2);
   expect(progression.view()).toMatchObject({xp:0,level:1,available:2});
-  expect(progression.allocate({attribute:'agility',matchId:1,revision:0})).toBe(true);
-  expect(progression.allocate({attribute:'stamina',matchId:1,revision:0})).toBe(false);
-  expect(progression.allocate({attribute:'stamina',matchId:1,revision:1})).toBe(true);
-  expect(progression.allocate({attribute:'agility',matchId:1,revision:2})).toBe(false);
+  expect(progression.allocate({attribute:'burglary',matchId:1,revision:0})).toBe(true);
+  expect(progression.allocate({attribute:'mobility',matchId:1,revision:0})).toBe(false);
+  expect(progression.allocate({attribute:'mobility',matchId:1,revision:1})).toBe(true);
+  expect(progression.allocate({attribute:'burglary',matchId:1,revision:2})).toBe(false);
   expect(new CharacterProgression(2).view().available).toBe(0);
 });
 

@@ -84,7 +84,7 @@ export class SessionRoom extends Room {
 
   private sees(state:ControlState,player:Player,now:number) {
     return player===state.player || (!state.plenary || inPlenary(player)) &&
-      (state.plenary && !this.match.powerOut || characterVisible(state.player,player,this.gameplay.vision(state.player.id,this.clock.currentTime)));
+      (state.plenary && !this.match.powerOut || characterVisible(state.player,player,this.gameplay.vision(state.player,this.clock.currentTime)));
   }
 
   private gameplayWorld() {
@@ -104,7 +104,7 @@ export class SessionRoom extends Room {
       },
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       actionFailed:(id:string,message:string)=>this.clients.getById(id)?.send('map-action-failed',message),
-      vision:(id:string)=>this.gameplay.vision(id,this.clock.currentTime),
+      vision:(id:string)=>this.gameplay.vision(this.players.get(id)?.player,this.clock.currentTime),
       present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.concat(this.gameplay.federalPlayers).some(player=>player.id===id) || this.gameplay.ghostAdvisers.has(id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         if (!world.publish({...event,at:this.match.gameTime(event.at)})) return;
@@ -595,7 +595,7 @@ export class SessionRoom extends Room {
         const site = fireSites[raw.site];
         for (const peer of this.clients) {
           const observer = this.players.get(peer.sessionId)?.player;
-          const vision = this.gameplay.vision(peer.sessionId,this.clock.currentTime);
+          const vision = this.gameplay.vision(observer,this.clock.currentTime);
           const seesFire = observer && localPerception(observer,site,vision).visible;
           const seesActor = observer && characterVisible(observer,player,vision);
           peer.send('fire-extinguished',{
@@ -834,7 +834,7 @@ export class SessionRoom extends Room {
           continue;
         }
         const view = this.match.view(id,ids,realNow,this.match.contacts(state.player,players));
-        if (this.match.running) view.ghostAdvisers = {count:this.gameplay.ghostAdvisers.players.length,paused:this.match.phase!=='negotiation'};
+        if (this.match.running) view.ghostAdvisers = this.gameplay.ghostAdvisers.view(world.incidentNow ?? world.now,this.match.phase!=='negotiation');
         if (broadcaster && broadcaster!==id) view.megaphoneActive = true;
         if (this.match.running) {
           const atDesk = this.match.canFileComplaint(state.player,now);
@@ -864,7 +864,7 @@ export class SessionRoom extends Room {
         }
         if (this.bots.messages.length && !state.isolated) view.botMessages = this.bots.messages;
         if (this.match.phase==='negotiation') view.fireInteraction = this.match.fireInteraction(
-          state.player,now,this.gameplay.vision(id,this.clock.currentTime),this.gameplay.incendiaryItem(id)!==undefined,this.gameplay.owns(id,'extinguisher'));
+          state.player,now,this.gameplay.vision(state.player,this.clock.currentTime),this.gameplay.incendiaryItem(id)!==undefined,this.gameplay.owns(id,'extinguisher'));
         if (this.match.canHandleObjects(id,now)) view.gameplay = this.gameplay.view(state.player,world);
         const photoRevision = this.match.running && this.photosEnabled ? this.gameplay.photoRevision : -1;
         const lastPhotos = this.lastPhotos.get(id);
@@ -905,7 +905,7 @@ export class SessionRoom extends Room {
         }
         if (this.match.running) {
           const visible = world.players.filter(player=>this.sees(state,player,now));
-          client.send('players',visible.map(({barriers:_barriers,interactionSpeedBonus:_interactionSpeed,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,this.clock.currentTime,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,this.clock.currentTime,id) ? true : undefined,health:this.gameplay.healthFraction(player,this.clock.currentTime)})));
+          client.send('players',visible.map(({barriers:_barriers,burglarySpeedBonus:_burglary,cashSpeedBonus:_cash,...player})=>({...player,exposed:player.id===id ? this.gameplay.visibleItems(id,this.clock.currentTime,id) : player.exposed,cashInHand:this.gameplay.hasVisibleCash(player.id,this.clock.currentTime,id) ? true : undefined,health:this.gameplay.healthFraction(player,this.clock.currentTime)})));
         } else client.send('players',players);
         client.send('control',state);
       }

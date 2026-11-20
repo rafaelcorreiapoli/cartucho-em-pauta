@@ -8,12 +8,19 @@ async page => {
     };
   });
   const guest = await page.context().newPage();
-  const advertiser = client=>client.getByRole('button',{name:'Veicular propaganda'});
+  const advertiser = client=>client.getByRole('button',{name:'Contratar campanha · Duda Mendonça'});
   const tv = client=>client.locator('.campaign-tv');
   const announcement = client=>client.locator('.campaign-tv-announcement');
 
   async function observeBroadcasts(client) {
     await client.evaluate(async ()=>{
+      const {GameAudio} = await import('/src/game-audio.ts');
+      window.applauseCues = [];
+      const cue = GameAudio.prototype.cue;
+      GameAudio.prototype.cue = function(name) {
+        if (name==='applause') window.applauseCues.push(performance.now());
+        return cue.call(this,name);
+      };
       const image = new Image();
       image.src = '/assets/campaign-tv.webp';
       await image.decode();
@@ -100,7 +107,7 @@ async page => {
     await campaignShortcut.waitFor();
     await page.keyboard.press(await campaignShortcut.getAttribute('aria-keyshortcuts'));
     await actionMenu.waitFor({state:'hidden'});
-    const picker = client=>client.getByRole('dialog',{name:'Veicular propaganda'});
+    const picker = client=>client.getByRole('dialog',{name:'Duda Mendonça'});
     const spot = client=>picker(client).getByRole('button',{name:/Spot eleitoral/});
     await spot(page).waitFor();
     const offers = await picker(page).locator('button[aria-keyshortcuts]').evaluateAll(async buttons=>
@@ -125,7 +132,12 @@ async page => {
     await spot(guest).click();
     const broadcasts = await Promise.all([page,guest].map(async client=>{
       await client.waitForFunction(()=>window.campaignAds.length===2 && window.campaignAds.every(ad=>ad.image!==undefined));
-      return client.evaluate(()=>window.campaignAds);
+      const cues = await client.evaluate(()=>window.applauseCues);
+      const ads = await client.evaluate(()=>window.campaignAds);
+      if (cues.length!==2 || ads.some((ad,index)=>Math.abs(ad.at-cues[index])>100)) {
+        throw Error('Aplausos fora do início de cada propaganda: '+JSON.stringify({cues,ads}));
+      }
+      return ads;
     }));
     for (const [first,second] of broadcasts) {
       if (second.at-first.at<3_900) throw Error('A segunda propaganda interrompeu a primeira.');
