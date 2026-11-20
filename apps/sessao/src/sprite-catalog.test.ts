@@ -1,13 +1,13 @@
 import {expect, test} from 'bun:test';
 import {spriteCatalog, spriteFrame} from './sprite-catalog';
-import {characterSheets, combatSheets, phoneSheets, safeBreachSheets, safeDepositSheets, npcRobberySheets, characterArt} from './character-art';
+import {characterSheets, collantSheets, combatSheets, phoneSheets, safeBreachSheets, safeDepositSheets, npcRobberySheets, characterArt} from './character-art';
 import {visitorSheets} from './visitors';
 import {federalPatrolSheets} from './federal-patrol';
 import {NAMES} from './map';
 
 test('review catalog covers every character animation sheet loaded by the game', async () => {
   const paths = new Set(spriteCatalog.flatMap(subject => subject.clips.map(clip => clip.path)));
-  for (const sheet of [...characterSheets, ...combatSheets, ...phoneSheets, ...safeBreachSheets, ...safeDepositSheets, ...npcRobberySheets, ...visitorSheets, ...federalPatrolSheets]) {
+  for (const sheet of [...collantSheets, ...characterSheets, ...combatSheets, ...phoneSheets, ...safeBreachSheets, ...safeDepositSheets, ...npcRobberySheets, ...visitorSheets, ...federalPatrolSheets]) {
     expect(paths.has(sheet.path)).toBe(true);
   }
   for (const path of paths) expect(await Bun.file(new URL(`../public/${path}`, import.meta.url)).exists()).toBe(true);
@@ -30,4 +30,12 @@ test('walking and idle preserve character rows and game direction mirroring', ()
   const breach = federal.clips.find(clip => clip.id === 'door-breach')!;
   expect(spriteFrame(breach, 3, 3)).toBe(15);
   expect(breach.directions[3].flip).toBeUndefined();
+});
+
+test('Collant review exposes every action, all detail tiers and its explicit left-facing walk',()=>{
+  const collant=spriteCatalog.find(subject=>subject.id==='collant')!;
+  expect(collant.clips.map(clip=>clip.id)).toEqual(['idle','walk','attack','hit','fall','phone','safe-breach','safe-deposit','npc-robbery']);
+  const walk=collant.clips.find(clip=>clip.id==='walk')!;
+  expect(spriteFrame(walk,3,3)).toBe(15);
+  expect(walk.directions[3].flip).toBeUndefined();
 });

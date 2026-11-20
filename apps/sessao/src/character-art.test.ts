@@ -105,3 +105,21 @@ for (const [name,skin] of cast) test(`${name} kneels toward the robbery victim r
   const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
   expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,256]);
 });
+
+test('invisibility uses the anonymous identity for every action and preserves directional timing',()=>{
+  const actor={x:100,y:100,direction:1};
+  for (const character of [0,1,4,7]) {
+    expect(attackArt(character,1,.4375,.4375,true)).toEqual({key:'collant-attack',frame:6});
+    expect([0,55,110,165].map(t=>hitArt(character,3,t,undefined,true))).toEqual(
+      [4,5,6,7].map(frame=>({key:'collant-hit',frame,flipX:true})),
+    );
+    expect(downedArt(character,3,8000,undefined,true)).toMatchObject({key:'collant-fall',frame:7,flipX:true,originY:.85});
+    expect(phoneArt(character,270,false,true)).toEqual({key:'collant-phone',frame:2});
+    expect(safeBreachArt(character,400,false,true)).toEqual({key:'collant-safe-breach',frame:2});
+    expect(safeDepositArt(character,1200,false,true)).toEqual({key:'collant-safe-deposit',frame:6});
+    expect(npcRobberyArt(character,900,false,actor,{...actor,x:90},true)).toEqual({key:'collant-npc-robbery',frame:5,flipX:true});
+  }
+  expect(phoneArt(0,270,true,true)?.frame).toBe(0);
+  expect(safeDepositArt(0,1200,true,true)?.frame).toBe(3);
+  expect(hitArt(0,0,220,undefined,true)).toBeUndefined();
+});

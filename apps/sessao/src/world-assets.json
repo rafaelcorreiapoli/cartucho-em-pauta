@@ -3674,5 +3674,237 @@
         "size": 512
       }
     ]
+  },
+  "collant-walk.webp": {
+    "id": "collant-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-walk-128",
+        "path": "assets/world-hd/collant-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-walk-256",
+        "path": "assets/world-hd/collant-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-walk-512",
+        "path": "assets/world-hd/collant-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-attack.webp": {
+    "id": "collant-attack",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-attack-128",
+        "path": "assets/world-hd/collant-attack-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-attack-256",
+        "path": "assets/world-hd/collant-attack-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-attack-512",
+        "path": "assets/world-hd/collant-attack-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-hit.webp": {
+    "id": "collant-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-hit-128",
+        "path": "assets/world-hd/collant-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-hit-256",
+        "path": "assets/world-hd/collant-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-hit-512",
+        "path": "assets/world-hd/collant-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-fall.webp": {
+    "id": "collant-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-fall-128",
+        "path": "assets/world-hd/collant-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-fall-256",
+        "path": "assets/world-hd/collant-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-fall-512",
+        "path": "assets/world-hd/collant-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-phone.webp": {
+    "id": "collant-phone",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-phone-128",
+        "path": "assets/world-hd/collant-phone-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-phone-256",
+        "path": "assets/world-hd/collant-phone-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-phone-512",
+        "path": "assets/world-hd/collant-phone-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-safe-breach.webp": {
+    "id": "collant-safe-breach",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-safe-breach-128",
+        "path": "assets/world-hd/collant-safe-breach-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-safe-breach-256",
+        "path": "assets/world-hd/collant-safe-breach-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-safe-breach-512",
+        "path": "assets/world-hd/collant-safe-breach-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-safe-deposit.webp": {
+    "id": "collant-safe-deposit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-safe-deposit-128",
+        "path": "assets/world-hd/collant-safe-deposit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-safe-deposit-256",
+        "path": "assets/world-hd/collant-safe-deposit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-safe-deposit-512",
+        "path": "assets/world-hd/collant-safe-deposit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "collant-npc-robbery.webp": {
+    "id": "collant-npc-robbery",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "collant-npc-robbery-128",
+        "path": "assets/world-hd/collant-npc-robbery-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "collant-npc-robbery-256",
+        "path": "assets/world-hd/collant-npc-robbery-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "collant-npc-robbery-512",
+        "path": "assets/world-hd/collant-npc-robbery-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
   }
 }

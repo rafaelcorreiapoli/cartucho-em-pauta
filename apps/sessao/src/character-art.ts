@@ -19,6 +19,8 @@ export const characterSlugs:Record<(typeof NAMES)[number],string> = {
   'Inês Brasil':'ines-brasil',
 };
 const combatActions = ['attack','hit','fall'] as const;
+export const collantActions = ['walk','attack','hit','fall','phone','safe-breach','safe-deposit','npc-robbery'] as const;
+export const collantSheets = collantActions.map(action=>({key:`collant-${action}`,path:`assets/world-hd/collant-${action}-128.webp`}));
 const hitFrameMs = 55;
 const fallFrameMs = 100;
 
@@ -27,8 +29,8 @@ export const phoneSheets = Object.values(characterSlugs).map(character=>{
   return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
-export function phoneArt(character:number,time:number,reducedMotion:boolean) {
-  const skin = characterSlugs[NAMES[character]];
+export function phoneArt(character:number,time:number,reducedMotion:boolean,anonymous=false) {
+  const skin = anonymous ? 'collant' : characterSlugs[NAMES[character]];
   if (!skin) return;
   return {key:`${skin}-phone`,frame:reducedMotion ? 0 : Math.floor(time/135)%4};
 }
@@ -38,8 +40,8 @@ export const npcRobberySheets = Object.values(characterSlugs).map(skin=>{
   return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
-export function npcRobberyArt(character:number,time:number,reducedMotion:boolean,actor:Motion & {direction:number},target:Motion & {direction:number}) {
-  const skin = characterSlugs[NAMES[character]];
+export function npcRobberyArt(character:number,time:number,reducedMotion:boolean,actor:Motion & {direction:number},target:Motion & {direction:number},anonymous=false) {
+  const skin = anonymous ? 'collant' : characterSlugs[NAMES[character]];
   if (!skin) return;
   const dx = target.x-actor.x;
   // On a vertical approach, use the victim's lying orientation when there is no horizontal offset.
@@ -52,8 +54,8 @@ export const safeDepositSheets = Object.values(characterSlugs).map(skin=>{
   return {key,path:`assets/characters-hd/${key}-128.webp`};
 });
 
-export function safeDepositArt(character:number,time:number,reducedMotion:boolean) {
-  const skin = characterSlugs[NAMES[character]];
+export function safeDepositArt(character:number,time:number,reducedMotion:boolean,anonymous=false) {
+  const skin = anonymous ? 'collant' : characterSlugs[NAMES[character]];
   if (!skin) return;
   return {key:`${skin}-safe-deposit`,frame:reducedMotion ? 3 : Math.floor(time/200)%8};
 }
@@ -67,8 +69,8 @@ function safeBreachKey(skin:string) {
   return `${skin}-safe-breach`;
 }
 
-export function safeBreachArt(character:number,time:number,reducedMotion:boolean) {
-  const skin = characterSlugs[NAMES[character]];
+export function safeBreachArt(character:number,time:number,reducedMotion:boolean,anonymous=false) {
+  const skin = anonymous ? 'collant' : characterSlugs[NAMES[character]];
   if (!skin) return;
   return {key:safeBreachKey(skin),frame:reducedMotion ? 0 : Math.floor(time/200)%4};
 }
@@ -92,8 +94,8 @@ export function characterArt(character:number,visitor?:VisitorId) {
   return {sheet,row,frame:row*4};
 }
 
-export function attackArt(character:number, row:number, progress:number, impactProgress:number) {
-  const skin = characterSlugs[NAMES[character]];
+export function attackArt(character:number, row:number, progress:number, impactProgress:number,anonymous=false) {
+  const skin = anonymous ? 'collant' : characterSlugs[NAMES[character]];
   if (!skin) return;
   // The third frame shows the arm fully extended at the moment of impact.
   const frame = progress<impactProgress*.55 ? 0 :
@@ -101,18 +103,18 @@ export function attackArt(character:number, row:number, progress:number, impactP
   return {key:combatSheet(skin,'attack'),frame:row*4+frame};
 }
 
-export function hitArt(character:number, direction:number, elapsed:number,visitor?:VisitorId) {
-  const skin = visitor ?? characterSlugs[NAMES[character]];
+export function hitArt(character:number, direction:number, elapsed:number,visitor?:VisitorId,anonymous=false) {
+  const skin = anonymous ? 'collant' : visitor ?? characterSlugs[NAMES[character]];
   const frame = Math.floor(elapsed/hitFrameMs);
   if (!skin || frame>=4) return;
   const row = direction===3 ? 1 : direction;
   return {key:combatSheet(skin,'hit'),frame:row*4+frame,flipX:direction===3};
 }
 
-export function downedArt(character:number, direction:number, elapsed = Infinity,visitor?:VisitorId) {
+export function downedArt(character:number, direction:number, elapsed = Infinity,visitor?:VisitorId,anonymous=false) {
   const row = direction===3 ? 1 : direction;
   const flipX = direction===3;
-  const skin = visitor ?? characterSlugs[NAMES[character]];
+  const skin = anonymous ? 'collant' : visitor ?? characterSlugs[NAMES[character]];
   if (skin) {
     const frame = Math.min(3,Math.floor(elapsed/fallFrameMs));
     return {key:combatSheet(skin,'fall'),frame:row*4+frame,flipX,rotation:0,originY:frame===3 ? .85 : 1};

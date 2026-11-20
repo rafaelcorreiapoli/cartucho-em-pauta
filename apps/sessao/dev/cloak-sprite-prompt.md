@@ -1,11 +1,24 @@
-# Sprite do Collant da Invisibilidade
+# Sprites do Collant da Invisibilidade
 
-Gerado com a ferramenta ImageGen integrada. Referência de proporção e perspectiva: `public/assets/characters-hd/lula-walk-256.webp`. A identidade do personagem de referência não faz parte do sprite.
+As oito folhas usam o mesmo homem genérico caricato, sem rosto, cabelo ou identidade do elenco. Cabeça grande, membros curtos, contorno fino prata/ciano e interior vazado. Objetos manipulados continuam opacos. Gerados com ImageGen usando a caminhada original e as poses equivalentes do elenco como referências.
 
-Arquivo final: `public/assets/capa-invisibilidade-walk.webp`, folha de 1024 × 1024 pixels, quatro colunas e quatro linhas (frente, direita, costas, esquerda), células de 256 × 256. Conversão para WebP lossless e normalização de tamanho via cwebp.
+| Ação | Grade | Quadros |
+|---|---|---|
+| Caminhada (frente/direita/costas/esquerda) | 4×4 | 16 |
+| Ataque, impacto e queda (cada folha) | 4×3 | 12 |
+| Celular e arrombamento (cada folha) | 4×1 | 4 |
+| Embolsar e roubar (cada folha) | 4×2 | 8 |
 
-Brief da geração: homem adulto genérico sem rosto, cabelo, barba ou roupa identificável, proporções caricatas médias do elenco, cabeça com aproximadamente 43% da altura. Contorno de vidro prata/ciano e interior vazado. Quatro poses alternadas de caminhada por direção. Fundo transparente, sem chão, texto ou grade.
+Total: 76 quadros. Parado, carregado e desmaiado reutilizam os quadros correspondentes, como o elenco normal. O efeito mantém a identidade anônima até o prazo original inclusive após nocaute; o nome continua oculto. Maleta e fumaça da corrida preservam seu comportamento.
 
-Prompt final de refinamento, aplicado à folha gerada:
+Fontes lossless: `hires-world/masters/collant-*.webp`. Prompts de geração e correção de transparência: `hires-world/collant-prompts.json`. O manifesto registra dimensões nativas, hashes, referências de enquadramento e recortes. Células nativas variam de aproximadamente 314 a 627 pixels; 512 é a resolução de entrega normalizada, não detalhe nativo garantido em cada fonte.
 
-> Precise transparency edit for a production spritesheet. Preserve the exact 4x4 grid, positions, proportions, all walking poses, directions and delicate silhouette outline of the supplied image. REMOVE ALL WHITE BACKGROUND AND ALL WHITE OR BLUE FILLED INTERIORS OF EACH PERSON. Output a real RGBA PNG where the background pixels and the inside of the heads torsos arms and legs have alpha EXACTLY ZERO. Only keep the thin illustrated silver-cyan outer glass silhouette contours and a few slim glass reflected highlight lines near their edges. Every character must be HOLLOW/EMPTY, like an outline drawing made of glass with see-through empty center, not a solid glass mannequin. No white canvas, no checkerboard illustration, no opaque white or milky body surface. No large cast shadows or glow fog. Preserve walking movement and 16 equally spaced cells exactly. Keep the body's actual contour lines visible rather than fading the whole sheet. Background and all enclosed interiors genuinely TRANSPARENT, alpha=0.
+Entregas: `public/assets/world-hd/collant-{ação}-{128,256,512}.webp`, com aliases base em `public/assets/collant-{ação}.webp`. O carregador adaptativo existente solicita alta resolução conforme a demanda, preservando tamanho, direção e posição. A caminhada anterior `capa-invisibilidade-walk.webp` fica preservada como referência.
+
+Reconstruir a partir de `apps/sessao`:
+
+```sh
+uv run --with pillow --with numpy --with scipy python dev/hires-world/build.py collant-
+```
+
+Revisão visual: `/sprites.html`, grupo Transformações, Collant da Invisibilidade. Conferir todas as ações e direções em 128/256/512 sobre fundo de mapa. Os guias de direção de arte de personagens continuam sendo leitura obrigatória antes de regenerar.

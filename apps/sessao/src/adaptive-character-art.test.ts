@@ -18,11 +18,11 @@ test('every available adaptive variant ships, ordered by frame resolution', asyn
   }
 });
 
-test('the main cast, nine visitors and Federal ship every pose at both adaptive tiers with complete frame grids', async () => {
-  expect(Object.keys(actorTextureVariants)).toHaveLength(93);
+test('the main cast, nine visitors, Federal and Collant ship every pose at both adaptive tiers with complete frame grids', async () => {
+  expect(Object.keys(actorTextureVariants)).toHaveLength(101);
   for (const [key, variants] of Object.entries(actorTextureVariants)) {
     expect(variants?.map(variant => variant.size)).toEqual([256, 512]);
-    const rows = key.endsWith('-door-breach') ? 4 : key.startsWith('walk:') || /-(walk|attack|hit|fall)$/.test(key) ? 3 : /-(safe-deposit|npc-robbery)$/.test(key) ? 2 : 1;
+    const rows = key==='collant-walk' || key.endsWith('-door-breach') ? 4 : key.startsWith('walk:') || /-(walk|attack|hit|fall)$/.test(key) ? 3 : /-(safe-deposit|npc-robbery)$/.test(key) ? 2 : 1;
     for (const variant of variants!) {
       const asset = Bun.file(new URL(`../public/${variant.path}`, import.meta.url));
       expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
