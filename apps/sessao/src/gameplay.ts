@@ -41,7 +41,7 @@ export const objects = {
   document:{exposable:true,name:'Lei do Elevador para o Térreo',portrait:'retrato-documento.webp',description:'Garante acesso ao térreo para quem já está no térreo.',destructible:true},
   portrait:{exposable:true,name:'Retrato oficial',portrait:'retrato-fotografia.webp',description:`Na primeira instalação, +${decorationPopularity.portrait} de popularidade. Um lugar na parede para a sua própria cara.`},
   vip:{exposable:true,name:'Placa VIP',portrait:'retrato-placa-vip.webp',description:`Na primeira instalação, +${decorationPopularity.vip} de popularidade. Uma reserva que os outros podem ignorar.`},
-  nightVision:{name:'Visão noturna',portrait:'retrato-visao-noturna.webp',description:'Liga e desliga sem recarga. Durante o apagão, restaura a visão normal e revela o mapa em preto e branco.'},
+  nightVision:{name:'Visão noturna',portrait:'retrato-visao-noturna.webp',description:'Liga e desliga sem recarga. Deixa o cenário em preto e branco. Durante o apagão, restaura o raio de visão e o fog normais.'},
   binoculars:{name:'Binóculo',portrait:'retrato-binoculo.webp',description:`Amplia a visão por ${binoculars.duration/1000} s. Recarga automática de ${binoculars.cooldown/1000} s.`},
   megaphone:{name:'Megafone',portrait:'retrato-megafone.webp',description:`Transmite sua voz para todo o Congresso por até ${megaphone.duration/1000} s. Recarga de ${megaphone.cooldown/1000} s após encerrar.`},
   voiceModulator:{name:'Modulador de voz',portrait:'retrato-modulador.webp',description:'Disfarça sua voz enquanto estiver ligado.'},

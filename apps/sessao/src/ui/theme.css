@@ -151,7 +151,7 @@
   #agenda-dock .react-missions { gap:6px; }
 }
 
-.center-game-alert { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(90vw,1000px); z-index:55; pointer-events:none; user-select:none; text-align:center; color:#ffe2a0; font-family:system-ui,sans-serif; paint-order:stroke fill; -webkit-text-stroke:5px #23110a; text-shadow:0 4px 8px #0009; }
+.center-game-alert { position:fixed; top:32%; left:50%; transform:translate(-50%,-50%); width:min(90vw,1000px); z-index:55; pointer-events:none; user-select:none; text-align:center; color:#ffe2a0; font-family:system-ui,sans-serif; paint-order:stroke fill; -webkit-text-stroke:5px #23110a; text-shadow:0 4px 8px #0009; }
 .center-game-alert strong { display:block; font-size:clamp(28px,5.5vw,68px); font-weight:950; line-height:1.1; }
 .center-game-alert span { display:block; margin-top:.5rem; font-size:clamp(15px,2vw,23px); font-weight:800; -webkit-text-stroke:3px #23110a; }
 .center-game-alert[data-critical="true"] { color:#ff8570; }

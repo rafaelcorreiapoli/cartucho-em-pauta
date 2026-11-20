@@ -460,7 +460,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const nightVision = running && !!plenaryView?.outage && !!plenaryView?.gameplay?.nightVision;
+      const nightVision = running && !!plenaryView?.gameplay?.nightVision;
       const powerOut = !!plenaryView?.outage && !nightVision;
       const filter = nightVision ? 'grayscale(1)' : '';
       if (this.game.canvas.style.filter!==filter) this.game.canvas.style.filter = filter;
