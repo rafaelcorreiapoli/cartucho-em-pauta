@@ -62,4 +62,4 @@ async (page) => {
   });
   if (errors.length) throw new Error(errors.join('\n'));
   return result;
-};
+}

@@ -37,6 +37,8 @@ export class PhotoRenderer {
 
   draw(canvas: HTMLCanvasElement, frame: PhotoScene, scale = 4) {
     // Snapshot legacy callers too: nothing in the asynchronous renderer may observe later mutations.
+    if (canvas.width!==PHOTO_WIDTH*scale) canvas.width=PHOTO_WIDTH*scale;
+    if (canvas.height!==PHOTO_HEIGHT*scale) canvas.height=PHOTO_HEIGHT*scale;
     const captured = structuredClone(frame);
     captured.features ??= {
       surveillance: this.surveillanceEnabled,
