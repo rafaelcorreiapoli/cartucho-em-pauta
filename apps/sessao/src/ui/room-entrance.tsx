@@ -38,7 +38,7 @@ export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRe
       <div className={invited ? "join-fields join-invite" : "join-fields"}>
         <label>Código da sala <input key={roomCode} id="room-id" name="room-id" maxLength={64} autoComplete="off"
           defaultValue={roomCode} required/></label>
-        <button className="hud-button hud-button--secondary" type="submit" disabled={busy}>Entrar</button>
+        <button className={invited ? "hud-button" : "hud-button hud-button--secondary"} id="join" type="submit" disabled={busy}>Entrar</button>
       </div>
     </form>
     <p id="connection" role="status">{message}</p>
