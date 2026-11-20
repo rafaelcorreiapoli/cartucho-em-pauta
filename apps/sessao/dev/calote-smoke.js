@@ -7,6 +7,7 @@ async page => {
   await page.setViewportSize({width:800,height:450});
   await page.getByRole('textbox',{name:'Seu nick'}).fill('Calote QA');
   await page.getByRole('button',{name:'Criar sala',exact:true}).click();
+  await page.getByRole('button',{name:'Configurar partida',exact:true}).click();
   const room = new URL(await page.getByRole('textbox',{name:'Link da sala'}).inputValue()).searchParams.get('sala');
   if (!room) throw Error('Missing room ID');
   await page.getByRole('button',{name:'Calote',exact:true}).click();
@@ -18,6 +19,7 @@ async page => {
     await page.waitForFunction(index=>!document.querySelectorAll('.lobby-options input[type=checkbox]')[index].checked,index);
   }
   await page.getByRole('button',{name:'Nenhum visitante'}).click();
+  await page.getByRole('button',{name:'Voltar ao lobby',exact:true}).click();
   await page.getByRole('button',{name:'Iniciar sessão',exact:true}).click();
   const intro = page.locator('#role-intro');
   await intro.getByText(/Evite 30 segundos seguidos no vermelho/).waitFor();

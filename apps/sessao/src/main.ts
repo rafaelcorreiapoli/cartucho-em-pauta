@@ -178,7 +178,7 @@ async function connect(join: () => Promise<Room>) {
       map.focus({preventScroll:true});
     },{signal:hudListeners.signal});
     settings.update({roomLabel:`Sala ${joined.roomId}`});
-    const inviteUrl = new URL(location.href);
+    const inviteUrl = new URL('https://cartuchao.io/infiltrados-no-congresso/jogar');
     inviteUrl.searchParams.set('sala',joined.roomId);
     const destroyInvite = mountLobbyInvite(document.getElementById('lobby-invite-mount')!,inviteUrl.href,settings.open);
     hudListeners.signal.addEventListener('abort',destroyInvite,{once:true});

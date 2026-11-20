@@ -1,5 +1,5 @@
 import {gameModes,type GameMode} from '../game-modes';
-import {useState} from 'react';
+import {useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {MIN_PLAYERS,type PlenaryView} from '../plenary';
 import {npcRules} from '../visitors';
@@ -34,6 +34,7 @@ type LobbyCommands = {
 };
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
+  const settings = useRef<HTMLDialogElement>(null);
   const [infiltrators,setInfiltrators] = useState(2);
   const {tutorial,running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
   const showInfiltrators = !tutorial && host && players+botsToFill>=MIN_PLAYERS;
@@ -44,7 +45,11 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
     host ? botHint : 'Aguardando quem criou a sala iniciar a sessão.';
   if (running) return null;
   return <>
+    {!tutorial && <div className="lobby-settings-entry"><div><strong>Configurações da partida</strong><p>{state.gameMode==='classic' ? 'Clássico' : 'Calote'} · {state.matchMinutes} min · {npcCount} visitantes</p></div><button type="button" className="hud-button hud-button--secondary" onClick={()=>settings.current?.showModal()}>Configurar partida</button></div>}
+    <dialog ref={settings} className="match-settings" aria-labelledby="match-settings-title">
+      <header><div><h2 id="match-settings-title">Configurações da partida</h2><p>{host ? 'Ajuste as regras antes de iniciar a sessão.' : 'Confira as regras escolhidas por quem criou a sala.'}</p></div><button type="button" className="hud-button hud-button--secondary" onClick={()=>settings.current?.close()} aria-label="Fechar configurações da partida">Fechar</button></header>
     <div className="lobby-options" hidden={tutorial}>
+      <h3>Regras e economia</h3>
       <div className="lobby-count" role="group" aria-label="Modo de jogo">
         <span>Modo de jogo</span>
         <div>{Object.entries(gameModes).map(([mode,{label,description}])=><button key={mode} type="button"
@@ -69,6 +74,7 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         <div>{[12,15,20].map(value=><button key={value} type="button" disabled={!host}
           aria-pressed={state.matchMinutes===value} onClick={()=>commands.changeMatchMinutes?.(value)}>{value} min</button>)}</div>
       </div>
+      <h3>Recursos da partida</h3>
       {state.gameMode==='calote' && <label className="lobby-count"><input type="checkbox" checked={state.automaticProjectsEnabled} disabled={!host}
         onChange={event=>commands.changeAutomaticProjects?.(event.currentTarget.checked)}/> Projetos automáticos</label>}
       <label className="lobby-count"><input type="checkbox" checked={state.portraitsAndVipEnabled} disabled={!host}
@@ -85,6 +91,7 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         onChange={event=>commands.changeProjectVoting?.(event.currentTarget.checked)}/> Votações de projetos</label>
       <label className="lobby-count"><input type="checkbox" checked={state.phoneGamesEnabled} disabled={!host}
         onChange={event=>commands.changePhoneGames?.(event.currentTarget.checked)}/> Joguinhos de celular</label>
+      <h3>Participantes</h3>
       {showInfiltrators ? <div id="infiltrator-setup" className="lobby-count" role="group" aria-labelledby="infiltrator-label">
         <span id="infiltrator-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>
         <div id="infiltrator-count">
@@ -103,6 +110,8 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
       {host && canStartAsInfiltrator && <button className="hud-button hud-button--secondary" type="button" disabled={!canStart}
         onClick={()=>commands.start(showInfiltrators ? infiltrators : 1,true)}>Iniciar como infiltrado</button>}
     </div>
+    <footer><span>As alterações são aplicadas à sala.</span><button type="button" className="hud-button" onClick={()=>settings.current?.close()}>Voltar ao lobby</button></footer>
+    </dialog>
     <footer className="lobby-footer">
       <button className="hud-button hud-button--secondary" id="lobby-back" type="button" onClick={commands.back}>‹ Voltar</button>
       <p id="start-hint" role="status">{hint}</p>
