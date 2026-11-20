@@ -15,8 +15,8 @@ export function lastInElection(view:PlenaryView,id:string) {
 
 export function cassationAnnounced(view:PlenaryView,previous:PlenaryView|undefined) {
   if (!previous || view.phase==='lobby' || view.phase==='finished') return false;
-  return (!!view.cassationIn && !previous.cassationIn) ||
-    (!!view.cassation && !previous.cassation && !previous.cassationIn);
+  return (view.cassationIn!==undefined && previous.cassationIn===undefined) ||
+    (!!view.cassation && !previous.cassation && previous.cassationIn===undefined);
 }
 
 export function createCenterAlert() {

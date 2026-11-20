@@ -29,6 +29,7 @@ test('cassation summons is global, once per call, and does not replay on reconne
   expect(cassationAnnounced(called,previous)).toBe(true);
   expect(cassationAnnounced({...called,cassationIn:19},called)).toBe(false);
   expect(cassationAnnounced(ballot,called)).toBe(false);
+  expect(cassationAnnounced(ballot,{...called,cassationIn:0})).toBe(false);
   expect(cassationAnnounced(ballot,previous)).toBe(true);
   expect(cassationAnnounced(ballot,ballot)).toBe(false);
   expect(cassationAnnounced(called,undefined)).toBe(false);

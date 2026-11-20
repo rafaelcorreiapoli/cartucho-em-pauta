@@ -428,7 +428,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
         audio.cue('cassationSummons');
       }
       audio.setScore(view.phase==='lobby' ? 'lobbyMusic' : view.phase==='finished' ? sessionVerdict(view) ?? 'music' :
-        view.cassationIn || view.cassation ? 'cassationMusic' : view.phase==='hearing' ? 'hearingMusic' : 'music');
+        view.cassationIn!==undefined || view.cassation ? 'cassationMusic' : view.phase==='hearing' ? 'hearingMusic' : 'music');
       const projectAnnounced = !!view.projectWarning && !previousView?.projectWarning;
       if (view.phase==='negotiation' && view.project!==undefined && view.proposer && view.project!==previousView?.project) {
         hud.notify('Projeto em pauta',`${view.proposer} protocolou ${bills[view.project].name}. Votação em ${Math.ceil(view.remaining/60)} min.`);
