@@ -103,6 +103,7 @@ export function followRoute(player:Player, route:Motion[], seconds:number, stand
     const next = {x:player.x+dx/distance*step,y:player.y+dy/distance*step};
     if (!clearSegment(player,next,stand)) { route.length = 0; break; }
     Object.assign(player,next);
+    player.facingAngle = Math.atan2(dy,dx);
     player.direction = Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
     player.moving = true;
     remaining -= step;

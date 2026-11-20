@@ -42,7 +42,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { cloaked?:true; id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; breachingSafe?:true; breachingDoor?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; burglarySpeedBonus?:number; cashSpeedBonus?:number; movementSpeedBonus?:number; visionBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { cloaked?:true; id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; facingAngle?:number; moving: boolean; handlingObject?:number; breachingSafe?:true; breachingDoor?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; burglarySpeedBonus?:number; cashSpeedBonus?:number; movementSpeedBonus?:number; visionBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 
@@ -93,6 +93,7 @@ export function move(player: Player, input: Motion, seconds: number, stand = can
   const {x,y} = player;
   if (stand(x+dx,y)) player.x += dx;
   if (stand(player.x,y+dy)) player.y += dy;
+  player.facingAngle = Math.atan2(dy,dx);
   player.direction = Math.abs(dx)>Math.abs(dy) ? (dx>0 ? 1 : 3) : (dy>0 ? 0 : 2);
   player.moving = x !== player.x || y !== player.y;
 }

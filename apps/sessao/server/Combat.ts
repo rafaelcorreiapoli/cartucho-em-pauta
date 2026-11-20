@@ -6,7 +6,7 @@ import { canReachDownedPlayer } from '../src/interactions';
 import { recoveryRules } from '../src/medical';
 import { obstacleBetween, segmentIntersects, type Player } from '../src/map';
 
-type Combatant = {direction?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'>;
+type Combatant = {direction?:number; facingAngle?:number} & Pick<Player,'id'|'character'|'x'|'y'|'hit'|'recoveryProtected'|'knockedOut'|'carrying'|'swing'|'stamina'|'staminaMax'>;
 
 type Vitality = {hp:number; recoverAt:number; protectedUntil:number; attackAt:number; pending:boolean; knockedOutBy?:string};
 
@@ -100,7 +100,7 @@ export class Combat {
     attacker.stamina = stamina-weapons[weapon].staminaCost;
     state.attackAt = now+weapons[weapon].swingMs;
     state.pending = true;
-    attacker.swing = {weapon,startedAt:now,angle:Combat.facingAngles[attacker.direction ?? 0]};
+    attacker.swing = {weapon,startedAt:now,angle:attacker.facingAngle ?? Combat.facingAngles[attacker.direction ?? 0]};
   }
 
   private findTarget<T extends Combatant>(attacker:T, swing:WeaponSwing, players:T[], now:number, canHit?:(player:T)=>boolean) {
