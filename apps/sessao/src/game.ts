@@ -673,10 +673,12 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         }
         if (!view) {
           view = {
-            speedIcon:this.add.graphics().lineStyle(1.5,0xffdc73,1)
-              .beginPath().moveTo(-5,-3).lineTo(-2,0).lineTo(-5,3)
-              .moveTo(1,-3).lineTo(4,0).lineTo(1,3).strokePath()
-              .setDepth(HEIGHT+30).setVisible(false),
+            speedIcon:this.add.graphics().fillStyle(0xffdc73,1).lineStyle(.7,0x20322e,1)
+              .beginPath().moveTo(-3.5,-2.5).lineTo(-1.8,-2.5).lineTo(.2,0)
+              .lineTo(-1.8,2.5).lineTo(-3.5,2.5).lineTo(-1.5,0).closePath().fillPath().strokePath()
+              .beginPath().moveTo(.2,-2.5).lineTo(1.9,-2.5).lineTo(3.9,0)
+              .lineTo(1.9,2.5).lineTo(.2,2.5).lineTo(2.2,0).closePath().fillPath().strokePath()
+              .setScale(.75).setDepth(HEIGHT+30).setVisible(false),
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             items:this.add.container().setDepth(HEIGHT+26),

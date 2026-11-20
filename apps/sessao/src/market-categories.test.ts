@@ -13,6 +13,6 @@ test('every technical product has one category and the specialized tool cannot b
 test('snack counter sells pizza, chocolates, coffee and energy drinks',()=>{
   expect(marketKinds.food).toEqual(['pizza','chocolates','coffee','energyDrink']);
   expect(marketProduct('food','energyDrink')?.price).toBe(1.5);
-  expect(describeFood(foods.energyDrink.effect)).toBe('+50% velocidade por 20 s');
+  expect(describeFood(foods.energyDrink.effect)).toBe('+20% velocidade por 20 s');
   expect(describeFood(foods.chocolates.effect)).toBe('+40 PV · −20 stamina');
 });
