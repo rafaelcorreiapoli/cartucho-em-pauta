@@ -3603,6 +3603,49 @@
       }
     ]
   },
+  "plenary-counter.webp": {
+    "id": "plenary-counter",
+    "kind": "image",
+    "width": 192,
+    "height": 112,
+    "variants": [
+      {
+        "key": "hires:plenary-counter:128",
+        "path": "assets/world-hd/plenary-counter-128.webp",
+        "width": 128,
+        "height": 75,
+        "size": 128
+      },
+      {
+        "key": "hires:plenary-counter:256",
+        "path": "assets/world-hd/plenary-counter-256.webp",
+        "width": 256,
+        "height": 149,
+        "size": 256
+      },
+      {
+        "key": "hires:plenary-counter:512",
+        "path": "assets/world-hd/plenary-counter-512.webp",
+        "width": 512,
+        "height": 299,
+        "size": 512
+      },
+      {
+        "key": "hires:plenary-counter:1024",
+        "path": "assets/world-hd/plenary-counter-1024.webp",
+        "width": 1024,
+        "height": 597,
+        "size": 1024
+      },
+      {
+        "key": "hires:plenary-counter:2048",
+        "path": "assets/world-hd/plenary-counter-2048.webp",
+        "width": 2048,
+        "height": 1195,
+        "size": 2048
+      }
+    ]
+  },
   "retrato-collant-invisibilidade.webp": {
     "id": "retrato-collant-invisibilidade",
     "kind": "image",

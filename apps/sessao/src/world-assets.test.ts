@@ -12,7 +12,7 @@ test('all requested NPCs, visitors, Federal, furniture and UI images ship real d
   for (const item of Object.values(objects)) expect(worldAssets[item.portrait]?.variants.some(v => v.size === 512)).toBe(true);
   for (const npc of Object.values(mapNpcs)) if (npc.sprite !== 'donald-trump.webp') expect(worldAssets[npc.sprite]?.variants.some(v => v.size === 512)).toBe(true);
   for (const sheet of [...visitorSheets,...federalPatrolSheets]) expect(Object.values(worldAssets).some(asset => asset?.id === sheet.key)).toBe(true);
-  for (const filename of ['office-hd.png','retratos-elenco.webp','gabinete-cofre.webp','gabinete-cofre-aberto.webp','gabinete-armario.webp','gabinete-poltrona.webp','gabinete-tv.webp','gabinete-tapete.webp','terminal-seguranca.webp','painel-eletrico.webp','cadeira-reserva.webp','moldura-congresso.webp','retrato-tenis.webp','retrato-incendiario.webp','projetos/auxilio-churrasco.webp']) expect(worldAssets[filename]).toBeDefined();
+  for (const filename of ['office-hd.png','plenary-counter.webp','retratos-elenco.webp','gabinete-cofre.webp','gabinete-cofre-aberto.webp','gabinete-armario.webp','gabinete-poltrona.webp','gabinete-tv.webp','gabinete-tapete.webp','terminal-seguranca.webp','painel-eletrico.webp','cadeira-reserva.webp','moldura-congresso.webp','retrato-tenis.webp','retrato-incendiario.webp','projetos/auxilio-churrasco.webp']) expect(worldAssets[filename]).toBeDefined();
   for (const asset of Object.values(worldAssets)) for (const variant of asset!.variants) {
     const file = Bun.file(new URL(`../public/${variant.path}`,import.meta.url));
     expect(await file.exists()).toBe(true);
@@ -26,4 +26,8 @@ test('browser image sources declare physical widths and preserve caller layout s
   expect(sources.srcSet).toContain(' 128w');
   expect(sources.srcSet).toContain(' 256w');
   expect(sources.srcSet).toContain(' 512w');
+});
+
+test('the plenary counter has its own larger detail tiers', () => {
+  expect(worldAssets['plenary-counter.webp']?.variants.map(variant => variant.size)).toEqual([128,256,512,1024,2048]);
 });
