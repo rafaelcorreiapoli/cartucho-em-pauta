@@ -70,3 +70,16 @@ export const spriteCatalog: SpriteSubject[] = [
 export function spriteFrame(clip: SpriteClip, direction: number, frame: number) {
   return clip.start + clip.directions[direction].row * 4 + frame;
 }
+
+/** Inspect the exact shipped tier while retaining legacy art for visual comparison. */
+export function spriteSubjectResolution(subject: SpriteSubject, resolution: string): SpriteSubject {
+  const character = players.findIndex(player => player.id === subject.id);
+  if (character < 0) return subject;
+  return {...subject, clips: players[character].clips.map(clip => {
+    const walk = clip.id === 'walk' || clip.id === 'idle';
+    if (resolution === 'original') return {...clip,
+      path: walk ? `assets/${character < 3 ? 'sprites-hd.png' : 'sprites-expansao.png'}` : `assets/${subject.id}-${clip.id}.webp`};
+    const size = Number(resolution);
+    return {...clip, path: `assets/characters-hd/${subject.id}-${walk ? 'walk' : clip.id}-${size}.webp`, size, start: 0};
+  })};
+}

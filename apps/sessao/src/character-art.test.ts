@@ -35,7 +35,7 @@ for (const [name,skin] of cast) {
   ]) {
     test(`${name} uses its own four ${action} frames and honors reduced motion`, async ()=>{
       const key = `${skin}-${action}`;
-      const path = `assets/${key}.webp`;
+      const path = `assets/characters-hd/${key}-128.webp`;
       expect(sheets).toContainEqual({key,path});
       expect([0,1,2,3,4].map(frame=>art(character,frame*interval,false))).toEqual(
         [0,1,2,3,0].map(frame=>({key,frame})),
@@ -65,7 +65,7 @@ test('the replacement skins ship all three combat sheets at the Phaser atlas dim
 for (const [name,skin] of cast) test(`${name} has eight safe deposit frames and a stationary reduced-motion pose`,async ()=>{
   const character = NAMES.indexOf(name);
   const key = `${skin}-safe-deposit`;
-  const path = `assets/${key}.webp`;
+  const path = `assets/characters-hd/${key}-128.webp`;
   expect(Array.from({length:9},(_,frame)=>safeDepositArt(character,frame*200,false)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
   expect(safeDepositArt(character,1200,true)).toEqual({key,frame:3});
   expect(safeDepositArt(-1,0,false)).toBeUndefined();
@@ -74,7 +74,7 @@ for (const [name,skin] of cast) test(`${name} has eight safe deposit frames and 
   const asset = Bun.file(new URL(`../public/${path}`,import.meta.url));
   expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
   const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
-  expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([1024,128]);
+  expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,256]);
 });
 
 for (const [name,skin] of cast) test(`${name} kneels toward the robbery victim regardless of previous facing direction`,async ()=>{
@@ -98,10 +98,10 @@ for (const [name,skin] of cast) test(`${name} kneels toward the robbery victim r
   expect(Array.from({length:9},(_,frame)=>npcRobberyArt(character,frame*180,false,actor,target)?.frame)).toEqual([0,1,2,3,4,5,6,7,0]);
   expect(npcRobberyArt(character,900,true,actor,target)?.frame).toBe(0);
   expect(npcRobberySheets).toHaveLength(NAMES.length);
-  expect(npcRobberySheets).toContainEqual({key:`${skin}-npc-robbery`,path:`assets/${skin}-npc-robbery.webp`});
+  expect(npcRobberySheets).toContainEqual({key:`${skin}-npc-robbery`,path:`assets/characters-hd/${skin}-npc-robbery-128.webp`});
   expect(npcRobberyArt(-1,0,false,actor,target)).toBeUndefined();
-  const asset = Bun.file(new URL(`../public/assets/${skin}-npc-robbery.webp`,import.meta.url));
+  const asset = Bun.file(new URL(`../public/assets/characters-hd/${skin}-npc-robbery-128.webp`,import.meta.url));
   expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
   const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
-  expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([1024,128]);
+  expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([512,256]);
 });

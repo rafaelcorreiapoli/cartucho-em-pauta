@@ -17,3 +17,17 @@ test('every available adaptive variant ships, ordered by frame resolution', asyn
     for (const variant of variants) expect(await Bun.file(new URL(`../public/${variant.path}`, import.meta.url)).exists()).toBe(true);
   }
 });
+
+test('all eight characters ship every pose at both adaptive tiers with complete frame grids', async () => {
+  expect(Object.keys(actorTextureVariants)).toHaveLength(64);
+  for (const [key, variants] of Object.entries(actorTextureVariants)) {
+    expect(variants?.map(variant => variant.size)).toEqual([256, 512]);
+    const rows = key.startsWith('walk:') || /-(attack|hit|fall)$/.test(key) ? 3 : /-(safe-deposit|npc-robbery)$/.test(key) ? 2 : 1;
+    for (const variant of variants!) {
+      const asset = Bun.file(new URL(`../public/${variant.path}`, import.meta.url));
+      expect(await asset.slice(8,16).text()).toBe('WEBPVP8L');
+      const dimensions = new DataView(await asset.slice(21,25).arrayBuffer()).getUint32(0,true);
+      expect([1+(dimensions&0x3fff),1+((dimensions>>>14)&0x3fff)]).toEqual([4*variant.size,rows*variant.size]);
+    }
+  }
+});
