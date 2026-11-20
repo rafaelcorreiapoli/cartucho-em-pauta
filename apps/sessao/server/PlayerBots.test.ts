@@ -287,3 +287,46 @@ test.each([true,false])('bots skip document filing when projects are disabled (o
   advance(20_000);
   expect(gameplay.hasSafeInsurance(bot.id)).toBe(true);
 });
+
+test('bots vote once in cassation, prefer their observed suspect and never vote for themselves',()=>{
+  const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
+  Reflect.set(match,'cassationReadyAt',0);
+  expect(match.callCassation({...human,...stations.audit},1_000)).toBeUndefined();
+  expect(view(human.id,1_000).cassationIn).toBe(5);
+  match.advance(5_999);
+  expect(view(human.id,5_999).cassation).toBeUndefined();
+  match.advance(6_000);
+  expect(view(human.id,6_000).cassation).toBeDefined();
+  const first = players.find(player=>player.bot)!;
+  const botStates = Reflect.get(bots,'bots') as Map<string,{suspicion?:string}>;
+  botStates.get(first.id)!.suspicion = human.nick;
+  const tick = (now:number)=>bots.tick(match,gameplay,worldAt(now),()=>true,now);
+  tick(6_000);
+  expect(view(human.id,6_000).cassation?.voted).toBe(0);
+  tick(18_000);
+  const votes = view(human.id,18_000).cassation!.votes!;
+  expect(votes).toHaveLength(5);
+  expect(votes.find(vote=>vote.voter===first.id)?.candidate).toBe(human.id);
+  const candidates = view(human.id,18_000).cassation!.candidates.map(candidate=>candidate.id);
+  for (const vote of votes) {
+    expect(vote.candidate).not.toBe(vote.voter);
+    expect(candidates).toContain(vote.candidate!);
+  }
+  tick(19_000);
+  expect(view(human.id,19_000).cassation?.votes).toEqual(votes);
+});
+
+test('cassation bots skip disconnected voters and candidates even if they were suspected',()=>{
+  const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
+  const absent = players.find(player=>player.bot)!;
+  match.setPlayerConnected(absent.id,false);
+  const botStates = Reflect.get(bots,'bots') as Map<string,{suspicion?:string}>;
+  for (const bot of botStates.values()) bot.suspicion = absent.nick;
+  Reflect.set(match,'cassationReadyAt',0);
+  expect(match.callCassation({...human,...stations.audit},1_000)).toBeUndefined();
+  match.advance(6_000);
+  bots.tick(match,gameplay,worldAt(18_000),()=>true,18_000);
+  const votes = view(human.id,18_000).cassation!.votes!;
+  expect(votes).toHaveLength(4);
+  expect(votes.some(vote=>vote.voter===absent.id || vote.candidate===absent.id)).toBe(false);
+});

@@ -17,7 +17,7 @@ export const projectRules = {debateMs:90_000, cooldownMs:60_000, warningSeconds:
 export const NEGOTIATION_MS = projectRules.debateMs;
 export const majorityQuorum = (electorate:number) => Math.floor(electorate/2)+1;
 export const BALLOT_MS = 35_000;
-export const CASSATION_NOTICE_MS = 30_000;
+export const CASSATION_NOTICE_MS = 5_000;
 
 export const stabilityRules = {initial:48,target:45,maximum:100} as const;
 export const publicDebtRules = {interval:30_000, maximumLoss:4} as const;

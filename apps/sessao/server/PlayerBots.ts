@@ -6,6 +6,7 @@ import {applyInput,restMovement,type ControlState} from '../src/movement';
 import {nickKey} from '../src/nick';
 import {bills,canReachStation,publicDebtStabilityLoss,MIN_PLAYERS,projectRules,stabilityRules,stations,type Impact,type PlenaryView,type Vote} from '../src/plenary';
 import {canOperatePanel,powerPanels,type PowerPanel} from '../src/power';
+import {HEARING_MS} from '../src/politics';
 import {BotAgenda} from './BotAgenda';
 import type {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
@@ -89,7 +90,7 @@ export class PlayerBots {
     if (!this.bots.size) return;
     const {now} = world;
     if (match.phase!=='ballot') this.messages = [];
-    if (match.phase!=='ballot' && match.phase!=='negotiation' || match.ballotCountdown(now)!==undefined) return;
+    if (match.phase!=='ballot' && match.phase!=='negotiation' && match.phase!=='hearing' || match.ballotCountdown(now)!==undefined) return;
     const players = world.players.filter(player=>!player.npc);
     const ids = players.map(player=>player.id);
     for (const [id,bot] of this.bots) {
@@ -101,6 +102,17 @@ export class PlayerBots {
       if (player.knockedOut || player.carried || player.carrying || !match.canHandleObjects(id,now)) continue;
       const visible = world.players.filter(peer=>peer!==player && world.present?.(peer.id)!==false && canSee(bot.control,peer));
       const view = match.view(id,ids,realNow,match.contacts(player,visible));
+      if (view.phase==='hearing') {
+        this.stop(bot);
+        const ballot = view.cassation;
+        if (ballot?.eligible && ballot.choice===undefined && view.remaining<=HEARING_MS/1000-2-bot.index*2) {
+          const candidates = ballot.candidates.filter(candidate=>candidate.id!==id);
+          const suspect = candidates.find(candidate=>candidate.name===bot.suspicion);
+          const target = suspect ?? candidates[Math.floor(Math.random()*candidates.length)];
+          match.castCassation(id,target?.id ?? null,now);
+        }
+        continue;
+      }
       const canFile = view.phase==='negotiation' && view.project===undefined && !view.protocolCooldown &&
         !view.projectFilingClosed && view.cassationIn===undefined;
       this.filingSince = canFile ? this.filingSince ?? now : undefined;

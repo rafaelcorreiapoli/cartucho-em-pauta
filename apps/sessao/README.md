@@ -105,7 +105,7 @@ de graça, ofereça uma venda a alguém próximo ou divulgue o documento na
 Imprensa. Divulgação de escândalos e campanhas afetam a popularidade.
 Com 40 de popularidade, mandato ativo e três eleitores elegíveis na sessão,
 fale com Chapolin Colorado no balcão da Corregedoria para convocar uma cassação.
-Cada convocação custa R$ 100 mil da sua carteira. Após o aviso de 30 segundos,
+A convocação é gratuita. Após o aviso de 5 segundos,
 o Plenário tem 35 segundos para votar. A maioria absoluta pode cassar um
 suspeito. A pessoa cassada fica como assessora e perde voto, verba e sabotagem.
 É possível convocar outra votação após a apuração, se ainda houver tempo.
