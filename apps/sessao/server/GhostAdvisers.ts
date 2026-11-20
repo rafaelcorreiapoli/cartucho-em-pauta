@@ -2,15 +2,18 @@ import {canStand, roomAt, isolationRoom, WIDTH, HEIGHT, type Player} from '../sr
 import {findRoute, followRoute} from '../src/navigation';
 import {ghostAdviserRules} from '../src/ghost-advisers';
 
-type Adviser = {player:Player; route:ReturnType<typeof findRoute>; elapsed:number; last:number};
+type Adviser = {player:Player; route:ReturnType<typeof findRoute>; elapsed:number; last:number; removedAt?:number};
 export class GhostAdvisers {
   private members = new Map<string,Adviser>();
   private serial = 0;
+  private announcement?:{name:string; until:number; sequence:number};
   private last = 0;
   private random = Math.random;
   get players() { return [...this.members.values()].map(({player})=>player); }
-  has(id:string) { return this.members.has(id); }
-  reset(now:number,random=Math.random) { this.members.clear(); this.serial=0; this.last=now; this.random=random; }
+  get count() { return [...this.members.values()].filter(member=>member.removedAt===undefined).length; }
+  has(id:string) { const member=this.members.get(id); return !!member && member.removedAt===undefined; }
+  view(now:number,paused:boolean) { return {count:this.count,paused,elimination:this.announcement && this.announcement.until>now ? {name:this.announcement.name,sequence:this.announcement.sequence} : undefined}; }
+  reset(now:number,random=Math.random) { this.members.clear(); this.announcement=undefined; this.serial=0; this.last=now; this.random=random; }
   private point() {
     // Sample the walkable floor rather than rooms, including corridors.
     for (let attempt=0;attempt<1000;attempt++) {
@@ -25,11 +28,23 @@ export class GhostAdvisers {
     this.members.set(player.id,{player,route:[],elapsed:0,last:now});
     return player;
   }
-  kill(id:string) { this.members.delete(id); }
+  kill(id:string,now=this.last,name?:string) {
+    const member=this.members.get(id);
+    if (!member || member.removedAt!==undefined) return;
+    member.removedAt=now+ghostAdviserRules.bodyMs;
+    member.player.knockedOut=true;
+    member.player.moving=false;
+    member.route=[];
+    if (name!==undefined) this.announcement={name,until:now+ghostAdviserRules.announcementMs,sequence:(this.announcement?.sequence ?? 0)+1};
+  }
   tick(now:number,active:boolean,spend:(amount:number)=>void) {
     this.last = now;
     let expense=0;
     for (const member of this.members.values()) {
+      if (member.removedAt!==undefined) {
+        if (now>=member.removedAt) this.members.delete(member.player.id);
+        continue;
+      }
       const elapsed=Math.max(0,now-member.last);
       member.last=now;
       if (!active) { member.player.moving=false; continue; }

@@ -23,7 +23,7 @@ import { isGear } from './equipment';
 import { paintSnake } from './phone-snake';
 import { hudConsumesKeys, isEditingText } from './game-keys';
 import { installationSites } from './installations';
-import { decorationLabel } from './photo-renderer';
+import { decorationLabel } from './world-art';
 import {PHOTO_LIMIT,type PhotoAccessView,type PhotoScene} from './photography';
 import { money, type Contact } from './politics';
 import { createPhonePhotos } from './phone-photos';
@@ -181,11 +181,11 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         </div>}
       </div>
       <div className={isBag ? "bag-item-actions" : "object-card-content"}>
-        {chooseQuantity && bagOpen && !offerTarget && <button type="button" className="bag-pin hud-button"
+        {chooseQuantity && bagOpen && !offerTarget && canPinToHotbar(item) && <button type="button" className="bag-pin hud-button"
           disabled={!canPinToHotbar(item)} onClick={focusHotbar}>
           <span><BagIcon name="grid"/>Adicionar à hotbar</span><kbd className="action-key" aria-hidden="true">⇧1–6</kbd>
         </button>}
-        {chooseQuantity && !bagOpen && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
+        {canPin && <div className="bag-hotbar" role="group" aria-label="Adicionar à hotbar">
           <span><BagIcon name="grid"/>Adicionar à hotbar</span>
           {hotbar.map((id,index)=>{
             const label = `Vincular ao slot ${index+1}`;

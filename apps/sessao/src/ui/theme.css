@@ -118,22 +118,12 @@
 #match #agenda-dock { display:flex; flex-direction:column; gap:24px; max-height:var(--agenda-available-height,calc(100% - 220px)); overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#78977c66 transparent; }
 #match #agenda-dock[data-scrollable="true"] { pointer-events:auto; }
 #agenda-dock > * { flex:none; }
-.automatic-projects-history { position:relative; padding:5px 10px 5px 17px; border:0; background:radial-gradient(ellipse at 12% 10%,#23473a33,transparent 65%),linear-gradient(90deg,#09140faa,transparent); color:var(--color-hud-ink); text-shadow:0 1px 3px #000; font:12px/1.4 system-ui,sans-serif; pointer-events:none; }
-.automatic-projects-history summary { list-style:none; pointer-events:auto; cursor:pointer; }
-.automatic-projects-history summary::-webkit-details-marker { display:none; }
-.automatic-projects-disclosure { display:none; margin-inline-start:7px; }
-.automatic-projects-history header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; }
-.automatic-projects-history h2 { margin:0; font-size:14px; font-weight:650; }
-.automatic-projects-count { color:var(--color-hud-muted); font-size:11px; font-variant-numeric:tabular-nums; }
-.automatic-projects-next { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:0; color:var(--color-hud-muted); font-size:11px; }
-.automatic-projects-next strong { font-size:18px; font-weight:650; color:var(--color-hud-budget); font-variant-numeric:tabular-nums; }
-.automatic-projects-next [data-urgent="true"] { color:#efb97f; }
-.automatic-projects-history ol { display:grid; gap:7px; list-style:none; margin:12px 0 0; padding:0; }
-.automatic-projects-history li { display:flex; align-items:center; gap:9px; color:#a3ad9c; }
-.automatic-projects-history [data-approved="true"] { color:#bccfb8; }
-.automatic-projects-status { display:grid; place-items:center; flex:none; width:13px; }
-.automatic-projects-status .hud-glyph { width:13px; height:13px; }
-.automatic-projects-number { color:#83927e; font-size:10px; }
+.automatic-projects-history { display:flex; justify-content:center; gap:6px; list-style:none; padding:0; margin:5px 0 0; pointer-events:auto; }
+.automatic-projects-history li { position:relative; display:grid; place-items:center; width:clamp(36px,4vw,56px); aspect-ratio:1; flex:none; overflow:hidden; border:1px solid #779c7c80; border-radius:6px; background:#10241dcc; color:#a7b5a4; font:650 24px/1 system-ui,sans-serif; }
+.automatic-projects-history li[data-next="true"] { border-color:#e0bb67; }
+.automatic-projects-history img { display:block; width:100%; height:100%; object-fit:cover; }
+.automatic-projects-history strong { position:absolute; inset:auto 0 0; padding:2px 0; background:#07140d99; backdrop-filter:blur(3px); text-align:center; color:var(--color-hud-budget); font:650 11px/1 system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.automatic-projects-history [data-urgent="true"] { color:#ffac96; }
 .automatic-project-announcement { position:fixed; z-index:25; top:50%; left:50%; transform:translate(-50%,-50%); width:min(650px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; display:grid; grid-template-columns:minmax(140px,38%) 1fr; background:#10261bf5; border:2px solid #e0bb67; border-radius:16px; box-shadow:0 18px 80px #000b; color:#fff0c9; pointer-events:none; }
 .automatic-project-announcement img { width:100%; height:100%; min-height:250px; object-fit:cover; }
 .automatic-project-announcement > div { padding:24px 22px; }
@@ -153,15 +143,12 @@
   .automatic-project-cost { font-size:16px; margin-top:10px; }
 }
 
-@media(max-height:600px) { .automatic-projects-disclosure { display:inline; } .automatic-projects-history[open] .automatic-projects-disclosure { display:inline-block; rotate:180deg; } }
 #agenda-dock > .react-agenda { flex:0 1 auto; min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#78977c66 transparent; pointer-events:auto; }
 @media(max-height:600px) {
   #match #agenda-dock { gap:16px; }
   #agenda-dock .react-agenda { font-size:12px; gap:8px; }
   #agenda-dock .react-agenda h2 { font-size:14px; }
   #agenda-dock .react-missions { gap:6px; }
-  .automatic-projects-history header { margin-bottom:6px; }
-  .automatic-projects-next strong { font-size:16px; }
 }
 
 .center-game-alert { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(90vw,1000px); z-index:55; pointer-events:none; user-select:none; text-align:center; color:#ffe2a0; font-family:system-ui,sans-serif; paint-order:stroke fill; -webkit-text-stroke:5px #23110a; text-shadow:0 4px 8px #0009; }
@@ -174,3 +161,7 @@
 .calote-countdown > span { font-size:.65rem; max-width:110px; line-height:1.25; }
 .calote-countdown > strong { font-size:1.35rem; color:#fff1d0; font-variant-numeric:tabular-nums; }
 .calote-countdown[data-critical="true"] { background:#941f24; border-color:#ffb39f; box-shadow:0 0 12px #ff493444; }
+
+
+.center-game-alert[data-key="first-blood"] { color:#ff3030; }
+.center-game-alert span { white-space:pre-line; }

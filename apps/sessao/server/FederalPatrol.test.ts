@@ -101,7 +101,7 @@ test('unlocking during a breach admits the inspector without a stale breach comp
   expect(state.doorUntil).toBe(0);
 });
 
-test('flagrant entry confiscates all carried briefcases, interrupts pocketing and detains exactly ten seconds',()=>{
+test('flagrant entry confiscates all carried briefcases, interrupts pocketing and waits at the scene before ten seconds of detention',()=>{
   const {game,match,players,owner,home,cash,world,create,tickPatrol} = setup();
   const second = create('briefcase',owner.id);
   world(0).cashFlow?.('spawned',3);
@@ -128,12 +128,16 @@ test('flagrant entry confiscates all carried briefcases, interrupts pocketing an
   expect(match.view(owner.id,players.map(p=>p.id),caughtAt)).toMatchObject({isolationSeconds:10,isolationReason:'federal'});
   expect(match.view(owner.id,players.map(p=>p.id),caughtAt).politics?.popularity).toBe(popularity);
   expect(match.economySummary(game.physicalCash()).discrepancy).toBe(0);
-  match.advance(caughtAt+9999);
+  const delay=federalPatrolRules.flagrantPauseMs;
+  expect(match.federalTransferPending(owner.id,caughtAt+delay-1)).toBe(true);
+  expect(match.federalTransferPending(owner.id,caughtAt+delay)).toBe(false);
+  expect(match.view(owner.id,players.map(p=>p.id),caughtAt+delay).isolationSeconds).toBe(10);
+  match.advance(caughtAt+delay+9999);
   expect(match.isolated(owner.id)).toBe(true);
-  match.advance(caughtAt+10000);
+  match.advance(caughtAt+delay+10000);
   expect(match.isolated(owner.id)).toBe(false);
   const inspector = game.federalPlayers[0];
-  for (let i=0;i<15;i++) tickPatrol(caughtAt+10000+i*50);
+  for (let i=0;i<15;i++) tickPatrol(caughtAt+delay+10000+i*50);
   expect(roomAt(inspector)).not.toBe(home.name);
 });
 
@@ -212,5 +216,21 @@ test('Federal detention uses real seconds through ballots and stale releases can
   world.releaseDetention?.(owner.id,11_000);
   expect(match.isolated(owner.id)).toBe(true);
   world.releaseDetention?.(owner.id,22_000);
+  expect(match.isolated(owner.id)).toBe(false);
+});
+
+
+test('the pre-transfer pause and ten-second detention follow real time even during a ballot',()=>{
+  const {match,owner,players}=setup();
+  const world=match.gameplayWorld(players,1000,()=>false);
+  const delay=federalPatrolRules.flagrantPauseMs;
+  expect(world.detain?.(owner.id,10_000,1000,delay)).toBe(true);
+  Reflect.get(match,'openVote').call(match,'ballot',2000,2000,30_000);
+  expect(match.federalTransferPending(owner.id,1000+delay-1)).toBe(true);
+  expect(match.federalTransferPending(owner.id,1000+delay)).toBe(false);
+  expect(match.view(owner.id,players.map(player=>player.id),1000+delay).isolationSeconds).toBe(10);
+  world.releaseDetention?.(owner.id,11000);
+  expect(match.isolated(owner.id)).toBe(true);
+  world.releaseDetention?.(owner.id,11000+delay);
   expect(match.isolated(owner.id)).toBe(false);
 });

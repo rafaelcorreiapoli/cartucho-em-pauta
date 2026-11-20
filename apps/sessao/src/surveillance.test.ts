@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {acceptsSpyCameraFrame,monitoredChannel,type SpyCameraFrame,type SpyView} from './surveillance';
+import {cameraRegion,cameraSees,acceptsSpyCameraFrame,monitoredChannel,type SpyCameraFrame,type SpyView} from './surveillance';
 
 test('the monitoring panel switches between camera and grampo',()=>{
   const view:SpyView = {channels:[
@@ -21,4 +21,13 @@ test('live surveillance ignores frames for stale, closed and removed channels',(
   expect(acceptsSpyCameraFrame({...view,selected:1,channels:[{...camera,id:1,removed:true}]},frame)).toBe(false);
   expect(acceptsSpyCameraFrame(view,frame)).toBe(false);
   expect(acceptsSpyCameraFrame(undefined,frame)).toBe(false);
+});
+
+test('hidden cameras cover their room independently of the owner’s vision and furniture',()=>{
+  const origin={x:247,y:243,barriers:[[240,180,5,70]]} as const;
+  const [x,y,w,h]=cameraRegion(origin);
+  const far={x:x+w-1,y:y+1};
+  expect(Math.hypot(far.x-origin.x,far.y-origin.y)).toBeGreaterThan(70);
+  expect(cameraSees(origin,far)).toBe(true);
+  expect(cameraSees(origin,{x:x+w+1,y:y+1})).toBe(false);
 });

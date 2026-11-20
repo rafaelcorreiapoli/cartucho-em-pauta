@@ -9,16 +9,16 @@ import { decorationProductEnabled, isCredentialGood, marketProduct, marketPurcha
 import { documentRules } from '../src/internal-mail';
 import { attributeUpgrades, type Attribute } from '../src/progression';
 import { PrivateOffices } from './PrivateOffices';
-import { decorPoint, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
+import { decorPoint, depositingAtSafe, decorSlots, isOfficeFurniture, officeActions, officeDoorPoint, officeGoods, officeRules, privateOffices, type OfficeAction, type OfficeDecor, type OfficeLayout, type OfficeOption } from '../src/private-offices';
 import { money, NEW_PORTRAIT_MS, PUBLIC_MEETING_PEERS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { BRIEFCASE_LIMIT, canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, occupiesInventorySlot, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
+import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, playerVisionRadius, WIDTH, inPlenary, type Motion, type Player, type Rect } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
-import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
+import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, photoPerson, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
 import { canReachInstallation, decorationInstallMs, installationSites, vipAreaRadius, type AgendaDecoration } from '../src/installations';
 import { bills, canReachStation, recoveryPolicy, stations } from '../src/plenary';
 import { PhotoAlbum } from './PhotoAlbum';
@@ -35,15 +35,16 @@ import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
 import { securityCameraSees, type SecurityCamera } from "../src/security";
-import { isSpyProduct, cameraSees, spyRules, type SpyView, type SpyDevice } from "../src/surveillance";
+import { isSpyProduct, cameraSees, cameraRegion, spyRules, type SpyView, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
 type Item = {data:WorldItem; place:Place; safeRobber?:string};
 type Request = {id:number; kind:'offer'|'signature'; item:number; from:string; to:string; expires:number; quantity?:number};
 type PendingInstallation = {action:GameplayAction; origin:Motion; started:number; ends:number};
-const interactionDuration = (player:Player, baseMs:number) =>
-  Math.ceil(baseMs/(1+(player.interactionSpeedBonus ?? 0)/100));
+const interactionDuration = (player:Player, baseMs:number,kind:OfficeAction) =>
+  Math.ceil(baseMs/(1+(kind==='office-cash' ? player.cashSpeedBonus ?? 0 :
+    kind.startsWith('office-breach-') ? player.burglarySpeedBonus ?? 0 : 0)/100));
 
 const mapEntrance = {x:140,y:146};
 const maxGroundItems = 36;
@@ -230,7 +231,8 @@ export class Gameplay {
     this.signedProjects.clear();
     for (const player of players) {
       player.pocketing = undefined;
-      player.interactionSpeedBonus = undefined;
+      player.burglarySpeedBonus = player.cashSpeedBonus = undefined;
+      player.movementSpeedBonus = player.visionBonus = undefined;
       player.staminaMax = player.runningShoes = player.sprinting = undefined;
       player.stamina = MAX_STAMINA;
       player.speedModifier = undefined;
@@ -361,8 +363,8 @@ export class Gameplay {
     return this.wearing(id,'binoculars') ? Math.max(0,(this.binocularUse.get(id)?.activeUntil ?? 0)-now) : 0;
   }
 
-  vision(id:string,now:number) {
-    return VISION_RADIUS*(this.binocularRemaining(id,now) ? binoculars.multiplier : 1)*(this.powerOut() ? powerRules.visionFactor : 1);
+  vision(player:Player|undefined,now:number) {
+    return playerVisionRadius(player)*(player && this.binocularRemaining(player.id,now) ? binoculars.multiplier : 1)*(this.powerOut() ? powerRules.visionFactor : 1);
   }
 
   private stopBinoculars(id:string) {
@@ -513,7 +515,7 @@ export class Gameplay {
         if (channel?.kind!=='office-cash' || channel.ends<=world.now || channel.office.layout.id!==office.id ||
             roomAt(player)!==office.name || player.moving || player.knockedOut || player.carried ||
             player.x!==channel.origin.x || player.y!==channel.origin.y || world.present?.(player.id)===false) continue;
-        if (!world.detain?.(player.id,federalPatrolRules.detentionMs)) continue;
+        if (!world.detain?.(player.id,federalPatrolRules.detentionMs,world.now,federalPatrolRules.flagrantPauseMs)) continue;
         this.privateOffices.channels.delete(player.id);
         player.pocketing = undefined;
         for (const item of this.inventory(player.id)) {
@@ -599,7 +601,7 @@ export class Gameplay {
   }
 
   private visibleGround(player:Player,now:number) {
-    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player.id,now)));
+    return this.groundItems(now).filter(item=>worldVisible(player,item,this.vision(player,now)));
   }
 
   private spawnCash({now,players,present,cashFlow}:GameplayWorld) {
@@ -689,8 +691,10 @@ export class Gameplay {
         publishGameplay(world,attacker,'hit',{...details,damage});
         if (!target.knockedOut) return;
         if (this.ghostAdvisers.has(target.id)) {
-          this.ghostAdvisers.kill(target.id);
+          const hit=target.hit;
           this.combat.leave(target);
+          target.hit=hit;
+          this.ghostAdvisers.kill(target.id,world.incidentNow ?? world.now,attacker.nick);
           world.feedback?.(attacker.id,'Assessor fantasma eliminado. Despesa encerrada.');
           return;
         }
@@ -906,7 +910,7 @@ export class Gameplay {
       treatment:this.treatmentOffer(player,world.now),
       modulator,
       decorations:[...this.installations.values()].filter(item=>this.decorationEnabled(item.kind) && (isOfficeFurniture(item.kind) ||
-        localPerception(player,item,this.vision(player.id,world.now)).visible)),
+        localPerception(player,item,this.vision(player,world.now)).visible)),
       interactive:[...this.installations.values()].filter(item=>this.decorationEnabled(item.kind)).filter(item=>item.kind==='portrait' && !item.privateOffice
         ? canReachInstallation(player,item,'portrait') : canReachObject(player,item)),
       installable:Object.entries(installationSites).filter(([,site])=>this.decorationEnabled(site.kind)).filter(([key,site])=>canReachInstallation(player,site.point,site.kind) && !installationConflict(this.installations.get(key),id)).map(([key])=>key),
@@ -926,6 +930,8 @@ export class Gameplay {
   private spyAccess(world:GameplayWorld) {
     return {
       ground:()=>this.groundItems(world.now),
+      players:()=>world.players,
+      equipped:(id:string)=>this.equipped(id).map(({data})=>data),
       inventory:(id:string)=>this.inventory(id).map(({data})=>data),
       consume:(id:string,serial:number)=>{
         const item = this.inventory(id).find(({data})=>data.id===serial);
@@ -972,7 +978,7 @@ export class Gameplay {
     if (!device || !('channel' in raw) || raw.channel!==device.id) return 'O canal da câmera mudou.';
     const frame = this.spyFrame(player,world);
     if (!frame) return;
-    const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
+    const inBounds = (point:Motion)=>!!frame.camera?.area || Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
       Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
     const result = this.album.capture(player.id,world.now,id=>({
       ...frame,people:frame.people.filter(inBounds),ground:frame.ground.filter(inBounds),
@@ -998,20 +1004,28 @@ export class Gameplay {
   }
 
   securityFrame(player:Player, camera:SecurityCamera, world:GameplayWorld) {
-    return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point));
+    return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point),camera.area);
+  }
+
+  private photoWorldState(observer:Player,world:GameplayWorld,visible=(point:Motion)=>localPerception(observer,point).visible) {
+    return {time:world.now,
+      features:{surveillance:this.surveillanceEnabled,projectVoting:this.projectVotingEnabled,
+        decorations:this.decorationsEnabled,portraitsAndVip:this.portraitsAndVipEnabled},
+      offices:this.privateOffices.view(world.now,observer,visible).map(({id,door,cabinetBreached})=>({id,door,cabinetBreached})),
+      openSafes:privateOffices.filter(office=>visible(office.safe) && depositingAtSafe(office,world.players)).map(office=>office.id),
+    };
   }
 
   private cameraScene(player:Player, position:Motion, world:GameplayWorld,
-    sees:(origin:Motion,point:Motion)=>boolean):PhotoScene {
+    sees:(origin:Motion,point:Motion)=>boolean,area:Rect=cameraRegion(position)):PhotoScene {
     const barriers = player.barriers?.filter(([x,y,w,h])=>
-      Math.hypot(x+w/2-position.x,y+h/2-position.y)<=spyRules.range+Math.hypot(w,h)/2);
-    const camera = {x:position.x,y:position.y,barriers};
+      x<area[0]+area[2] && x+w>area[0] && y<area[1]+area[3] && y+h>area[1]);
+    const camera = {x:area[0]+area[2]/2,y:area[1]+area[3]/2,barriers,area};
     const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
-    const visible = (point:Motion)=>sees(camera,point);
-    return {center,camera,
+    const visible = (point:Motion)=>sees({...position,barriers},point);
+    return {center,camera,...this.photoWorldState({...player,...camera},world,visible),
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
-        id:person.id,name:person.nick,x:person.x,y:person.y,character:person.character,visitor:person.visitor,
-        direction:person.direction,moving:person.moving,knockedOut:person.knockedOut,carried:person.carried,
+        ...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
         exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),
       })),
       ground:this.groundItems(world.now).filter(visible).map(({id,kind,x,y})=>({id,kind,x,y})),
@@ -1022,13 +1036,14 @@ export class Gameplay {
   private capture(player:Player, selfie:boolean, world:GameplayWorld) {
     const {x,y} = player;
     const people:PhotoPerson[] = world.players.filter(person=>world.present?.(person.id)!==false && inPhotoFrame(player,person,true))
-      .map(person=>({id:person.id,name:person.nick,x:person.x,y:person.y,
-        character:person.character,visitor:person.visitor,direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
+      .map(person=>({...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,
+        direction:selfie && person.id===player.id ? 0 : person.direction,office:world.office(person.id),
         pocketing:person.pocketing,exposed:this.visibleItems(person.id,world.now),phone:this.phoneActivity(person.id),gameSession:this.phone.gameSession(person.id),knockedOut:person.knockedOut,carried:person.carried}));
     const ids = new Set(people.map(person=>person.id));
     const stillAt = (id:string,point:Motion) => people.some(person=>person.id===id && Math.hypot(person.x-point.x,person.y-point.y)<=14);
     const result = this.album.capture(player.id,world.now,id=>({
       id,author:{id:player.id,name:player.nick},at:Math.max(0,world.now-(world.started ?? 0)),
+      ...this.photoWorldState(player,world),
       center:{x,y,barriers:player.barriers},breaches:this.officeBreaches(world.now).filter(point=>inPhotoFrame(player,point)),location:roomAt(player),selfie,people,
       ground:this.visibleGround(player,world.now).filter(item=>inPhotoFrame(player,item))
         .map(({id,kind,x,y,document})=>({id,kind,x,y,title:document?.title})),
@@ -1053,7 +1068,7 @@ export class Gameplay {
 
   private startInstallation(player:Player,action:GameplayAction,now:number) {
     this.pendingInstallations.set(player.id,{action,origin:{x:player.x,y:player.y},
-      started:now,ends:now+interactionDuration(player,decorationInstallMs)});
+      started:now,ends:now+decorationInstallMs});
     return 'Instalando decoração…';
   }
 
@@ -1183,7 +1198,7 @@ export class Gameplay {
         const duration = tool && (target==='door' || !this.ownerInside(office,players))
           ? this.privateOffices.breachTime(office,target,this.toolLevel(tool),now) : undefined;
         const name = target==='door' ? 'porta' : target==='safe' ? 'cofre' : 'armário';
-        const detail = duration ? ` · ${(interactionDuration(player,duration)/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})} s` : '';
+        const detail = duration ? ` · ${(interactionDuration(player,duration,`office-breach-${target}`)/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})} s` : '';
         add(target==='door' ? 'office-breach-door' : target==='safe' ? 'office-breach-safe' : 'office-breach-cabinet',
           `Arrombar ${name}${detail}`,tool?.id);
       };
@@ -1338,7 +1353,7 @@ export class Gameplay {
       if (offices.channels.has(player.id)) return this.reject(player,world,'Já existe uma interação em andamento.');
       const duration = officeRules.reinforceMs;
       offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,
-        ends:now+interactionDuration(player,duration),baseDuration:duration,level:office[level]});
+        ends:now+interactionDuration(player,duration,kind),baseDuration:duration,level:office[level]});
       return 'Reforço iniciado.';
     }
     if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return this.reject(player,world,'Ação indisponível.');
@@ -1358,7 +1373,7 @@ export class Gameplay {
     const duration = kind==='office-cash' ? (own && cashAmount(item.data) ? officeRules.cashMs : undefined)
       : !own ? offices.breachTime(office,target,level,now) : undefined;
     if (!duration) return this.reject(player,world,kind==='office-cash' ? 'Somente o cofre do titular aceita dinheiro.' : 'Ferramenta insuficiente para esta fechadura.');
-    offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+interactionDuration(player,duration),baseDuration:duration,level});
+    offices.channels.set(player.id,{kind,office,item:item.data.id,origin:{x:player.x,y:player.y},started:now,ends:now+interactionDuration(player,duration,kind),baseDuration:duration,level});
     if (kind==='office-cash') {
       player.pocketing = true;
       this.expose(player.id,item.data.id);
@@ -1512,7 +1527,7 @@ export class Gameplay {
     const scan = this.scanning.get(player.id);
     if (!scan || scan.ends<=world.now || world.plenary || player.knockedOut || player.carried ||
         this.wearing(player.id,'xray')?.id!==scan.item || !world.wallet) return;
-    const radius = this.vision(player.id,world.now);
+    const radius = this.vision(player,world.now);
     const targets:NonNullable<GameplayView['xrayVision']>['targets'] = [];
     const add = (id:string,owner:string,{x,y}:Motion,safe?:true)=>{
       let balance = scan.balances.get(id);
@@ -1598,11 +1613,15 @@ export class Gameplay {
   applyAttribute(player:Player, attribute:Attribute) {
     const {bonus} = attributeUpgrades[attribute];
     switch (attribute) {
-      case 'agility': player.interactionSpeedBonus = (player.interactionSpeedBonus ?? 0)+bonus; break;
-      case 'stamina': {
+      case 'burglary': player.burglarySpeedBonus = (player.burglarySpeedBonus ?? 0)+bonus; break;
+      case 'concealment': player.cashSpeedBonus = (player.cashSpeedBonus ?? 0)+bonus; break;
+      case 'vision': player.visionBonus = (player.visionBonus ?? 0)+bonus; break;
+      case 'mobility': {
         const max = player.staminaMax ?? MAX_STAMINA;
-        player.staminaMax = max+bonus;
-        player.stamina = Math.min(player.staminaMax,(player.stamina ?? max)+bonus);
+        player.movementSpeedBonus = (player.movementSpeedBonus ?? 0)+bonus;
+        const staminaBonus = attributeUpgrades.mobility.staminaBonus;
+        player.staminaMax = max+staminaBonus;
+        player.stamina = Math.min(player.staminaMax,(player.stamina ?? max)+staminaBonus);
         break;
       }
     }

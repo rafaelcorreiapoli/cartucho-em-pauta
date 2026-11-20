@@ -35,11 +35,11 @@ async page => {
     await terminal.getByText('Ao vivo',{exact:true}).waitFor();
     const bounds = await terminal.evaluate(dialog=>{
       const outer = dialog.getBoundingClientRect();
-      const console = dialog.querySelector('.security-console');
-      console.scrollTop = console.scrollHeight;
+      const channels = dialog.querySelector('.security-channels');
+      channels.scrollTop = channels.scrollHeight;
       const header = dialog.querySelector('header').getBoundingClientRect();
       return {top:outer.top,bottom:outer.bottom,left:outer.left,right:outer.right,
-        scroll:console.scrollTop,dialogOverflow:dialog.scrollHeight-dialog.clientHeight,headerTop:header.top};
+        scroll:channels.scrollTop,dialogOverflow:dialog.scrollHeight-dialog.clientHeight,headerTop:header.top};
     });
     if (bounds.top<0 || bounds.bottom>height || bounds.left<0 || bounds.right>width ||
         bounds.headerTop<bounds.top || bounds.dialogOverflow>1 || (height===360 && bounds.scroll===0)) {
@@ -63,6 +63,47 @@ async page => {
     results.push({width,height,terminalScroll:bounds.scroll});
   }
   await page.setViewportSize({width:1280,height:720});
+  await page.getByRole('button',{name:'Consultar câmeras'}).click();
+  const coverage=page.getByRole('dialog',{name:'Sala de Segurança'});
+  for (const [label,width,height] of [['Apoio Técnico',223,87],['Tesouraria',266,122],['Lanchonete',126,122]]) {
+    await coverage.getByRole('button',{name:label==='Lanchonete' ? /Lanchonete|Rótulo original alterado/ : label,exact:true}).click();
+    await coverage.getByText('Ao vivo',{exact:true}).waitFor();
+    await page.waitForFunction(({width,height})=>{
+      const canvas=document.querySelector('#security-dialog canvas');
+      return canvas?.width===width*4 && canvas?.height===height*4;
+    },{width,height});
+  }
+  // Camera changes must neither resize/reposition the modal nor move its image panel.
+  for (const [width,height] of [[1280,720],[800,360],[390,700]]) {
+    await page.setViewportSize({width,height});
+    const geometry=()=>coverage.evaluate(dialog=>{
+      const box=element=>{const {x,y,width,height}=element.getBoundingClientRect();return {x,y,width,height};};
+      const viewport=dialog.querySelector('.spy-viewport');
+      const canvas=viewport.querySelector('canvas');
+      const style=getComputedStyle(canvas);
+      return {dialog:box(dialog),viewport:box(viewport),canvas:box(canvas),fit:style.objectFit,position:style.objectPosition};
+    });
+    const before=await geometry();
+    for (const [label,cw,ch] of [['Biblioteca',132,127],['Tesouraria',266,122],['Corredor central',223,36],['Apoio Técnico',223,87]]) {
+      await coverage.getByRole('button',{name:label,exact:true}).click();
+      await page.waitForFunction(({cw,ch})=>{
+        const canvas=document.querySelector('#security-dialog canvas');
+        return canvas?.width===cw*4 && canvas?.height===ch*4;
+      },{cw,ch});
+      const after=await geometry();
+      for(const part of ['dialog','viewport']) for(const key of ['x','y','width','height']) {
+        if(Math.abs(after[part][key]-before[part][key])>1) throw Error(`Camera layout shifted: ${width}×${height}, ${label}, ${part}.${key}`);
+      }
+      if(after.fit!=='contain' || after.position!=='50% 50%') throw Error('Camera image is not contained and centered');
+      for(const axis of [['x','width'],['y','height']]) {
+        const [position,size]=axis;
+        if(Math.abs(after.canvas[position]+after.canvas[size]/2-after.viewport[position]-after.viewport[size]/2)>1) throw Error('Canvas is not centered in the image panel');
+      }
+    }
+  }
+  await page.setViewportSize({width:1280,height:720});
+  await coverage.getByRole('button',{name:/Fechar terminal|Fechamento original alterado/}).click();
+  await coverage.waitFor({state:'hidden'});
   await page.keyboard.press('v');
   const surveillance = page.getByRole('dialog',{name:'Central de Vigilância'});
   const viewport = surveillance.getByLabel('Visão ao vivo da câmera');
@@ -95,15 +136,24 @@ async page => {
     await surveillance.locator('.spy-viewport[aria-busy="false"]').waitFor();
     await canvas.waitFor();
     if (await canvas.count()!==1) throw Error('Mais de um canvas na câmera '+name);
-    const hasScene = await canvas.evaluate(canvas=>{
-      const context = canvas.getContext('2d');
-      if (!context) return false;
-      const pixels = context.getImageData(0,0,canvas.width,canvas.height).data;
+    // The shared map renderer can use WebGL. Read the displayed pixels through
+    // Playwright rather than requesting an incompatible 2D context from its canvas.
+    const screenshot = await canvas.screenshot({scale:'css'});
+    const hasScene = await page.evaluate(async encoded=>{
+      const image = new Image();
+      image.src = 'data:image/png;base64,'+encoded;
+      await image.decode();
+      const sample = document.createElement('canvas');
+      sample.width = image.width;
+      sample.height = image.height;
+      const context = sample.getContext('2d');
+      context.drawImage(image,0,0);
+      const pixels = context.getImageData(0,0,sample.width,sample.height).data;
       for (let index=4;index<pixels.length;index+=64) {
         if (pixels[index]!==pixels[0] || pixels[index+1]!==pixels[1] || pixels[index+2]!==pixels[2]) return true;
       }
       return false;
-    });
+    },screenshot.toString('base64'));
     if (!hasScene) throw Error('Primeiro quadro sem cenário na câmera '+name);
   }
   async function markCanvas(id) {

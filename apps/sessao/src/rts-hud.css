@@ -634,13 +634,16 @@ button:where(:has(.action-key)) { position: relative; }
 #surveillance-dialog header, #security-dialog header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .spy-console { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(240px, 1.6fr); gap: 1rem; }
 #spy-channels, #spy-monitor { padding: .8rem; border-radius: .6rem; background: #101c18; }
-.spy-viewport { aspect-ratio: 1; margin-bottom: .6rem; border: 1px solid #4b816a; background: #09120f; overflow: hidden; }
-.spy-viewport canvas { display: block; width: 100%; height: auto; }
-.security-console { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1rem; margin-top: 1rem; }
-#security-dialog .spy-viewport { width: min(100%, 48dvh); margin-inline: auto; }
+.spy-viewport { display: grid; place-items: center; aspect-ratio: 1; margin-bottom: .6rem; border: 1px solid #4b816a; background: #09120f; overflow: hidden; }
+.spy-viewport canvas { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; object-position: center; }
+#security-dialog { height: min(540px, calc(100dvh - 2rem)); }
+.security-console { display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 1rem; margin-top: 1rem; }
+.security-channels { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.security-console > section { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: .6rem; min-height: 0; min-width: 0; }
+#security-dialog .spy-viewport { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; margin: 0; }
 #security-dialog .waiting-for-feed canvas { visibility: hidden; }
 @media (max-width: 520px) {
-  .security-console { grid-template-columns: 1fr; }
+  .security-console { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr); }
   .security-channels { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
   .security-channels .spy-channel { margin: 0; }
 }

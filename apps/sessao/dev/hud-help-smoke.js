@@ -31,8 +31,9 @@ async page => {
         throw Error('Relógio eleitoral deve ficar logo à direita do título');
       }
     }
-    if (await page.locator('#congress-dock .congress-payroll').count()) throw Error('Folha ainda no HUD central');
-    await page.locator('#payroll-mount .congress-payroll').waitFor();
+    await page.locator('#session-timers-mount .congress-payroll').waitFor();
+    await page.getByRole('button',{name:'Folha salarial',exact:true}).hover();
+    await tooltip.filter({hasText:'Folha salarial: valor total'}).waitFor();
     await stability.hover();
     await tooltip.filter({hasText:'Parlamento entra em colapso'}).waitFor();
     const bounds = await tooltip.boundingBox();

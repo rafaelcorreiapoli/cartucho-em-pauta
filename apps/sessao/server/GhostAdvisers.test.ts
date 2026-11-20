@@ -98,6 +98,11 @@ test('real baton hits kill an adviser permanently and stop only its charges',()=
   }
   expect(s.game.ghostAdvisers.has(target.id)).toBe(false);
   expect(s.game.ghostAdvisers.has(other.id)).toBe(true);
+  expect(target.knockedOut).toBe(true);
+  expect(target.hit).toBeGreaterThan(s.world.now);
+  expect(target.moving).toBe(false);
+  expect(s.game.ghostAdvisers.players).toContain(target);
+  expect(s.game.ghostAdvisers.view(s.world.now,false)).toEqual({count:1,paused:false,elimination:{name:'A',sequence:1}});
   s.world.players=[s.actor,other];
   s.world.now=rules.tick;
   s.game.tick(s.world,true);
@@ -105,4 +110,37 @@ test('real baton hits kill an adviser permanently and stop only its charges',()=
   s.world.now=rules.tick*20;
   s.game.tick(s.world,true);
   expect(s.game.ghostAdvisers.has(target.id)).toBe(false);
+});
+
+
+test('a dead adviser falls before removal, never bills again and announces the killer temporarily',()=>{
+  const advisers=new GhostAdvisers();
+  advisers.reset(0);
+  const target=advisers.hire();
+  advisers.kill(target.id,100,'Rafael');
+  expect(advisers.has(target.id)).toBe(false);
+  expect(target.knockedOut).toBe(true);
+  let expense=0;
+  advisers.tick(100+rules.bodyMs-1,true,amount=>expense+=amount);
+  expect(advisers.players).toContain(target);
+  advisers.tick(100+rules.bodyMs,true,amount=>expense+=amount);
+  expect(advisers.players).toHaveLength(0);
+  expect(advisers.view(100+rules.announcementMs-1,false).elimination).toEqual({name:'Rafael',sequence:1});
+  expect(advisers.view(100+rules.announcementMs,false).elimination).toBeUndefined();
+  advisers.tick(rules.tick*10,true,amount=>expense+=amount);
+  expect(expense).toBe(0);
+  advisers.reset(0);
+  expect(advisers.view(0,false).elimination).toBeUndefined();
+});
+
+
+test('consecutive adviser eliminations by the same player have distinct announcement sequences',()=>{
+  const advisers = new GhostAdvisers();
+  advisers.reset(0);
+  const first = advisers.hire();
+  const second = advisers.hire();
+  advisers.kill(first.id,100,'Rafael');
+  expect(advisers.view(100,false).elimination?.sequence).toBe(1);
+  advisers.kill(second.id,101,'Rafael');
+  expect(advisers.view(101,false).elimination).toEqual({name:'Rafael',sequence:2});
 });

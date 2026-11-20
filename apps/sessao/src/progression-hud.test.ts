@@ -7,11 +7,11 @@ import {BALLOT_MS,NEGOTIATION_MS,stations} from './plenary';
 import {attributeUpgrades,baseStamina} from './progression';
 import {attributePlayerView,canSelectAttribute} from './progression-hud';
 
-test('the attribute player projection ignores movement and subunit stamina',()=>{
+test('the specialization panel only tracks whether the player can spend points',()=>{
   const player:Player = {id:'a',nick:'A',character:0,direction:0,moving:false,stamina:89.9,...stations.coffee};
   expect(attributePlayerView({...player,x:player.x+10,direction:2,moving:true,stamina:89.1}))
     .toEqual(attributePlayerView(player));
-  expect(attributePlayerView({...player,stamina:88.9})).not.toEqual(attributePlayerView(player));
+  expect(attributePlayerView({...player,stamina:88.9})).toEqual(attributePlayerView(player));
   expect(attributePlayerView({...player,carried:true}).unavailable).toBe(true);
 });
 
@@ -31,7 +31,7 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
     return {...match.view(player.id,ids,now),gameplay:game.view(player,world)};
   };
   const allowed = (now:number)=>canSelectAttribute(view(now),attributePlayerView(player));
-  const request = {attribute:'stamina',revision:0,matchId:view(1).politics!.progression.matchId} as const;
+  const request = {attribute:'mobility',revision:0,matchId:view(1).politics!.progression.matchId} as const;
   expect(allowed(1)).toBe(true);
 
   player.carried = true;
@@ -56,6 +56,6 @@ test('the attribute panel and gameserver deny upgrades while carried or in the b
   expect(allowed(next)).toBe(true);
   expect(match.allocateAttribute(player,request,next)).toBe(true);
   game.applyAttribute(player,request.attribute);
-  expect(view(next).politics?.progression).toMatchObject({available:0,revision:1,invested:{stamina:1}});
-  expect(player.staminaMax).toBe(baseStamina+attributeUpgrades.stamina.bonus);
+  expect(view(next).politics?.progression).toMatchObject({available:0,revision:1,invested:{mobility:1}});
+  expect(player.staminaMax).toBe(baseStamina+attributeUpgrades.mobility.staminaBonus);
 });

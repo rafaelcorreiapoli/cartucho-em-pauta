@@ -4,6 +4,7 @@ import { money } from '../src/politics';
 import { contextActionKeys } from '../src/ui/context-action-keys';
 import { xrayRechargeAction } from '../src/ui/xray-recharge-action';
 import { Visitors } from './Visitors';
+import {securityCameras} from '../src/security';
 import { hideouts } from '../src/surveillance';
 import { weapons } from '../src/weapons';
 import { privateOffices } from '../src/private-offices';
@@ -475,8 +476,8 @@ test('public portrait and VIP sites are reachable and show the installer to othe
   const {alice,bob,game,world,events} = setup();
   world.spend = ()=>true;
   alice.character = 4;
-  game.applyAttribute(alice,'agility');
-  const duration = decorationInstallMs/1.25;
+  game.applyAttribute(alice,'burglary');
+  const duration = decorationInstallMs;
   for (const [place,site] of Object.entries(installationSites)) {
     if (site.kind==='pizza') continue;
     Object.assign(alice,npcs.credentialsVendor.interaction);
@@ -633,7 +634,7 @@ test('surveillance shops, races, discoveries, reconnection, audio and photo evid
   expect(game.spyFrame(alice,world)?.people).toContainEqual(expect.objectContaining({id:watcher.id,moving:true}));
   Object.assign(watcher,{x:254,y:252,moving:false});
   alice.barriers = [[241,248,12,2]];
-  expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).not.toContain(bob.id);
+  expect(game.spyFrame(alice,world)?.people.map(person=>person.id)).toContain(bob.id);
   alice.barriers = undefined;
   expect(game.spyAction(alice,{kind:'capture',channel:channel.id+1},world)).toBe('O canal da câmera mudou.');
   expect(game.photoView(alice.id,world.now).album).toEqual([]);
@@ -1086,4 +1087,87 @@ test('ten briefcases block collection, transfers and NPC robbery without losing 
   game.act(alice,{kind:'drop',item:inventory(alice)[0].id},world);
   expect(game.act(alice,{kind:'collect',item:extra.id},world)).toBe('Objeto recolhido.');
   expect(inventory(alice)).toHaveLength(10);
+});
+
+test('photos and security frames project the same public visual state and freeze the capture settings',()=>{
+  const {alice,bob,game,world} = setup();
+  world.now=4000;
+  Object.assign(alice,{x:260,y:204});
+  Object.assign(bob,{x:250,y:204,moving:true,handlingObject:1,breachingSafe:true,cashInHand:true,carrying:true,
+    robberyTarget:{x:255,y:250,direction:3},swing:{weapon:'baton',startedAt:3900,angle:1},health:.2});
+  game.surveillanceEnabled=false;
+  game.portraitsAndVipEnabled=false;
+  game.act(alice,{kind:'photo'},world);
+  const photo=game.photoView(alice.id,world.now).album[0].photo;
+  const subject=photo.people.find(person=>person.id===bob.id)!;
+  expect(subject).toMatchObject({moving:true,handlingObject:1,breachingSafe:true,carrying:true,
+    robberyTarget:{x:255,y:250,direction:3},swing:{weapon:'baton',startedAt:3900,angle:1}});
+  expect(subject.cashInHand).toBeUndefined(); // The authoritative inventory, not a client-visible flag.
+  expect(subject).not.toHaveProperty('health');
+  expect(photo.time).toBe(4000);
+  expect(photo.features).toMatchObject({surveillance:false,portraitsAndVip:false});
+  const frame=game.securityFrame(alice,securityCameras[1],world);
+  const {office,...visual} = subject;
+  expect(frame.people.find(person=>person.id===bob.id)).toMatchObject(visual);
+  bob.robberyTarget!.x=999;
+  bob.swing!.angle=3;
+  bob.moving=false;
+  game.surveillanceEnabled=true;
+  game.portraitsAndVipEnabled=true;
+  expect(subject.robberyTarget!.x).toBe(255);
+  expect(subject.swing!.angle).toBe(1);
+  expect(subject.moving).toBe(true);
+  expect(photo.features).toMatchObject({surveillance:false,portraitsAndVip:false});
+});
+
+
+test('a photo captures open safe state independently of the people left in its crop',()=>{
+  const {alice,bob,game,world} = setup();
+  const office=privateOffices[0];
+  Object.assign(alice,{x:office.safe.x,y:office.safe.y});
+  Object.assign(bob,{...office.safe,pocketing:true});
+  game.act(alice,{kind:'photo'},world);
+  const photo=game.photoView(alice.id,world.now).album[0].photo;
+  expect(photo.openSafes).toContain(office.id);
+  bob.pocketing=false;
+  expect(photo.openSafes).toContain(office.id);
+});
+
+test('institutional frames include the far side of a camera region and exclude adjacent rooms',()=>{
+  const {alice,bob,watcher,game,world}=setup();
+  const camera=securityCameras.find(camera=>camera.id==='treasury')!;
+  const [x,y,w,h]=camera.area;
+  Object.assign(bob,{x:x+5,y:y+h-5});
+  Object.assign(watcher,{x:x+w+1,y:y+h/2});
+  expect(Math.hypot(bob.x-camera.x,bob.y-camera.y)).toBeGreaterThan(70);
+  const frame=game.securityFrame(alice,camera,world);
+  expect(frame.camera?.area).toEqual(camera.area);
+  expect(frame.camera).toMatchObject({x:x+w/2,y:y+h/2});
+  expect(frame.people.map(person=>person.id)).toContain(bob.id);
+  expect(frame.people.map(person=>person.id)).not.toContain(watcher.id);
+});
+
+test('an equipped detector inspects nearby players and fixed hideouts without being consumed',()=>{
+  const {alice,bob,game,world} = setup();
+  world.spend = ()=>true;
+  Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  game.act(alice,{kind:'talk',target:'vendor'},world);
+  game.act(alice,{kind:'dialogue-choice',target:'products',token:game.view(alice,world).dialogue?.token},world);
+  game.act(alice,{kind:'shop-buy',target:'bugDetector',token:game.view(alice,world).dialogue?.token},world);
+  const detector = game.view(alice,world).inventory.find(item=>item.kind==='bugDetector')!;
+  game.act(alice,{kind:'equip',item:detector.id},world);
+  expect(game.view(alice,world).equipped).toContainEqual(detector);
+  Object.assign(alice,{x:247,y:250});
+  Object.assign(bob,{x:250,y:250});
+  const options = game.spyView(alice,world).options;
+  expect(options).toContainEqual(expect.objectContaining({kind:'inspect',site:'coffee',item:detector.id}));
+  const inspect = options.find(option=>option.site===`player:${bob.id}`)!;
+  expect(inspect.kind).toBe('inspect');
+  expect(game.spyAction(alice,inspect,world)).toBeUndefined();
+  world.now += 3000;
+  game.tick(world,true);
+  expect(game.spyView(alice,world).progress).toBeUndefined();
+  expect(game.view(alice,world).equipped).toContainEqual(detector);
+  Object.assign(bob,{x:900,y:500});
+  expect(game.spyAction(alice,inspect,world)).toBe('Aproxime-se do local.');
 });

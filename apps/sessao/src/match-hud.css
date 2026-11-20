@@ -851,6 +851,7 @@ button.item-tile:active { transform: translateY(3px); }
   border-radius: 9px;
   background: #0d1f18;
 }
+.album-photo canvas { aspect-ratio: auto; height: auto; }
 .camera-preview {
   border: 2px solid #96d8af;
   box-shadow: 0 0 0 3px #182922;

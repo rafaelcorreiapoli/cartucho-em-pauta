@@ -36,6 +36,7 @@ async page => {
     ?.checkVisibility({visibilityProperty:true,opacityProperty:true}));
   await page.keyboard.press('u');
   await apps.waitFor();
+  if (await page.locator('#election-dock').isVisible()) throw Error('Pesquisa eleitoral deve recolher com aplicativos abertos');
   await page.keyboard.press('F2');
   const palette = page.getByRole('dialog',{name:'Atalhos de teclado'});
   await palette.waitFor();
@@ -111,7 +112,7 @@ async page => {
   await page.locator('#action-shortcuts').getByRole('button',{name:/Fechar configurações/}).click();
   await settings.waitFor({state:'hidden'});
   await page.keyboard.press('p');
-  const attributes = page.getByRole('dialog',{name:/Atributos/i});
+  const attributes = page.getByRole('dialog',{name:/Especializações/i});
   await attributes.waitFor();
   await page.keyboard.press('F2');
   await palette.waitFor();
@@ -143,7 +144,7 @@ async page => {
     await dossier.waitFor({state:'hidden'});
   }
   await page.setViewportSize({width:1280,height:720});
-  await page.locator('#payroll-mount').getByText('Folha salarial',{exact:true}).waitFor();
+  await page.locator('#session-timers-mount').getByRole('button',{name:'Folha salarial',exact:true}).waitFor();
   const pollButton = page.getByRole('button',{name:'Pesquisa eleitoral',exact:true});
   await pollButton.waitFor();
   if (await pollButton.getAttribute('aria-keyshortcuts')!=='L' || await pollButton.locator('kbd').count()) {

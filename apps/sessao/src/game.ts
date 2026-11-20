@@ -1,48 +1,29 @@
 import {sprintDust} from './sprint-dust';
-import {federalPatrolRules,federalPatrolSheets,federalBreachArt} from './federal-patrol';
-import {visitorRoster,visitorSheets} from './visitors';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
 import {wallVision} from './visibility';
 import {canActOnFire,fireSites,type ExtinguishEffect,type FireCommand} from './fire';
 import {createRoomFires,createFuseSmoke,createExtinguishEffect,showSafeExplosion} from './fire-effects';
-import {powerOption,powerPanels,powerRules,type PowerAction,type PowerPanel} from './power';
-import { decorPoint, depositingAtSafe, isOfficeFurniture, officeDoorPoint, officeFixtures, officeFurniture, privateOffices } from './private-offices';
+import {powerOption,powerRules,type PowerAction} from './power';
+import { decorPoint, depositingAtSafe, officeDoorPoint, officeFixtures, privateOffices } from './private-offices';
 import type { CombatCue } from './game-audio';
 import { playBloodImpact, playComicImpact } from './comic-impact';
-import { weaponPose, weapons } from './weapons';
 import { npcEnabled, mapNpcs, type NpcId } from './npcs';
 import { binoculars, xray } from './equipment';
-import { cashAmount, objects, treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
+import { treasuryDeliveries, type GroundItem, type GameplayAction } from './gameplay';
 import { hudConsumesKeys } from './game-keys';
 import Phaser from 'phaser';
-import { attackArt, characterArt, characterSheets, combatSheets, downedArt, hitArt, phoneArt, phoneSheets, safeBreachArt, safeBreachSheets, safeDepositArt, safeDepositSheets, npcRobberyArt, npcRobberySheets } from './character-art';
 import {projectWorldSnapshot} from './world-snapshot';
 import { agendaProject, bills, stations, type Phase, type PlenaryView, type Station } from './plenary';
 import { installationArt, installationSites } from './installations';
-import { groundItemArt } from './map-props';
 import { drawMap, updateSafeArt } from './draw-map';
-import { decorationLabel, itemSymbols, PhotoRenderer } from './photo-renderer';
+import { PhotoRenderer } from './photo-renderer';
+import {preloadWorldArt,createWorldAnimations,createActorView,updateActorView,createGroundArt,createDecorationArt,decorationLabel,createInstallationFrame,createMapNpc,drawOfficeState,type ActorView} from './world-art';
 import { inPhotoFrame, type Decoration, type PhotoScene } from './photography';
 import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
-import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
-
-type View = { speedIcon:Phaser.GameObjects.Graphics; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number; depositStarted?:number; robberyStarted?:number };
-// Grip coordinates in the original 128 px frames, ordered front, profile, back.
-type Grip = readonly [x:number,y:number];
-type WalkGrips = readonly [Grip,Grip,Grip,Grip];
-const briefcaseGrip = {
-  Lula: [[[85,101],[91,94],[85,101],[88,85]],[[57,102],[82,89],[57,102],[78,88]],[[38,100],[39,95],[38,100],[40,89]]],
-  Bolsonaro: [[[83,103],[86,97],[83,103],[87,87]],[[57,104],[85,90],[57,104],[82,89]],[[41,103],[41,99],[41,103],[43,94]]],
-  Clodovil: [[[90,101],[95,94],[90,101],[87,91]],[[56,103],[81,84],[56,103],[81,84]],[[34,101],[36,96],[34,101],[36,96]]],
-  Tiririca: [[[85,104],[89,95],[85,104],[80,91]],[[58,103],[86,88],[58,103],[87,87]],[[41,105],[38,98],[41,105],[39,91]]],
-  'Sikêra Jr.': [[[94,102],[95,92],[94,102],[84,95]],[[54,102],[85,87],[54,102],[86,87]],[[34,102],[35,94],[34,102],[36,94]]],
-  'Alexandre Frota': [[[92,106],[94,92],[92,106],[87,91]],[[54,105],[83,85],[54,105],[83,85]],[[34,106],[34,96],[34,106],[34,96]]],
-  'Sergio Moro': [[[85,106],[87,99],[85,106],[82,92]],[[55,105],[85,90],[55,105],[84,89]],[[43,106],[40,100],[43,106],[43,94]]],
-  'Inês Brasil': [[[94,100],[98,95],[94,100],[92,89]],[[65,100],[89,79],[65,100],[89,79]],[[38,101],[32,94],[38,101],[32,94]]],
-} satisfies Record<(typeof NAMES)[number],readonly [WalkGrips,WalkGrips,WalkGrips]>;
+import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, playerVisionRadius, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
 const rechargeFixtures = (Object.keys(stationRecharge) as RechargeStation[]).flatMap(station=>{
   const {texture,duration} = stationRecharge[station];
@@ -116,7 +97,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private officeRenderKey:string|undefined = '';
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
-    private views = new Map<string,View>();
+    private views = new Map<string,ActorView>();
     private groundMarkers = new Map<number,Phaser.GameObjects.Container>();
     private renderedGround?:readonly GroundItem[];
     private renderedDecorations?:readonly Decoration[];
@@ -168,50 +149,13 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
 
-      for (const {texture,sprite} of Object.values(installationArt)) {
-        this.load.image(texture,import.meta.env.BASE_URL+'assets/'+sprite);
-      }
-      this.load.image('cash-briefcase',import.meta.env.BASE_URL+'assets/maleta-social.png');
-      for (const [key,weapon] of Object.entries(weapons)) {
-        this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
-      }
-      for (const {key,path} of [...characterSheets,...visitorSheets,...federalPatrolSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
-      for (const [id,npc] of Object.entries(mapNpcs)) {
-        this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
-      }
-      for (const [kind,{sprite}] of Object.entries(officeFurniture)) {
-        this.load.image(`furniture-${kind}`,import.meta.env.BASE_URL+'assets/'+sprite);
-      }
-      for (const [kind,{portrait}] of Object.entries(objects)) {
-        this.load.image(`item-${kind}`,`${import.meta.env.BASE_URL}assets/${portrait}`);
-      }
-      this.load.spritesheet('installed-portraits',`${import.meta.env.BASE_URL}assets/retratos-elenco.webp`,{frameWidth:256,frameHeight:256});
-      this.load.image(officeFixtures.safe.openTexture,`${import.meta.env.BASE_URL}assets/gabinete-cofre-aberto.webp`);
-      this.load.image(officeFixtures.safe.texture,`${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
-      this.load.image(officeFixtures.cabinet.texture,`${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
-      this.load.image('infirmary-stretcher',import.meta.env.BASE_URL+'assets/'+'maca-enfermaria.webp');
-      this.load.image('technical-shelf',import.meta.env.BASE_URL+'assets/'+'estante-apoio-tecnico.webp');
-      this.load.image('snack-counter',import.meta.env.BASE_URL+'assets/'+'balcao-lanchonete.webp');
-      this.load.image('coffee-maker',import.meta.env.BASE_URL+'assets/cafeteira.webp');
-      this.load.image('security-terminal',import.meta.env.BASE_URL+'assets/terminal-seguranca.webp');
-      this.load.image('power-panel',import.meta.env.BASE_URL+'assets/painel-eletrico.webp');
-      this.load.spritesheet('office','assets/office-hd.png',{frameWidth:192,frameHeight:112});
+      preloadWorldArt(this);
     }
     private tutorialMarker?:Phaser.GameObjects.Graphics;
     create() {
       if (this.assetsFailed) return;
       this.cameras.main.setVisible(!inLobby);
-      for (let character=0;character<NAMES.length;character++) {
-        const {sheet,frame} = characterArt(character);
-        for (let direction=0;direction<3;direction++) {
-          const start = frame+direction*4;
-          const frames = Array.from({length:4},(_,step) => ({key:sheet.key,frame:start+step}));
-          this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
-        }
-      }
-      for (const {id} of [...visitorRoster,{id:federalPatrolRules.skin}]) for (let direction=0;direction<3;direction++) {
-        this.anims.create({key:`${id}-${direction}`,frames:Array.from({length:4},(_,step)=>({key:`${id}-walk`,frame:direction*4+step})),frameRate:9,repeat:-1});
-      }
+      createWorldAnimations(this);
       const syncCanvas = () => {
         const density = Math.min(2,Math.max(1,window.devicePixelRatio || 1));
         const width = Math.round(parent.clientWidth*density);
@@ -238,10 +182,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       },art=>{
         this.securityTerminal = art;
         this.registerInteraction(art,()=>plenaryView?.surveillanceEnabled!==false && !!plenaryView?.gameplay?.security,openSecurity);
-      });
-      powerPanels.forEach(({x,y},index)=>{
-        const panel = index as PowerPanel;
-        const fixture = this.add.image(x,y,'power-panel').setOrigin(.5,.85).setDisplaySize(24,17.5).setDepth(2);
+      },(fixture,panel)=>{
         const option = ()=>{
           const player = local.state?.player;
           if (!player || !running || !plenaryView?.gameplay || plenaryView.ballotCountdown!==undefined) return;
@@ -255,9 +196,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.fog = this.add.graphics().setDepth(3);
       this.fogTexture = this.textures.createCanvas('vision-penumbra',512,512)!;
       this.fogEdge = this.add.image(0,0,this.fogTexture.key).setDepth(3).setVisible(false);
-      this.photoRenderer = new PhotoRenderer(this.textures);
-      this.children.depthSort();
-      this.photoRenderer.loadMap(this.children.getChildren(),this.securityTerminal);
+      this.photoRenderer = new PhotoRenderer(this);
+      this.events.once('shutdown',()=>this.photoRenderer?.destroy());
       this.roomFires = createRoomFires(this);
       this.fuseSmoke = createFuseSmoke(this);
       this.extinguishEffect = createExtinguishEffect(this);
@@ -275,9 +215,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
       for (const [place,{point,kind}] of Object.entries(installationSites)) {
         if (kind==='pizza') continue;
-        const {texture,width,height,centerY} = installationArt[kind];
-        const art = this.add.image(point.x,point.y+centerY,texture)
-          .setDisplaySize(width,height).setDepth(point.y).setVisible(false);
+        const {width,height} = installationArt[kind];
+        const art = createInstallationFrame(this,point,kind).setVisible(false);
         this.installationFixtures.push({point,art});
         const installed = () => worldSnapshot.decorations.find(item=>item.kind===kind && !item.privateOffice && item.x===point.x && item.y===point.y);
         const availableItem = () => {
@@ -305,21 +244,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       this.mapProgress = this.add.graphics().setDepth(HEIGHT+31);
       for (const office of privateOffices) {
         const point = decorPoint(office,'portrait');
-        const {texture,width,height,centerY} = installationArt.portrait;
-        const frame = this.add.image(point.x,point.y+centerY,texture)
-          .setDisplaySize(width,height).setDepth(point.y).setVisible(false);
+        const frame = createInstallationFrame(this,point,'portrait').setVisible(false);
         this.installationFixtures.push({point,art:frame});
         const install = ()=>plenaryView?.gameplay?.officeOptions?.find(option=>option.kind==='office-install' && option.place===office.id);
         this.registerInteraction(frame,()=>!!install(),()=>{
           const action = install();
           if (action) interact(action);
         });
-        const [doorX,doorY,doorWidth,doorHeight] = office.door;
-        this.add.text(doorX+doorWidth+3,doorY+doorHeight/2,office.id.padStart(2,'0'),{
-          fontFamily:'system-ui',fontSize:'5.2px',fontStyle:'bold',color:'#fff3cd',backgroundColor:'#152720',
-          shadow:{offsetX:0,offsetY:0,color:'#ffd879',blur:3,fill:true,stroke:false},
-          align:'left',padding:{x:2,y:1},resolution:4,
-        }).setOrigin(0,.5).setDepth(3.1); // Keep the illuminated sign above the map fog (depth 3).
+
       }
       this.doors = this.add.graphics().setDepth(1);
       for (const [x,y,w,h] of PLENARY_DOORS) {
@@ -330,12 +262,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         align:'center',padding:{x:4,y:2},resolution:3,
       }).setOrigin(.5,0).setDepth(HEIGHT+10);
       this.npcViews = Object.entries(mapNpcs).map(([id,npc])=>{
-        const sprite = this.add.sprite(npc.x,npc.y,`npc-${id}`);
-        sprite.setOrigin(.5,1).setDisplaySize(38,38).setDepth(npc.y);
-        const label = id==='treasurer' && 'counter' in npc ? this.add.text(npc.x,npc.counter.y+24,npc.name,{
-          fontFamily:'system-ui',fontSize:'7px',color:'#ffe4a1',backgroundColor:'#142820bb',
-          padding:{x:3,y:1},resolution:3,
-        }).setOrigin(.5,0).setDepth(1) : undefined;
+        const {sprite,label} = createMapNpc(this,id,npc);
         if (id==='treasurer') {
           const delivery = ()=>treasuryDeliveries(plenaryView?.gameplay?.inventory ?? [])[0]?.action;
           this.registerInteraction(sprite,()=>!!plenaryView?.gameplay?.locations.includes('treasury') && !!delivery(),()=>{
@@ -410,11 +337,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           existing.setPosition(item.x,item.y).setDepth(item.y-1);
           continue;
         }
-        const symbol = itemSymbols[item.kind];
-        const icon = symbol ? this.add.text(0,0,symbol,{fontSize:'15px',color:'#ffe08a',resolution:3}).setOrigin(.5,.8)
-          : this.add.image(0,0,`item-${item.kind}`).setOrigin(.5,groundItemArt.anchor).setDisplaySize(groundItemArt.size,groundItemArt.size);
-        const shadow = this.add.ellipse(0,2,15,5,0x09110e,.28);
-        const marker = this.add.container(item.x,item.y,[shadow,icon]).setDepth(item.y-1);
+        const {marker,icon} = createGroundArt(this,item);
         this.groundMarkers.set(item.id,marker);
         this.registerInteraction(icon,()=>!!plenaryView?.gameplay?.nearby.some(entry=>entry.id===item.id),
           ()=>interact({kind:'collect',item:item.id}),marker);
@@ -438,27 +361,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           current.mark?.setVisible(!!item.marked);
           continue;
         }
-        if (isOfficeFurniture(item.kind)) {
-          const {width,height,anchor} = officeFurniture[item.kind];
-          const art = this.add.image(0,0,`furniture-${item.kind}`).setDisplaySize(width,height).setOrigin(.5,anchor);
-          const marker = this.add.container(item.x,item.y,[art]).setDepth(item.kind==='officeRug' ? .5 : 2.5);
-          this.installed.set(item.id,{marker});
-          continue;
-        }
-        const portrait = item.kind==='portrait';
-        const art = portrait
-          ? this.add.image(0,0,'installed-portraits',item.character).setDisplaySize(18,18)
-          : this.add.image(0,item.kind==='vip' ? -9 : 0,`item-${item.kind}`)
-            .setDisplaySize(item.kind==='vip' ? 13 : 26,item.kind==='vip' ? 13 : 26);
-        const label = this.add.text(0,item.kind==='vip' ? 5 : 13,decorationLabel(item),{
-          fontSize:'5px',color:'#fff5df',backgroundColor:'#142820cc',padding:{x:2,y:1},resolution:this.textResolution,
-        }).setOrigin(.5,0);
-        const marker = this.add.container(item.x,item.y).setDepth(item.y+1);
-        marker.add([art,label]);
-        const mark = portrait ? this.add.text(0,0,'✗',{fontSize:'16px',color:'#ff7262',resolution:3})
-          .setOrigin(.5).setVisible(!!item.marked) : undefined;
-        if (mark) marker.add(mark);
-        this.installed.set(item.id,{marker,label,mark});
+        const entry = createDecorationArt(this,item,this.textResolution);
+        const {marker,art} = entry;
+        this.installed.set(item.id,entry);
         if (item.privateOffice || item.kind==='pizza') this.registerInteraction(art,
           ()=>!!plenaryView?.gameplay?.interactive.some(entry=>entry.id===item.id),()=>inspect(item.id),marker);
       }
@@ -530,22 +435,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const officeKey = JSON.stringify(officeViews);
       if (officeKey!==this.officeRenderKey) {
         this.officeRenderKey = officeKey;
-        this.officeDoors.clear();
-        for (const layout of privateOffices) {
-          const office = officeViews?.find(entry=>entry.id===layout.id);
-          const [x,y,w,h] = layout.door;
-          const status = office?.door ?? 'open';
-          if (status!=='open') {
-            const vertical = h>w;
-            const inset = vertical ? 1 : 3;
-            const thickness = status==='breached' ? 2 : (vertical ? w : h)-inset;
-            this.officeDoors.fillStyle(status==='breached' ? 0xb66243 : status==='locked' ? 0x843d37 : 0x83623e,1);
-            if (vertical) this.officeDoors.fillRect(x+inset,y,thickness,h);
-            else this.officeDoors.fillRect(x,y+inset,w,thickness);
-          }
-          if (office?.cabinetBreached) this.officeDoors.lineStyle(1,0xee9169)
-            .strokeEllipse(layout.cabinet.x,layout.cabinet.y-3,officeFixtures.cabinet.width+4,7);
-        }
+        drawOfficeState(this.officeDoors,officeViews);
       }
       for (const layout of privateOffices) {
         const art = this.safeArt.get(layout.id);
@@ -570,7 +460,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       const now = performance.now();
       const ownPlayer = local.state?.player;
       const powerOut = !!plenaryView?.outage;
-      const visionRadius = VISION_RADIUS*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
+      const visionRadius = playerVisionRadius(ownPlayer)*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
         (powerOut ? powerRules.visionFactor : 1);
       const cooldowns = plenaryView?.gameplay?.stationCooldowns;
       if (negotiating && ownPlayer && cooldowns) {
@@ -659,7 +549,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         const own = latest.id===ownId;
         const player = (own ? local.state?.player : history.sample(now,latest.id)) ?? latest;
         const {id,character,direction,visitor} = player;
-        const {sheet,frame} = characterArt(character,visitor);
         let view = this.views.get(id);
         if (running && !own && ownPlayer && (inSession ? !inPlenary(player) : !characterVisible(ownPlayer,player,this.drawnVisionRadius))) {
           view?.sprite.setVisible(false);
@@ -672,25 +561,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           continue;
         }
         if (!view) {
-          view = {
-            speedIcon:this.add.graphics().fillStyle(0xffdc73,1).lineStyle(.7,0x20322e,1)
-              .beginPath().moveTo(-3.5,-2.5).lineTo(-1.8,-2.5).lineTo(.2,0)
-              .lineTo(-1.8,2.5).lineTo(-3.5,2.5).lineTo(-1.5,0).closePath().fillPath().strokePath()
-              .beginPath().moveTo(.2,-2.5).lineTo(1.9,-2.5).lineTo(3.9,0)
-              .lineTo(1.9,2.5).lineTo(.2,2.5).lineTo(2.2,0).closePath().fillPath().strokePath()
-              .setScale(.75).setDepth(HEIGHT+30).setVisible(false),
-            nextStep:0,
-            weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
-            items:this.add.container().setDepth(HEIGHT+26),
-            sprite:this.add.sprite(player.x,player.y,sheet.key,frame).setOrigin(.5,1).setScale(.295),
-            label:this.add.text(player.x,player.y+2,'',{
-              fontFamily:'system-ui',fontSize:'5.5px',fontStyle:'bold',color:'#fff7df',stroke:'#20322e',strokeThickness:1.1,resolution:this.textResolution,
-            }).setOrigin(.5,0).setDepth(HEIGHT+30),
-            office:this.add.text(player.x,player.y+10,'',{
-              fontFamily:'system-ui',fontSize:'4px',fontStyle:'bold',stroke:'#152522',strokeThickness:.85,
-              resolution:this.textResolution,
-            }).setOrigin(.5,0).setDepth(HEIGHT+30),
-          };
+          view = createActorView(this,player,this.textResolution);
           this.views.set(id,view);
         }
         const {sprite,label,office} = view;
@@ -705,14 +576,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.swingStarted = time;
           playCombatSound('swing',x,y);
         }
-        const profile = swing && weapons[swing.weapon];
-        const progress = profile && view.swingStarted!==undefined ? (time-view.swingStarted)/profile.swingMs : 1;
-        const pose = swing && progress<1 && !latest.knockedOut ? weaponPose(swing,progress) : undefined;
-        const handling = !moving && !latest.knockedOut && !latest.carried ? latest.handlingObject : undefined;
-        const facing = pose?.facing ?? handling ?? direction;
-        const reach = handling!==undefined && !reducedMotion.matches ? (1+Math.sin(time/95))*.5 : 0;
-        const row = facing===3 ? 1 : facing;
-        const attack = pose && profile ? attackArt(character,row,progress,profile.impactMs/profile.swingMs) : undefined;
         if (moving && time>=view.nextStep && (own || ownPlayer)) {
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
           const level = own ? .22 : Math.max(0,1-distance/75)*.08;
@@ -728,9 +591,6 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           if (latest.knockedOut) {
             view.fallAt = time;
             view.hitAt = undefined;
-            this.time.delayedCall(185,()=>{
-              if (running) playCombatSound('fall',x,y);
-            });
           } else view.hitAt = time;
           playBloodImpact(this,x,y-15);
           playComicImpact(this,x,y-54,latest.hit,this.textResolution);
@@ -738,97 +598,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         view.lastHit = latest.hit;
         if ((view.flashUntil ?? 0)>time) sprite.setTint(0xff685d);
         else sprite.clearTint();
-        const downed = latest.knockedOut || latest.carried
-          ? downedArt(character,direction,time-(view.fallAt ?? -Infinity),visitor)
-          : undefined;
-        if (!downed) view.fallAt = undefined;
-        const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt,visitor);
-        const combatArt = downed ?? recoil ?? attack;
-        const breachArt = latest.breachingDoor && visitor===federalPatrolRules.skin
-          ? federalBreachArt(facing,time,reducedMotion.matches)
-          : latest.breachingSafe && !combatArt && !pose && !latest.carrying
-            ? safeBreachArt(character,time,reducedMotion.matches) : undefined;
-        const depositing = latest.pocketing && !moving && !combatArt && !pose && !latest.carrying;
-        if (depositing) view.depositStarted ??= time;
-        else view.depositStarted = undefined;
-        const depositArt = depositing ? safeDepositArt(character,time-(view.depositStarted ?? time),reducedMotion.matches) : undefined;
-        const robberyTarget = latest.robberyTarget;
-        const robbing = robberyTarget && !moving && !combatArt && !pose && !latest.carrying;
-        if (robbing) view.robberyStarted ??= time;
-        else view.robberyStarted = undefined;
-        const robberyArt = robbing ? npcRobberyArt(character,time-(view.robberyStarted ?? time),reducedMotion.matches,latest,robberyTarget) : undefined;
-        const phone = latest.phone;
-        const usingPhone = !robberyArt && !depositArt && !breachArt && (phone==='open' || phone==='game') && !player.moving &&
-          handling===undefined && !combatArt && !pose && !latest.carrying;
-        const handsetArt = usingPhone ? phoneArt(character,time,reducedMotion.matches) : undefined;
-        const spriteX = x+(pose?.lungeX ?? (handling===1 ? reach : handling===3 ? -reach : 0));
-        const spriteY = latest.carried ? y-24 : y+(pose?.lungeY ?? -reach);
-        const labelY = latest.carried ? y-51 : y+2;
-        const opacity = latest.knockedOut && !latest.carried ? .68 :
-          latest.recoveryProtected && (reducedMotion.matches || Math.floor(time/150)%2===0) ? .4 : 1;
-        sprite.setOrigin(.5,downed?.originY ?? 1).setRotation(downed?.rotation ?? (recoil ? 0 : pose?.lean ?? reach*(handling===3 ? -.05 : .05)))
-          .setAlpha(opacity);
-        const spriteDepth = y+(latest.carried ? 1 : 0);
-        if (sprite.depth!==spriteDepth) sprite.setDepth(spriteDepth);
-        sprite.setVisible(true).setPosition(spriteX,spriteY)
-          .setFlipX(downed?.flipX ?? recoil?.flipX ?? robberyArt?.flipX ?? (!handsetArt && !breachArt && !depositArt && facing===3));
-        view.weapon.setVisible(!!pose);
-        if (pose && swing && profile) {
-          view.weapon.setTexture(`weapon-${swing.weapon}`).setOrigin(profile.grip,.5)
-            .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
-            .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
-        }
-        view.speedIcon.setVisible((latest.speedModifier?.factor ?? 1)>1 && (latest.speedModifier?.remainingMs ?? 0)>0)
-          .setPosition(x,spriteY-43);
-        const name = player.nick;
-        label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : phone==='game' ? `🎮 ${name}` : phone==='call' ? `☎ ${name}` : name);
-        const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
-        // Phaser redraws and uploads the text texture on every setColor call.
-        if (label.style.color!==nameColor) label.setColor(nameColor);
-        const handsBusy = !!(handsetArt || breachArt || depositArt || robberyArt);
-        const grip = briefcaseGrip[NAMES[character]]?.[breachArt ? 2 : handsetArt ? 0 : row];
-        const exposed = grip ? (latest.exposed ?? []).filter(item=>!cashAmount(item.kind)) : latest.exposed ?? [];
-        const concealed = own && !!plenaryView?.gameplay?.concealmentSeconds;
-        const itemsKey = `${concealed}:${exposed.map(item=>item.kind).join(',')}`;
-        if (view.itemsKey!==itemsKey) {
-          view.itemsKey = itemsKey;
-          view.items.removeAll(true);
-          exposed.forEach(({kind},index)=>{
-            const offset = (index-(exposed.length-1)/2)*13;
-            const backdrop = this.add.rectangle(offset,0,11.5,11.5,0x10211b,.84).setStrokeStyle(.5,0x637f6d);
-            const icon = this.add.image(offset,0,`item-${kind}`).setDisplaySize(10,10);
-            if (concealed && cashAmount(kind)) {
-              backdrop.setAlpha(.38);
-              icon.setAlpha(.38);
-            }
-            view.items.add([backdrop,icon]);
-          });
-        }
-        view.items.setPosition(x,latest.carried ? spriteY-12 : latest.knockedOut ? y-12 : spriteY-44).setVisible(!!exposed.length);
-        const status = latest.carried ? 'Em transporte' : latest.carrying ? 'Carregando' :
-          latest.knockedOut ? 'Nocauteado' : latest.former ? 'Ex-parlamentar' : '';
-        office.setVisible(!!status && (running || worldSnapshot.officeHolders.has(id)))
-          .setPosition(x,labelY+6).setText(status);
-        const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
-        if (office.style.color!==officeColor) office.setColor(officeColor);
-        if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
-          sprite.play(`${visitor ?? character}-${row}`,true);
-          sprite.anims.timeScale = player.sprinting ? sprintMultiplier : 1;
-        } else {
-          sprite.anims.stop();
-          const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
-          sprite.setTexture(art?.key ?? sheet.key,art?.frame ?? frame+row*4);
-        }
-        if (grip && latest.cashInHand && !pose && !combatArt && !depositArt && !robberyArt) {
-          const walkFrame = !handsBusy && typeof sprite.frame.name==='number' ? sprite.frame.name%4 : 0;
-          const [handX,handY] = grip[walkFrame];
-          const briefcase = view.briefcase ??= this.add.image(0,0,'cash-briefcase').setScale(12/128);
-          const side = sprite.flipX ? -1 : 1;
-          briefcase.setOrigin(.5,breachArt ? 1 : .12)
-            .setPosition(spriteX+(handX-64)*sprite.scaleX*side,breachArt ? y : spriteY+(handY-128)*sprite.scaleY)
-            .setFlipX(sprite.flipX).setAlpha(concealed ? .38*opacity : opacity).setVisible(true)
-            .setDepth(spriteDepth+.1);
-        } else view.briefcase?.setVisible(false);
+        const {spriteX,spriteY} = updateActorView(this,view,{...latest,direction,character,visitor,moving:player.moving,sprinting:player.sprinting},x,y,moving,time,{
+          reducedMotion:reducedMotion.matches,concealed:own && !!plenaryView?.gameplay?.concealmentSeconds,
+          showStatus:running || worldSnapshot.officeHolders.has(id),
+        });
         if (own) {
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
@@ -934,7 +707,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           ...(office.cabinetBreached ? [layout.cabinet] : [])] : [];
       }).filter(point=>inPhotoFrame(center,point));
       scene.photoRenderer.draw(canvas,{
-        center,breaches,
+        center,breaches,time:scene.time.now,offices:plenaryView?.gameplay?.offices,
+        openSafes:privateOffices.filter(office=>depositingAtSafe(office,players)).map(office=>office.id),
+        features:{surveillance:plenaryView?.surveillanceEnabled!==false,projectVoting:plenaryView?.projectVotingEnabled!==false,
+          decorations:plenaryView?.decorationsEnabled!==false,portraitsAndVip:plenaryView?.portraitsAndVipEnabled!==false},
         people:players.filter(person=>person.id!==ownId && inPhotoFrame(center,person,true)).map(person=>({
           ...person,name:person.nick,
         })),

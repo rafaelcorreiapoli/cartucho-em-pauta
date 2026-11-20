@@ -1,4 +1,5 @@
 export const equipment = {
+  bugDetector:{slot:'detector',price:2,symbol:'▣'},
   xray:{slot:'scanner',price:5,symbol:'▣'},
   binoculars:{slot:'vision',price:2,symbol:'🔭'},
   voiceModulator:{slot:'voice',price:3,symbol:'🎙️'},

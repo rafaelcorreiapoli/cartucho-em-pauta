@@ -1,3 +1,4 @@
+import {readMatchPreferences,saveMatchPreference} from '../match-preferences';
 import {money} from '../politics';
 import {caloteDebtSecondsOptions,gameModes,type GameMode} from '../game-modes';
 import {useRef,useState} from 'react';
@@ -38,7 +39,7 @@ type LobbyCommands = {
 
 export function LobbyControls({state,commands}:{state:LobbyControlsState;commands:LobbyCommands}) {
   const settings = useRef<HTMLDialogElement>(null);
-  const [infiltrators,setInfiltrators] = useState(2);
+  const [infiltrators,setInfiltrators] = useState(()=>Number(readMatchPreferences().infiltrators?.count ?? 2));
   const {tutorial,running,host,players,minimum,npcCount,rematch,assetsReady,canStartAsInfiltrator,botsToFill} = state;
   const showInfiltrators = !tutorial && host && players+botsToFill>=MIN_PLAYERS;
   const canStart = host && players>=minimum && assetsReady;
@@ -109,7 +110,7 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         <span id="infiltrator-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>
         <div id="infiltrator-count">
           {[1,2].map(count=><button key={count} type="button" data-count={count} aria-pressed={infiltrators===count}
-            onClick={()=>setInfiltrators(count)}>{count}</button>)}
+            onClick={()=>{ setInfiltrators(count); if (!tutorial) saveMatchPreference('infiltrators',{count}); }}>{count}</button>)}
         </div>
       </div> : null}
       <div id="parliamentarian-setup" className="lobby-count" role="group" aria-labelledby="parliamentarian-label">

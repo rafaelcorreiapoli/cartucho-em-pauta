@@ -24,14 +24,14 @@ async page => {
   const history = page.locator('.automatic-projects-history');
   await history.waitFor();
   if (!/4:5\d|5:00/.test(await history.innerText())) throw Error('Initial countdown missing');
-  if (await history.locator('li').filter({hasText:'Não revelado'}).count()!==4) throw Error('Future projects leaked');
+  if (await history.locator('li[data-approved="false"]').count()!==4) throw Error('Future projects leaked');
   if (await page.locator('.calote-budget-zero').count()) throw Error('Zero label still rendered');
   const checkLayout = async (width,height)=>{
     await page.setViewportSize({width,height});
     await page.waitForTimeout(150);
     const layout = await page.evaluate(()=>{
       const dock = document.querySelector('#agenda-dock');
-      const projects = dock.querySelector('.automatic-projects-history');
+      const projects = document.querySelector('.automatic-projects-history');
       const agenda = dock.querySelector('.react-agenda');
       const box = element=>{const r=element.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
       const overlaps = (a,b)=>a.x<b.right && a.right>b.x && a.y<b.bottom && a.bottom>b.y;
@@ -39,13 +39,13 @@ async page => {
       const obstructions = ['.character-dock','.congress-meter','.right-hud','.deck-tools'].map(selector=>document.querySelector(selector)).filter(Boolean).map(box);
       const style = getComputedStyle(projects);
       return {inside:bounds.x>=0 && bounds.y>=0 && bounds.right<=innerWidth+1 && bounds.bottom<=innerHeight+1,
-        ordered:box(projects).bottom+12<=box(agenda).y,overlaps:obstructions.some(other=>overlaps(bounds,other)),
+        ordered:document.querySelector('.congress-meter').contains(projects) && box(projects).y>=box(document.querySelector('.congress-meter-track')).bottom,overlaps:obstructions.some(other=>overlaps(bounds,other)),
         positioned:style.position,border:style.borderTopWidth,scrollable:dock.dataset.scrollable,
         centerFree:!dock.contains(document.elementFromPoint(innerWidth*.55,innerHeight*.65))};
     });
-    if (!layout.inside || !layout.ordered || layout.overlaps || !layout.centerFree || layout.positioned==='fixed' || layout.border!=='0px') throw Error('HUD layout regression at '+width+'x'+height+': '+JSON.stringify(layout));
+    if (!layout.inside || !layout.ordered || layout.overlaps || !layout.centerFree || layout.positioned==='fixed') throw Error('HUD layout regression at '+width+'x'+height+': '+JSON.stringify(layout));
     if (height<=600) {
-      if (await history.getAttribute('open')!==null) throw Error('Compact history should start collapsed');
+      if (await history.locator('li').count()!==4) throw Error('Project slots missing in compact view');
       const agenda = await page.locator('.react-agenda').boundingBox();
       if (!agenda || agenda.y+agenda.height>height+1) throw Error('Compact missions should remain visible');
     }
@@ -68,9 +68,9 @@ async page => {
     await announcement.getByRole('button',{name:'Fechar anúncio do projeto'}).click();
     await announcement.waitFor({state:'hidden'});
     await page.waitForFunction(count=>document.querySelectorAll('.automatic-projects-history [data-approved="true"]').length===count,index+1);
-    if (await history.locator('li').filter({hasText:'Não revelado'}).count()!==3-index) throw Error('Incorrect secret slots');
+    if (await history.locator('li[data-approved="false"]').count()!==3-index) throw Error('Incorrect secret slots');
   }
-  await history.getByText('Pauta encerrada').waitFor();
+  await page.getByRole('list',{name:'Projetos · Pauta encerrada',exact:true}).waitFor();
   await checkLayout(1280,720);
   await checkLayout(800,450);
   await page.screenshot({path:'output/playwright/automatic-project-history.png'});

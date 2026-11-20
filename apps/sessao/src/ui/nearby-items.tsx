@@ -2,7 +2,7 @@ import {HudHelp} from './hud-help';
 import type {ContextKey} from './context-action-keys';
 import {isGear} from '../equipment';
 import {objects,type ObjectKind} from '../gameplay';
-import {itemSymbols} from '../photo-renderer';
+import {itemSymbols} from '../world-art';
 
 export type NearbyItem = {
   key:string;

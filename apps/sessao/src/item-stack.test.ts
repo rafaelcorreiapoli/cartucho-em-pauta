@@ -11,6 +11,8 @@ test('the inventory quantity control sends only the selected number of units',()
     expect(readGameplayAction({kind:'drop',item:item.id,quantity:invalid})).toBeUndefined();
   }
   expect(canStackItem('coxinha')).toBe(true);
+  expect(canStackItem('coffee')).toBe(true);
+  expect(canStackItem('energyDrink')).toBe(true);
   expect(canStackItem('pizza')).toBe(false);
   expect(canStackItem('xray')).toBe(false);
 });

@@ -1,11 +1,9 @@
 import type {ContextKey} from './context-action-keys';
-import {ELECTION_RULES} from '../elections';
 import type {PlenaryView,Station} from '../plenary';
-import {money} from '../politics';
 import {ContextActionButton} from './context-action-button';
 
 export const electionButtons = {
-  advertise:{station:'press',label:'Veicular propaganda',icon:'chart',detail:`${money(ELECTION_RULES.advertisementCost)} em diante`},
+  advertise:{station:'press',label:'Contratar campanha · Duda Mendonça',icon:'chart'},
   speech:{station:'panel',label:'Discursar',icon:'mic'},
   interview:{station:'tv',label:'Entrevista ao vivo',icon:'mic'},
   object:{station:'panel',label:'Contestar projeto',icon:'cross'},

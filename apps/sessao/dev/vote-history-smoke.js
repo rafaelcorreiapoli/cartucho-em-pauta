@@ -72,14 +72,20 @@ async page => {
       return sample;
     });
     try {
-      const boxes = [stack.querySelector('#election-dock'),...samples].map(node=>node.getBoundingClientRect());
+      const boxes = samples.map(node=>node.getBoundingClientRect());
       return boxes.every((box,index)=>box.width>0 && box.height>0 && (!index || boxes[index-1].bottom<box.top)) &&
         getComputedStyle(stack).isolation==='isolate' && getComputedStyle(stack,'::before').zIndex==='-1';
     } finally {
       samples.forEach(sample=>sample.remove());
     }
   });
-  if (!rightHudStacked) throw Error('Placar, incidentes e notificações devem ocupar linhas separadas à frente do degradê');
+  if (!rightHudStacked) throw Error('Incidentes e notificações devem ocupar linhas separadas à frente do degradê');
+  const electionAboveHotbar = await page.evaluate(()=>{
+    const election=document.querySelector('#election-indicator-mount').getBoundingClientRect();
+    const hotbar=document.querySelector('.deck-tools').getBoundingClientRect();
+    return election.bottom+8<=hotbar.top && Math.abs(election.right-document.querySelector('.right-hud').getBoundingClientRect().right)<=1;
+  });
+  if (!electionAboveHotbar) throw Error('Pesquisa eleitoral deve ficar acima da hotbar e alinhada à direita');
 
   await page.setViewportSize({width:1280,height:720});
   await page.keyboard.press('c');

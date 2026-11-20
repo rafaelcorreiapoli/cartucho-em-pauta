@@ -1,7 +1,8 @@
+import type {FederalAudioStage} from './federal-patrol';
 import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/audio';
 
 const files = {
-  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav',
+  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', firstBlood:'first-blood.mp3',
   music:'corredores-de-brasilia.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
   caloteMusic:'hitman.mp3',
@@ -9,6 +10,8 @@ const files = {
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
   explosion:'explosao-cofre.wav',
+  federalCaught:'federal-siren.mp3', federalIsolation:'federal-trombone.mp3',
+  applause:'aplausos.wav',
   eat:'comer.wav', drink:'beber.wav',
   stamp:'carimbo.wav', lock:'fechadura.wav', shutter:'obturador.wav',
   swing:'porrete-golpe.wav', impact:'porrete-impacto.wav', fall:'personagem-queda.wav',
@@ -36,6 +39,7 @@ export class GameAudio {
   private speaking = false;
   private lastFootIndex = 0;
   private lastCashCue = -Infinity;
+  private federalEffect?:AudioBufferSourceNode;
 
   constructor() {
     this.preferences.subscribe(() => this.updateGain());
@@ -103,6 +107,8 @@ export class GameAudio {
 
   leave() {
     this.playing = false;
+    this.federalEffect?.stop();
+    this.federalEffect = undefined;
     this.lastCashCue = -Infinity;
     this.stopMusic(0);
     for (const source of this.fading) source.stop();
@@ -178,6 +184,11 @@ export class GameAudio {
     });
   }
 
+  federal(stage:FederalAudioStage) {
+    this.federalEffect?.stop();
+    this.federalEffect = stage==='cancelled' ? undefined : this.play(stage==='caught' ? 'federalCaught' : 'federalIsolation',.62,0,1);
+  }
+
   stationClick() { this.play('vote',.75,0,1.35); }
   footstep(level:number,pan:number) {
     const offset = 1 + Math.floor(Math.random() * (footsteps.length - 1));
@@ -212,5 +223,6 @@ export class GameAudio {
       panner?.disconnect();
     };
     source.start();
+    return source;
   }
 }
