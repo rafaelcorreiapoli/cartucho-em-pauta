@@ -80,7 +80,8 @@ async (page) => {
     for (const asset of animations) {
       const art=adaptivePoseArt(scene,{key:asset.id,frame:0},9.3);
       if (art.key!==`${asset.id}-512`) throw new Error(`Animation did not upgrade: ${asset.id}`);
-      const expected=asset.id.endsWith('door-breach') ? 16 : 12;
+      const collantFrames={walk:16,attack:12,hit:12,fall:12,phone:4,'safe-breach':4,'safe-deposit':8,'npc-robbery':8};
+      const expected=asset.id.startsWith('collant-') ? collantFrames[asset.id.slice(8)] : asset.id.endsWith('door-breach') ? 16 : 12;
       if (scene.textures.get(art.key).frameTotal!==expected+1) throw new Error(`Incomplete frame grid: ${asset.id}`);
     }
     for (const {id} of visitorRoster) {
