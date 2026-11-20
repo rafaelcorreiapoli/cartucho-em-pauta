@@ -3,7 +3,7 @@ import { corridorFloors, doors, floorDecor } from './congress-layout';
 import { officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
 import {powerPanels,type PowerPanel} from './power';
 import { infirmary } from './medical';
-import { desks, furnishings, rooms, walls, WIDTH, HEIGHT, type Rect } from './map';
+import { desks, furnishings, rooms, walls, HEIGHT, type Rect } from './map';
 
 export function drawMap(scene: Phaser.Scene,
   officeFixture?:(art:Phaser.GameObjects.Image,office:OfficeLayout,kind:'safe'|'cabinet')=>void,
@@ -87,11 +87,8 @@ export function drawMap(scene: Phaser.Scene,
       align:'left',padding:{x:2,y:1},resolution:4,
     }).setOrigin(0,.5).setDepth(3.1);
   }
-  // The floor, rugs and walls never move. Draw their geometry once.
-  const backdrop = 'congress-map-backdrop';
-  if (!scene.textures.exists(backdrop)) graphics.generateTexture(backdrop,WIDTH,HEIGHT);
-  graphics.destroy();
-  scene.add.image(0,0,backdrop).setOrigin(0).setDepth(-1);
+  // Keep geometry at render resolution instead of enlarging a 1× bitmap.
+  graphics.setName('congress-map-backdrop').setDepth(-1);
 
   for (const {name,x,y} of desks) {
     if (name==='Terminal de segurança') {
