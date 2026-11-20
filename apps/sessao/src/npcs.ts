@@ -66,7 +66,7 @@ export const dialogues:Readonly<Record<string,Readonly<Record<string,DialogueNod
     options:[{id:'leave',label:'Voltar depois',action:'close'}]}},
   corregedoria:{
     start:{
-      text:'A convocação avisa o Plenário. Cada eleitor poderá votar em quem suspeita ser infiltrado.',
+      text:'A votação começa 5 segundos após o pedido. Cada eleitor poderá votar em quem suspeita ser infiltrado.',
       options:[{id:'cassation',label:'Convocar cassação · Grátis',action:'call-cassation'},
         {id:'leave',label:'Encerrar',action:'close'}],
     },

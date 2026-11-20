@@ -339,7 +339,7 @@ test('players sign, publish, alter, examine and counterpublish snapshots over th
     const call = {kind:'dialogue-choice',target:'cassation',token:consultation.token};
     alice.send('gameplay',{action:call,token:2310});
     alice.send('gameplay',{action:call,token:2320});
-    await wait(()=>views.get(bia.sessionId)?.cassationIn===30);
+    await wait(()=>views.get(bia.sessionId)?.cassationIn===5);
     expect(views.get(alice.sessionId)?.politics?.wallet).toBe(before-cassationFee);
     Reflect.set(match,'cassationAt',room.clock.currentTime);
     await wait(()=>views.get(bia.sessionId)?.cassation && controls.get(bia.sessionId)?.plenary);

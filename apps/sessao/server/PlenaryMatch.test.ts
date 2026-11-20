@@ -764,7 +764,7 @@ test('cassation requires at least three eligible players to be called',()=>{
 
   match.setPlayerConnected(honest.id,true);
   call();
-  expect(view().cassationIn).toBe(30);
+  expect(view().cassationIn).toBe(5);
 });
 
 test('cassation can be called at 40 popularity',()=>{
@@ -784,7 +784,7 @@ test('cassation can be called at 40 popularity',()=>{
   economy.changePopularity(host.id,1);
   expect(view().politics?.canCallHearing).toBe(false);
   call();
-  expect(view().cassationIn).toBe(30);
+  expect(view().cassationIn).toBe(5);
 });
 
 test('splitting cassation votes leaves mandates intact and resumes the project timer',()=>{
@@ -798,7 +798,7 @@ test('splitting cassation votes leaves mandates intact and resumes the project t
   expect(match.callCassation(at(host,'audit'),50)).toBeUndefined();
   const open = 50+CASSATION_NOTICE_MS;
   const view = (now:number)=>match.view(host.id,ids,now);
-  expect(view(50).cassationIn).toBe(30);
+  expect(view(50).cassationIn).toBe(5);
   match.advance(open);
   expect(view(open).cassation?.quorum).toBe(2);
   expect(match.voting).toBe(true);

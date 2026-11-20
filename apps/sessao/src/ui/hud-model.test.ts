@@ -465,7 +465,7 @@ test('a pending project resumes its countdown after cassation',()=>{
   expect(match.callCassation({...player,...stations.audit},noticeAt)).toBeUndefined();
   const hud = createHudModel();
   hud.render(match.view(player.id,ids,noticeAt));
-  expect(hud.countdown.get()).toEqual({kind:'cassation',seconds:30});
+  expect(hud.countdown.get()).toEqual({kind:'cassation',seconds:5});
   match.advance(hearingAt);
   expect(match.phase).toBe('hearing');
   match.advance(hearingEnd);
