@@ -66,6 +66,9 @@ test('speech is available behind the central microphone, not beside the dais',()
   const match = new PlenaryMatch(1);
   expect(canStand(player.x,player.y)).toBe(true);
   expect(match.start(player.id,[player],0,()=>.9)).toBe(true);
-  expect(match.electionAction({...player,x:548,y:620},{kind:'speech'},1,false)).toBeUndefined();
-  expect(match.electionAction(player,{kind:'speech'},2,false)).toBeDefined();
+  publishProjectFiling(match,player);
+  match.electionAction({...player,x:548,y:620},{kind:'speech'},1,false);
+  expect(match.view(player.id,[player.id],1).election?.personal?.spoke).toBe(false);
+  match.electionAction(player,{kind:'speech'},2,false);
+  expect(match.view(player.id,[player.id],2).election?.personal?.spoke).toBe(true);
 });
