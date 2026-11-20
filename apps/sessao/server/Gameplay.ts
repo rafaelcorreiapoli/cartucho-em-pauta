@@ -1896,9 +1896,10 @@ export class Gameplay {
         return this.reject(player,world,'Não é possível implantar minas em áreas de interação com NPCs.');
       }
       if ([...this.mines.values()].some(mine=>Math.hypot(player.x-mine.x,player.y-mine.y)<landMine.radius*2)) return this.reject(player,world,'Já existe uma mina muito próxima.');
-      this.mines.set(data.id,{id:data.id,x:player.x,y:player.y,owner:id,armedAt:world.now+landMine.armingMs});
-      this.remove(item);
-      this.event(world,player,'used',data);
+      const planted = this.takeUnits(item,1);
+      this.mines.set(planted.data.id,{id:planted.data.id,x:player.x,y:player.y,owner:id,armedAt:world.now+landMine.armingMs});
+      this.remove(planted);
+      this.event(world,player,'used',planted.data);
       return 'Mina instalada. Afaste-se: ela arma em 1,5 s.';
     }
     const definition = objects[data.kind];

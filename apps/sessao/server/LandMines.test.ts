@@ -1,7 +1,8 @@
+import {assignHotbarSlot,emptyHotbar,pinPurchasedConsumable,reconcileHotbar} from '../src/hotbar';
 import {expect,test} from 'bun:test';
 import {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
-import {consumableAction,type GameplayEvent} from '../src/gameplay';
+import {INVENTORY_SLOTS,consumableAction,type GameplayEvent} from '../src/gameplay';
 import {canStand,type Player} from '../src/map';
 import {npcs,treasurer} from '../src/npcs';
 import {landMine} from '../src/land-mines';
@@ -97,3 +98,57 @@ for (const [id,npc] of Object.entries({...npcs,treasurer})) {
     expect(plant()).toBe('Mina instalada. Afaste-se: ela arma em 1,5 s.');
   });
 }
+
+function buyMine(game:Gameplay,owner:Player,world:GameplayWorld) {
+  Object.assign(owner,{x:npcs.vendor.x,y:npcs.vendor.y+11});
+  world.spend=()=>true;
+  game.act(owner,{kind:'open-shop',target:'vendor'},world);
+  return game.act(owner,{kind:'shop-buy',target:'landMine',token:game.view(owner,world).dialogue?.token},world);
+}
+
+test('repeat purchases stack in the chosen hotbar slot and planting uses one mine with an independent ground id',()=>{
+  const {game,world,events,owner,victim,item,plant} = setup();
+  let hotbar:readonly (number|undefined)[] = assignHotbarSlot(emptyHotbar(),4,item.id);
+  for (let i=0;i<2;i++) {
+    expect(buyMine(game,owner,world)).toBe('Compra guardada no inventário.');
+    const purchase = events.filter(event=>event.type==='purchased').at(-1)!;
+    expect(purchase.inventoryItem).toBe(item.id);
+    hotbar = pinPurchasedConsumable(reconcileHotbar(hotbar,game.view(owner,world).inventory),purchase.inventoryItem!);
+    expect(hotbar).toEqual([undefined,undefined,undefined,undefined,item.id,undefined]);
+  }
+  expect(game.view(owner,world).inventory.filter(entry=>entry.kind==='landMine')).toEqual([{id:item.id,kind:'landMine',quantity:3}]);
+  Object.assign(owner,{x:140,y:146});
+  plant();
+  expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(2);
+  expect(plant()).toBe('Já existe uma mina muito próxima.');
+  expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(2);
+  Object.assign(owner,npcs.secretary.interaction);
+  plant();
+  expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(2);
+  Object.assign(owner,{x:180,y:146});
+  plant();
+  expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(1);
+  expect(reconcileHotbar(hotbar,game.view(owner,world).inventory)).toEqual([...hotbar]);
+  const mines = game.view(owner,world).mines!;
+  expect(mines).toHaveLength(2);
+  expect(new Set(mines.map(mine=>mine.id)).size).toBe(2);
+  expect(mines.every(mine=>mine.id!==item.id)).toBe(true);
+  owner.x=250;
+  world.now=landMine.armingMs;
+  game.tick(world,true);
+  expect(victim.knockedOut).toBe(true);
+  expect(game.view(owner,world).mines).toHaveLength(1);
+  Object.assign(owner,{x:220,y:146});
+  plant();
+  expect(game.view(owner,world).inventory.some(entry=>entry.id===item.id)).toBe(false);
+  expect(reconcileHotbar(hotbar,game.view(owner,world).inventory)).toEqual(emptyHotbar());
+});
+
+test('a full inventory still accepts purchases into the existing mine stack',()=>{
+  const {game,world,owner,item} = setup();
+  for (const kind of ['baton','vest','xray','binoculars','runningShoes','voiceModulator','firstAidKit','forensicKit'] as const) game.giveTrainingItem(owner.id,kind);
+  expect(game.view(owner,world).inventory).toHaveLength(INVENTORY_SLOTS);
+  expect(buyMine(game,owner,world)).toBe('Compra guardada no inventário.');
+  expect(game.view(owner,world).inventory).toHaveLength(INVENTORY_SLOTS);
+  expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(2);
+});
