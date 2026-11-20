@@ -115,3 +115,16 @@ test('lobby shows confirmed grant, budget and duration choices to host and guest
   expect(html).toContain('aria-pressed="true">+R$ 50 mil</button>');
   expect(html).not.toContain('500 mil');
 });
+
+test('Federal addon defaults off, shows the confirmed state and is host-only',()=>{
+  const match = new PlenaryMatch(6),ids = ['a','b','c','d','e','f'];
+  expect(lobbyControlsState(match.view('a',ids,0),'a',true).federalPatrolEnabled).toBe(false);
+  for (const enabled of [false,true]) for (const id of ['a','b']) {
+    const html = renderToStaticMarkup(<LobbyControls state={lobbyControlsState({
+      ...match.view(id,ids,0),federalPatrolEnabled:enabled,
+    },id,true)} commands={commands}/>);
+    expect(html).toContain('Japonês da Federal');
+    expect(html).toContain('10 segundos na solitária');
+    expect(html).toContain(`type="checkbox"${id==='b' ? ' disabled=""' : ''}${enabled ? ' checked=""' : ''}/> Japonês da Federal`);
+  }
+});

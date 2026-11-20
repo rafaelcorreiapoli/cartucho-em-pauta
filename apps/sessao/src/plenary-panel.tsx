@@ -68,6 +68,7 @@ export function createPlenaryPanel(id:string, command:ReturnType<typeof createRo
     changePhotos:enabled=>command('lobby-photos',{enabled}),
     changeElections:enabled=>command('lobby-elections',{enabled}),
     changeProjectVoting:enabled=>command('lobby-project-voting',{enabled}),
+    changeFederalPatrol:enabled=>command('lobby-federal-patrol',{enabled}),
     changePhoneGames:enabled=>command('lobby-phone-games',{enabled}),
     changeNpcCount:count=>command('lobby-npc-count',{count}),
     start:(infiltrators,asInfiltrator)=>{ if (assetsReady()) command('start-match',{infiltrators,asInfiltrator}); },

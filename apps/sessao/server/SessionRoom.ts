@@ -61,6 +61,7 @@ export class SessionRoom extends Room {
   private caloteDebtSeconds = 30;
   private gameMode:GameMode = 'calote';
   private lobbyNpcCount:number = 3;
+  private federalPatrolEnabled = false;
   private phoneGamesEnabled = false;
   private projectVotingEnabled = false;
   private automaticProjectsEnabled = true;
@@ -87,16 +88,23 @@ export class SessionRoom extends Room {
   }
 
   private gameplayWorld() {
-    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.visitors.players),this.gameNow,
+    const world = this.match.gameplayWorld([...this.players.values()].map(({player})=>player).concat(this.visitors.players,this.gameplay.federalPlayers),this.gameNow,
       id=>this.match.training || this.voice.has(id));
     return {
       ...world,
       // Physical actions continue while the legislative clock is paused.
       now:this.clock.currentTime,
+      detain:(id:string,duration:number)=>{
+        const realNow = this.clock.currentTime;
+        if (!world.detain?.(id,duration,realNow)) return false;
+        // Ballots pause match time, but a Federal detention lasts ten real seconds.
+        this.clock.setTimeout(()=>world.releaseDetention?.(id,realNow+duration),duration);
+        return true;
+      },
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
       actionFailed:(id:string,message:string)=>this.clients.getById(id)?.send('map-action-failed',message),
       vision:(id:string)=>this.gameplay.vision(id,this.clock.currentTime),
-      present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.some(player=>player.id===id),
+      present:(id:string)=>!!this.clients.getById(id) || this.players.get(id)?.player.bot===true || this.visitors.players.concat(this.gameplay.federalPlayers).some(player=>player.id===id),
       publish: (event:Parameters<typeof world.publish>[0]) => {
         if (!world.publish({...event,at:this.match.gameTime(event.at)})) return;
         if (event.type==='safe-trap-triggered') {
@@ -348,6 +356,12 @@ export class SessionRoom extends Room {
           this.players.keys().next().value!==client.sessionId) return;
       this.projectVotingEnabled = raw.enabled;
     });
+    this.onMessage('lobby-federal-patrol',(client,raw:unknown)=>{
+      if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
+          !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
+          this.players.keys().next().value!==client.sessionId) return;
+      this.federalPatrolEnabled = raw.enabled;
+    });
     this.onMessage('lobby-phone-games',(client,raw:unknown)=>{
       if (!raw || typeof raw!=='object' || !('enabled' in raw) || typeof raw.enabled!=='boolean' ||
           !this.consumeRoomCommand(client.sessionId,raw) || this.match.running || this.tutorial ||
@@ -374,6 +388,7 @@ export class SessionRoom extends Room {
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        this.gameplay.enableFederalPatrol(!this.tutorial && this.federalPatrolEnabled);
         this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
         this.gameplay.projectVotingEnabled = this.projectVotingEnabled;
         this.gameplay.photosEnabled = this.photosEnabled;
@@ -744,6 +759,7 @@ export class SessionRoom extends Room {
       if (enteredVote) for (const player of players) {
         if (player.carrying) this.gameplay.act(player,{kind:'release'},world);
       }
+      this.gameplay.tickFederalPatrol(world,STEP_MS/1000,exploring && !freeze);
       if (exploring && !freeze || enteredVote) {
         const endedXray = this.gameplay.tick(world,exploring);
         if (endedXray) this.match.refreshAgendaEligibility(now);
@@ -827,6 +843,7 @@ export class SessionRoom extends Room {
         view.lobbyNpcCount = this.lobbyNpcCount;
         view.gameMode = this.gameMode;
         view.automaticProjectsEnabled = this.automaticProjectsEnabled;
+        view.federalPatrolEnabled = this.federalPatrolEnabled;
         view.phoneGamesEnabled = this.phoneGamesEnabled;
         view.projectVotingEnabled = this.projectVotingEnabled;
         view.electionsEnabled = this.electionsEnabled;

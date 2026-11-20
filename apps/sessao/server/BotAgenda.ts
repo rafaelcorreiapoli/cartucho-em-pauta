@@ -3,6 +3,7 @@ import {cashAmount,hasInventorySpace,occupiesInventorySlot,terminals,type Gamepl
 import {canStand,roomAt,type Motion,type Player} from '../src/map';
 import type {Agenda} from '../src/politics';
 import {npcs} from '../src/npcs';
+import {marketProduct} from '../src/market-catalog';
 import {privateOffices} from '../src/private-offices';
 import {canReachStation,stations,type PlenaryView} from '../src/plenary';
 import type {Gameplay} from './Gameplay';
@@ -21,9 +22,12 @@ export class BotAgenda {
   private attemptedPhotoAt = -Infinity;
   private studiedRound?:number;
   private coffeeAt:number;
+  private insuranceAt:number;
+  private buyingInsurance = false;
 
   constructor(private readonly random:()=>number,now:number) {
     this.coffeeAt = now+15_000+Math.floor(random()*60_000);
+    this.insuranceAt = now+45_000+Math.floor(random()*45_000);
   }
 
   tick(player:Player,view:PlenaryView,game:GameplayView,gameplay:Gameplay,world:GameplayWorld,
@@ -31,6 +35,7 @@ export class BotAgenda {
     const {now} = world;
     const has = (...kinds: Agenda[])=>view.politics?.missions.active.some(mission=>kinds.includes(mission.kind)) ?? false;
     this.visited.add(roomAt(player));
+    if (this.protectSafe(player,view,game,gameplay,world,go,rest,act)) return;
     if (this.handleCash(player,game,now,has,go,rest,act)) return;
 
     if (has('visitaArquivo') && roomAt(player)!=='Arquivo') {
@@ -110,6 +115,44 @@ export class BotAgenda {
     }
     if (this.stop && Math.hypot(player.x-this.stop.x,player.y-this.stop.y)>8) go(this.stop);
     else rest();
+  }
+
+  private protectSafe(player:Player,view:PlenaryView,game:GameplayView,gameplay:Gameplay,world:GameplayWorld,
+    go:(point:Motion)=>void,rest:()=>void,act:(action:GameplayAction)=>void) {
+    const office = privateOffices.find(layout=>layout.id===game.ownOffice);
+    if (!office || gameplay.hasSafeInsurance(player.id)) { this.buyingInsurance = false; return false; }
+    const trap = game.inventory.find(item=>item.kind==='safeTrap');
+    if (!trap) {
+      if (game.inventory.some(item=>cashAmount(item))) return false;
+      const price = marketProduct('equipment','safeTrap',world.policies,world.publicBudget)?.price;
+      if (price===undefined || (view.politics?.wallet ?? 0)<price || !hasInventorySpace(game.inventory.filter(occupiesInventorySlot).length)) {
+        this.buyingInsurance = false;
+        return false;
+      }
+      if (!this.buyingInsurance) {
+        if (world.now<this.insuranceAt) return false;
+        this.insuranceAt = world.now+45_000+Math.floor(this.random()*45_000);
+        if (this.random()>=.4) return false;
+        this.buyingInsurance = true;
+      }
+    }
+    const phone = gameplay.phoneActivity(player.id);
+    if (phone==='open' || phone==='game') { rest(); act({kind:'phone-close'}); return true; }
+    if (trap) {
+      this.buyingInsurance = false;
+      if (game.dialogue) { rest(); act({kind:'dialogue-close'}); return true; }
+      const install = game.officeOptions?.find(option=>option.kind==='office-trap-safe' && option.item===trap.id);
+      const openDoor = game.officeOptions?.find(option=>option.place===office.id && option.kind==='office-open');
+      if (install || openDoor) { rest(); act((install ?? openDoor)!); }
+      else go(office.safe);
+    } else if (game.dialogue?.npc==='vendor' && game.dialogue.shop) {
+      rest();
+      act({kind:'shop-buy',target:'safeTrap',token:game.dialogue.token});
+    } else if (game.npcNearby?.includes('vendor')) {
+      rest();
+      act({kind:'open-shop',target:'vendor'});
+    } else go({x:npcs.vendor.x,y:npcs.vendor.y+11});
+    return true;
   }
 
   private handleCash(player:Player,game:GameplayView,now:number,has:(...kinds:Agenda[])=>boolean,

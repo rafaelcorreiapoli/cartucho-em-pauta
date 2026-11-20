@@ -8,7 +8,7 @@ import {npcRules} from '../visitors';
 export function lobbyControlsState(view:PlenaryView,id:string,assetsReady:boolean) {
   const running = view.phase==='negotiation' || view.phase==='ballot' || view.phase==='hearing';
   return {
-    caloteDebtSeconds:view.caloteDebtSeconds ?? 30, initialWallet:view.initialWallet ?? 20, grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
+    caloteDebtSeconds:view.caloteDebtSeconds ?? 30, federalPatrolEnabled:!!view.federalPatrolEnabled, initialWallet:view.initialWallet ?? 20, grantsEnabled:view.grantsEnabled!==false, initialBudget:view.initialBudget ?? 0, matchMinutes:view.matchMinutes ?? 12,
     automaticProjectsEnabled:view.automaticProjectsEnabled!==false, gameMode:view.gameMode ?? 'classic', portraitsAndVipEnabled:view.portraitsAndVipEnabled!==false, decorationsEnabled:view.decorationsEnabled!==false, surveillanceEnabled:view.surveillanceEnabled!==false, photosEnabled:view.photosEnabled!==false, electionsEnabled:view.electionsEnabled!==false, projectVotingEnabled:view.projectVotingEnabled!==false, phoneGamesEnabled:view.phoneGamesEnabled!==false, tutorial:!!view.tutorial, running, host:view.host===id, players:view.players, minimum:view.minimumPlayers ?? MIN_PLAYERS,
     botsToFill:view.botsToFill ?? 0, canStartAsInfiltrator:!!view.canStartAsInfiltrator, npcCount:view.lobbyNpcCount ?? npcRules.count, rematch:view.phase==='finished', assetsReady,
   };
@@ -29,6 +29,7 @@ type LobbyCommands = {
   changePhotos?:(enabled:boolean)=>void;
   changeElections?:(enabled:boolean)=>void;
   changeProjectVoting?:(enabled:boolean)=>void;
+  changeFederalPatrol?:(enabled:boolean)=>void;
   changePhoneGames?:(enabled:boolean)=>void;
   changeNpcCount:(count:number)=>void;
   start:(infiltrators:number,asInfiltrator?:boolean)=>void;
@@ -47,7 +48,7 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
     host ? botHint : 'Aguardando quem criou a sala iniciar a sessão.';
   if (running) return null;
   return <>
-    {!tutorial && <div className="lobby-settings-entry"><div><strong>Configurações da partida</strong><p>{state.gameMode==='classic' ? 'Clássico' : 'Calote'} · {state.matchMinutes} min · {npcCount} visitantes</p></div><button type="button" className="hud-button hud-button--secondary" onClick={()=>settings.current?.showModal()}>Configurar partida</button></div>}
+    {!tutorial && <div className="lobby-settings-entry"><div><strong>Configurações da partida</strong><p>{state.gameMode==='classic' ? 'Clássico' : 'Calote'} · {state.matchMinutes} min · {npcCount} visitantes{state.federalPatrolEnabled ? ' · Federal' : ''}</p></div><button type="button" className="hud-button hud-button--secondary" onClick={()=>settings.current?.showModal()}>Configurar partida</button></div>}
     <dialog ref={settings} className="match-settings" aria-labelledby="match-settings-title">
       <header><div><h2 id="match-settings-title">Configurações da partida</h2><p>{host ? 'Ajuste as regras antes de iniciar a sessão.' : 'Confira as regras escolhidas por quem criou a sala.'}</p></div><button type="button" className="hud-button hud-button--secondary" onClick={()=>settings.current?.close()} aria-label="Fechar configurações da partida">Fechar</button></header>
     <div className="lobby-options" hidden={tutorial}>
@@ -99,6 +100,10 @@ export function LobbyControls({state,commands}:{state:LobbyControlsState;command
         onChange={event=>commands.changeProjectVoting?.(event.currentTarget.checked)}/> Votações de projetos</label>
       <label className="lobby-count"><input type="checkbox" checked={state.phoneGamesEnabled} disabled={!host}
         onChange={event=>commands.changePhoneGames?.(event.currentTarget.checked)}/> Joguinhos de celular</label>
+      <h3>Addons</h3>
+      <label className="lobby-count"><input type="checkbox" checked={state.federalPatrolEnabled} disabled={!host}
+        onChange={event=>commands.changeFederalPatrol?.(event.currentTarget.checked)}/> Japonês da Federal</label>
+      <p>Ronda os gabinetes e arromba portas trancadas. Flagrante ao entrar: 10 segundos na solitária e apreensão das maletas.</p>
       <h3>Participantes</h3>
       {showInfiltrators ? <div id="infiltrator-setup" className="lobby-count" role="group" aria-labelledby="infiltrator-label">
         <span id="infiltrator-label"><svg className="hud-glyph" aria-hidden="true"><use href="#icon-bug"/></svg> Infiltrados</span>

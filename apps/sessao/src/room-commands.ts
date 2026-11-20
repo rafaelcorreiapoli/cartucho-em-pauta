@@ -21,6 +21,7 @@ type RoomActions = {
   'lobby-match-minutes':{value:number};
   'lobby-automatic-projects':{enabled:boolean};
   'lobby-npc-count':{count:number};
+  'lobby-federal-patrol':{enabled:boolean};
   'lobby-phone-games':{enabled:boolean};
   'lobby-project-voting':{enabled:boolean};
   'lobby-elections':{enabled:boolean};

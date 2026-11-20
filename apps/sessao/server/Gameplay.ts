@@ -1,3 +1,5 @@
+import {FederalPatrol} from './FederalPatrol';
+import {federalPatrolRules} from '../src/federal-patrol';
 import {canReachPerson} from '../src/interactions';
 import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
@@ -12,7 +14,7 @@ import { money, NEW_PORTRAIT_MS, PUBLIC_MEETING_PEERS } from '../src/politics';
 import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
-import { canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, occupiesInventorySlot, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
+import { BRIEFCASE_LIMIT, canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, occupiesInventorySlot, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
 import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, VISION_RADIUS, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
@@ -61,6 +63,7 @@ export class Gameplay {
   private lastPolicyHeal = 0;
   private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; plenaryVisit:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
+  private readonly federalPatrol = new FederalPatrol(this.privateOffices);
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
@@ -196,6 +199,7 @@ export class Gameplay {
     this.roomSamples.clear();
     this.lastPolicyHeal = now;
     this.privateOffices.reset(players,officeRandom);
+    this.federalPatrol.reset(false);
     this.syncOfficeDoors(players,now);
     this.album.reset();
     this.exposed.clear();
@@ -323,6 +327,10 @@ export class Gameplay {
 
   hasLuxuryDecoration() { return [...this.installations.values()].some(item=>isOfficeFurniture(item.kind)); }
 
+  hasSafeInsurance(id:string) {
+    return [...this.privateOffices.offices.values()].some(office=>office.owner===id && office.safeTrap!==undefined);
+  }
+
   hasOffice(id:string) { return !!this.privateOffices.ownedBy(id); }
 
   ownsOfficeRoom(id:string,room:string) { return this.privateOffices.ownedBy(id)?.name===room; }
@@ -341,6 +349,7 @@ export class Gameplay {
   }
 
   healthFraction(player:Player, now:number) {
+    if (player.visitor===federalPatrolRules.skin) return 1;
     const {hp,max} = this.combat.view(player,now);
     return hp/max;
   }
@@ -366,6 +375,10 @@ export class Gameplay {
   }
 
   private available(id:string) { return hasInventorySpace(this.inventory(id).filter(({data})=>occupiesInventorySlot(data)).length); }
+
+  private briefcasesFull(id:string) {
+    return this.inventory(id).filter(item=>item.data.kind==='briefcase').length>=BRIEFCASE_LIMIT;
+  }
 
   private stack(id:string,kind:ObjectKind,except?:number) {
     return canStackItem(kind) ? this.inventory(id).find(item=>item.data.kind===kind && item.data.id!==except) : undefined;
@@ -487,6 +500,30 @@ export class Gameplay {
     return data;
   }
 
+  get federalPlayers() { return this.federalPatrol.players; }
+  enableFederalPatrol(enabled:boolean) { this.federalPatrol.reset(enabled); }
+
+  tickFederalPatrol(world:GameplayWorld,seconds:number,active:boolean,random = Math.random) {
+    this.federalPatrol.tick(world.now,seconds,active,office=>{
+      for (const player of world.players) {
+        const channel = this.privateOffices.channels.get(player.id);
+        if (channel?.kind!=='office-cash' || channel.ends<=world.now || channel.office.layout.id!==office.id ||
+            roomAt(player)!==office.name || player.moving || player.knockedOut || player.carried ||
+            player.x!==channel.origin.x || player.y!==channel.origin.y || world.present?.(player.id)===false) continue;
+        if (!world.detain?.(player.id,federalPatrolRules.detentionMs)) continue;
+        this.privateOffices.channels.delete(player.id);
+        player.pocketing = undefined;
+        for (const item of this.inventory(player.id)) {
+          if (item.data.kind!=='briefcase') continue;
+          world.cashFlow?.('expired',cashAmount(item.data) ?? 0);
+          this.remove(item);
+        }
+        world.feedback?.(player.id,'Flagrante! Suas maletas foram apreendidas. Solitária por 10 segundos.');
+      }
+    },random);
+    this.syncOfficeDoors(world.players,world.now);
+  }
+
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
   isBreachingSafe(id:string) { return this.privateOffices.channels.get(id)?.kind==='office-breach-safe'; }
 
@@ -504,6 +541,7 @@ export class Gameplay {
   physicalCash() { return [...this.items.values()].reduce((sum,item)=>sum+(cashAmount(item.data) ?? 0),0); }
 
   robNpc(player:Player,npc:Player,world:GameplayWorld) {
+    if (this.briefcasesFull(player.id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
     const amount = world.takeWallet?.(npc.id) ?? 0;
     if (!amount) return 'O visitante está sem dinheiro.';
     const cash = this.create('briefcase',{holder:player.id});
@@ -640,7 +678,7 @@ export class Gameplay {
         this.transport.detach(player,world);
         publishGameplay(world,player,'character-recovered');
       },
-      canHit:player=>world.present?.(player.id)!==false,
+      canHit:player=>player.visitor!==federalPatrolRules.skin && world.present?.(player.id)!==false,
       armored:player=>!!this.wearing(player.id,'vest'),
       hit:(attacker,target,damage)=>{
         const details = {target:target.id,kind:attacker.swing?.weapon,
@@ -1232,6 +1270,7 @@ export class Gameplay {
       if (!item) return this.reject(player,world,'Objeto indisponível.');
       if (kind==='office-take') {
         if (!('storage' in item.place) || item.place.storage!==`office:${office.layout.id}`) return this.reject(player,world,'Objeto indisponível.');
+        if (item.data.kind==='briefcase' && this.briefcasesFull(player.id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
         if (occupiesInventorySlot(item.data) && !this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
         this.addToInventory(item,player.id);
       } else {
@@ -1293,6 +1332,7 @@ export class Gameplay {
       return 'Reforço iniciado.';
     }
     if (kind!=='office-cash' && kind!=='office-breach-door' && kind!=='office-breach-cabinet' && kind!=='office-breach-safe') return this.reject(player,world,'Ação indisponível.');
+    if (kind==='office-breach-safe' && this.briefcasesFull(player.id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
     if (offices.channels.has(player.id)) return this.reject(player,world,'Já existe uma interação em andamento.');
     const target = kind==='office-cash' || kind.endsWith('-safe') ? 'safe' : kind.endsWith('-door') ? 'door' : 'cabinet';
     if (!offices.near(player,office,target)) return this.reject(player,world,'Aproxime-se do alvo.');
@@ -1347,6 +1387,10 @@ export class Gameplay {
         (world.actionFailed ?? world.feedback)?.(id,moved ? `${label} Fique parado durante a ação.` : label);
         continue;
       }
+      if (kind==='office-breach-safe' && this.briefcasesFull(id)) {
+        (world.actionFailed ?? world.feedback)?.(id,'Você já carrega o máximo de 10 maletas.');
+        continue;
+      }
       this.remove(item);
       if (reinforcing) {
         office[level]++;
@@ -1395,8 +1439,7 @@ export class Gameplay {
         world.feedback?.(id,'Dinheiro embolsado.');
       } else {
         if (target==='door') {
-          office.doorUntil = world.now+officeRules.breachMs;
-          office.doorBreachedBy = id;
+          offices.breachDoor(office.layout.id,world.now,id);
         } else {
           office.cabinetUntil = world.now+officeRules.breachMs;
           office.cabinetBreachedBy = id;
@@ -1760,6 +1803,7 @@ export class Gameplay {
       const accessible = action.kind==='collect' ? 'ground' in item.place && canReachObject(player,item.place.ground) :
         'storage' in item.place && locations(player).some(key => 'storage' in item.place && key===item.place.storage);
       if (!accessible) return this.reject(player,world,'Objeto fora de alcance.');
+      if (data.kind==='briefcase' && this.briefcasesFull(id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
       if (occupiesInventorySlot(data) && !this.available(id) && !this.stack(id,data.kind)) return this.reject(player,world,'Inventário cheio.');
       this.addToInventory(item,id);
       if (cashAmount(data)) this.expose(id,data.id);
@@ -1912,6 +1956,7 @@ export class Gameplay {
       return this.reject(player,world,'O portador ou objeto está fora de alcance.');
     }
     if (request.kind==='offer') {
+      if (item.data.kind==='briefcase' && this.briefcasesFull(player.id)) return this.reject(player,world,'Você já carrega o máximo de 10 maletas.');
       if (occupiesInventorySlot(item.data) && !this.available(player.id) && !this.stack(player.id,item.data.kind)) return this.reject(player,world,'Inventário cheio.');
       const quantity = request.quantity ?? itemQuantity(item.data);
       if (quantity>itemQuantity(item.data)) return this.reject(player,world,'Quantidade indisponível.');

@@ -279,3 +279,11 @@ test.each([true,false])('bots skip document filing when projects are disabled (o
     action.kind==='sign-request' || action.kind==='talk' && action.target==='protocol')).toBe(false);
   actions.mockRestore();
 });
+
+ test('a bot physically returns to its own safe and installs carried insurance',()=>{
+  const {advance,players,gameplay} = gameWithBots(()=>.1,false);
+  const bot = players.find(player=>player.bot)!;
+  gameplay.giveTrainingItem(bot.id,'safeTrap');
+  advance(20_000);
+  expect(gameplay.hasSafeInsurance(bot.id)).toBe(true);
+});

@@ -9,7 +9,7 @@ export const visitorRoster = [
   {id:'delcidio-do-amaral',name:'Delcídio do Amaral',wallet:8},
   {id:'luciano-hang',name:'Véio da Havan',wallet:16},
 ] as const;
-export type VisitorId = typeof visitorRoster[number]['id'];
+export type VisitorId = typeof visitorRoster[number]['id'] | 'japones-federal';
 
 export const npcRules = {
   count:2,maxCount:visitorRoster.length,pauseMs:2500,speed:68,
