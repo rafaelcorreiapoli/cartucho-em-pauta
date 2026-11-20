@@ -79,7 +79,6 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
     </div>}
     {children}
     <div className="congress-summary-row">
-    <PayrollMetrics payroll={payroll}/>
     {!calote && <HudHelp aria-label="Orçamento Público" className="congress-budget flex items-center justify-center"
       data-in-debt={budget<0}
       help={`Projetos e salários usam este saldo. ${budget<0 ? `O orçamento está negativo: a dívida reduz a estabilidade em ${publicDebtStabilityLoss(budget)} a cada ${publicDebtRules.interval/1000} s.${debtPenaltyIn!==undefined ? ` Próxima perda em ${debtPenaltyIn} s.` : ''}` : 'A dívida reduz a estabilidade.'} Depósitos na Tesouraria abatem a dívida.`}>
@@ -90,6 +89,7 @@ export function ParliamentMetrics({gameMode='classic',caloteIn,stability,budget,
       <HudIcon name="clock"/>
       <strong className="tabular-nums">{Math.floor(sessionRemaining/60)}:{String(sessionRemaining%60).padStart(2,'0')}</strong>
     </HudHelp>}
+    <PayrollMetrics payroll={payroll}/>
     </div>
   </section>;
 }
@@ -98,7 +98,7 @@ export function PayrollMetrics({payroll}:{payroll:ReturnType<HudModel['congress'
   return payroll ? <div className="congress-payroll" aria-label="Próxima distribuição de salários">
     <HudHelp className="payroll-label" aria-label="Folha salarial" help="Folha salarial: valor total pago pelo orçamento público quando o relógio zera."><HudIcon name="wallet"/></HudHelp>
     <strong className="tabular-nums">{money(payroll.cost)}</strong>
-    <span className="payroll-countdown" role="timer"><HudIcon name="clock"/>{Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')}</span>
+    <span className="payroll-countdown" role="timer" aria-label="Tempo até a folha salarial">({Math.floor(payroll.remaining/60)}:{String(payroll.remaining%60).padStart(2,'0')})</span>
   </div> : null;
 }
 
