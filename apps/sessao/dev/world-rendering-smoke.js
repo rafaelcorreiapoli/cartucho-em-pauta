@@ -37,6 +37,7 @@ async (page) => {
     const comparisons = [await compare(base)];
     for (const person of [
       { ...base.people[0], phone: 'open', cashInHand: false },
+      { ...base.people[0], cloaked: true },
       {...base.people[0],speedModifier:{factor:1.3,remainingMs:5000}},
       { ...base.people[0], character: 4, knockedOut: true, direction: 3 },
       { ...base.people[0], character: 0, visitor: 'joesley-batista', direction: 2 },
