@@ -1,3 +1,4 @@
+import {KnockoutAnnouncements} from './KnockoutAnnouncements';
 import {isCaloteDebtSeconds,isGameMode,type GameMode} from '../src/game-modes';
 import {tutorialSteps,matchesTutorialEvent,type TutorialView} from '../src/tutorial';
 import { fireSites, type FireExtinguished } from '../src/fire';
@@ -46,6 +47,7 @@ export class SessionRoom extends Room {
 
   private players = new Map<string, ControlState>();
   private readonly bots = new PlayerBots();
+  private readonly knockouts = new KnockoutAnnouncements();
   private movementQueue = new Map<string, MovementInput[]>();
 
   private resetMovement(state:ControlState) {
@@ -165,6 +167,7 @@ export class SessionRoom extends Room {
     this.bots.clear(this.players);
     const players = [...this.players.values()].map(state=>state.player);
     this.gameplay.reset(this.clock.currentTime,Math.random,players);
+    this.knockouts.reset();
     for (const player of players) player.speed = undefined;
     void this.unlock();
   }
@@ -389,6 +392,7 @@ export class SessionRoom extends Room {
         this.broadcast('mail-state',[]);
         this.broadcast('mail-reports',[]);
         this.gameplay.reset(this.clock.currentTime,Math.random,players);
+        this.knockouts.reset();
         this.gameplay.enableFederalPatrol(!this.tutorial && this.federalPatrolEnabled);
         this.gameplay.phoneGamesEnabled = this.phoneGamesEnabled;
         this.gameplay.projectVotingEnabled = this.projectVotingEnabled;
@@ -816,6 +820,9 @@ export class SessionRoom extends Room {
         player.breachingSafe = exploring && this.gameplay.isBreachingSafe(player.id) ? true : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,this.clock.currentTime) : undefined;
       }
+      if (exploring) this.knockouts.update(this.gameplayWorld().players,players,
+        ()=>this.broadcast('first-blood'),
+        (id,level,pan)=>this.clients.getById(id)?.send('knockout-sound',{level,pan}));
       const broadcaster = this.match.phase==='negotiation' ? this.gameplay.megaphoneSpeaker() : undefined;
       this.routeVoice(this.match.speaker(now),broadcaster);
       const ids = players.map(({id}) => id);

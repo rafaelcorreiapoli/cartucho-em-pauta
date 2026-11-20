@@ -6,13 +6,13 @@ type Adviser = {player:Player; route:ReturnType<typeof findRoute>; elapsed:numbe
 export class GhostAdvisers {
   private members = new Map<string,Adviser>();
   private serial = 0;
-  private announcement?:{name:string; until:number};
+  private announcement?:{name:string; until:number; sequence:number};
   private last = 0;
   private random = Math.random;
   get players() { return [...this.members.values()].map(({player})=>player); }
   get count() { return [...this.members.values()].filter(member=>member.removedAt===undefined).length; }
   has(id:string) { const member=this.members.get(id); return !!member && member.removedAt===undefined; }
-  view(now:number,paused:boolean) { return {count:this.count,paused,elimination:this.announcement && this.announcement.until>now ? {name:this.announcement.name} : undefined}; }
+  view(now:number,paused:boolean) { return {count:this.count,paused,elimination:this.announcement && this.announcement.until>now ? {name:this.announcement.name,sequence:this.announcement.sequence} : undefined}; }
   reset(now:number,random=Math.random) { this.members.clear(); this.announcement=undefined; this.serial=0; this.last=now; this.random=random; }
   private point() {
     // Sample the walkable floor rather than rooms, including corridors.
@@ -35,7 +35,7 @@ export class GhostAdvisers {
     member.player.knockedOut=true;
     member.player.moving=false;
     member.route=[];
-    if (name!==undefined) this.announcement={name,until:now+ghostAdviserRules.announcementMs};
+    if (name!==undefined) this.announcement={name,until:now+ghostAdviserRules.announcementMs,sequence:(this.announcement?.sequence ?? 0)+1};
   }
   tick(now:number,active:boolean,spend:(amount:number)=>void) {
     this.last = now;

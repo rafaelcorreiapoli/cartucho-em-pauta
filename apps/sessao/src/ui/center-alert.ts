@@ -22,8 +22,10 @@ export function createCenterAlert() {
   let currentKey:string|undefined;
   let timer:number|undefined;
   let animation:Animation|undefined;
-  return {
+  const queue:{title:string;detail:string;key:string}[] = [];
+  const api = {
     show(title:string,detail:string,key='general') {
+      host.dataset.key = key;
       currentKey = key;
       window.clearTimeout(timer);
       animation?.cancel();
@@ -36,9 +38,18 @@ export function createCenterAlert() {
       if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
         animation = host.animate([{opacity:1,offset:0},{opacity:1,offset:.75},{opacity:0,offset:1}],{duration:3000,fill:'forwards'});
       }
-      timer = window.setTimeout(()=>{host.hidden = true;},3000);
+      timer = window.setTimeout(()=>{
+        host.hidden = true;
+        const next = queue.shift();
+        if (next) api.show(next.title,next.detail,next.key);
+      },3000);
     },
-    clear(key:string) { if (currentKey===key) { window.clearTimeout(timer); animation?.cancel(); host.hidden = true; currentKey = undefined; } },
-    destroy() { window.clearTimeout(timer); animation?.cancel(); host.remove(); },
+    enqueue(title:string,detail:string,key:string) {
+      if (host.hidden) api.show(title,detail,key);
+      else queue.push({title,detail,key});
+    },
+    clear(key:string) { if (currentKey===key) { window.clearTimeout(timer); animation?.cancel(); host.hidden = true; currentKey = undefined; const next = queue.shift(); if (next) api.show(next.title,next.detail,next.key); } },
+    destroy() { window.clearTimeout(timer); animation?.cancel(); queue.length = 0; host.remove(); },
   };
+  return api;
 }

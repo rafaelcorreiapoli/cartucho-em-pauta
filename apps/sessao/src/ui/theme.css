@@ -162,5 +162,6 @@
 .calote-countdown > strong { font-size:1.35rem; color:#fff1d0; font-variant-numeric:tabular-nums; }
 .calote-countdown[data-critical="true"] { background:#941f24; border-color:#ffb39f; box-shadow:0 0 12px #ff493444; }
 
-.ghost-adviser-elimination { position:fixed; z-index:30; top:50%; left:50%; transform:translate(-50%,-50%); width:max-content; max-width:calc(100vw - 32px); padding:18px 26px; border:2px solid #e0bb67; border-radius:12px; background:#10261bf5; box-shadow:0 12px 50px #0009; color:#fff0c9; font-size:clamp(18px,3vw,28px); text-align:center; pointer-events:none; overflow-wrap:anywhere; }
-.ghost-adviser-elimination strong { color:#ffdc78; font-weight:900; }
+
+.center-game-alert[data-key="first-blood"] { color:#ff3030; }
+.center-game-alert span { white-space:pre-line; }

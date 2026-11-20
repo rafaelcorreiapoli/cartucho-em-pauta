@@ -2,7 +2,7 @@ import type {FederalAudioStage} from './federal-patrol';
 import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/audio';
 
 const files = {
-  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav',
+  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', firstBlood:'first-blood.mp3',
   music:'corredores-de-brasilia.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
   caloteMusic:'hitman.mp3',
