@@ -170,3 +170,60 @@ test('a partial deposit that leaves the budget negative does not restart the deb
   match.advance(30_000);
   expect(view(match,30_000).winner).toBe('Infiltrado');
 });
+
+test.each([30,45,60])('selected debt duration %s applies to the deadline and recovery',seconds=>{
+  const match = new PlenaryMatch(1);
+  expect(match.start(ids[0],players,0,()=>.9,1,false,false,false,false,false,false,false,false,'calote',false,true,0,12,8,seconds)).toBe(true);
+  budget(match,-1,1_000);
+  expect(view(match,1_000)).toMatchObject({caloteDebtSeconds:seconds,caloteIn:seconds});
+  budget(match,0,10_000);
+  expect(view(match,10_000).caloteIn).toBeUndefined();
+  budget(match,-1,11_000);
+  match.advance(11_000+seconds*1000-1);
+  expect(match.running).toBe(true);
+  expect(view(match,11_000+seconds*1000-1).caloteIn).toBe(1);
+  match.advance(11_000+seconds*1000);
+  expect(view(match,11_000+seconds*1000)).toMatchObject({winner:'Infiltrado',reason:expect.stringContaining(`${seconds} segundos`)});
+});
+
+test('only a treasury deposit crossing out of debt announces who saved the country',()=>{
+  const match = start();
+  budget(match,-3,1_000);
+  const deposit = (amount:number,now:number)=>match.gameplayWorld(players,now,()=>false).deposit?.(ids[0],amount);
+  expect(deposit(1,2_000)).toBe(true);
+  expect(view(match,2_000).treasuryRescue).toBeUndefined();
+  expect(deposit(2,3_000)).toBe(true);
+  expect(view(match,3_000).treasuryRescue).toEqual({sequence:1,name:players[0].nick});
+  expect(deposit(1,4_000)).toBe(true);
+  expect(view(match,4_000).treasuryRescue?.sequence).toBe(1);
+  budget(match,-1,5_000);
+  expect(deposit(2,6_000)).toBe(true);
+  expect(view(match,6_000).treasuryRescue).toEqual({sequence:2,name:players[0].nick});
+});
+
+test('parallel fires drain the calote budget as incidents, stop individually, and preserve the ledger',()=>{
+  const match=start();
+  const fire=Reflect.get(match,'fire');
+  fire.startTraining(0); fire.startTraining(1);
+  const before=view(match,0);
+  match.advance(6000);
+  expect(view(match,6000).budget).toBe(before.budget-4);
+  expect(view(match,6000).stability).toBe(before.stability);
+  expect(view(match,6000).fires).toHaveLength(2);
+  expect(view(match,6000).fires?.every(fire=>fire.budget)).toBe(true);
+  fire.extinguish(0);
+  match.advance(12000);
+  expect(view(match,12000).budget).toBe(before.budget-6);
+  expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('adviser incident spending can start debt and does not reset an existing calote countdown',()=>{
+  const match=start();
+  budget(match,1,0);
+  match.gameplayWorld(players,1000,()=>true).incidentExpense?.(2);
+  expect(view(match,1000)).toMatchObject({budget:-1,caloteIn:30});
+  match.gameplayWorld(players,11000,()=>true).incidentExpense?.(1);
+  expect(view(match,11000)).toMatchObject({budget:-2,caloteIn:20});
+  match.advance(31000);
+  expect(view(match,31000).winner).toBe('Infiltrado');
+});

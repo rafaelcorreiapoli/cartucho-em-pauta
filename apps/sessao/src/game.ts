@@ -1,3 +1,4 @@
+import {sprintDust} from './sprint-dust';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
 import {plenaryCameraCenter,plenaryZoom} from './plenary-camera';
@@ -577,6 +578,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           const distance = own ? 0 : Math.hypot(x-ownPlayer!.x,y-ownPlayer!.y);
           const level = own ? .22 : Math.max(0,1-distance/75)*.08;
           if (level) footstep(level,own ? 0 : Phaser.Math.Clamp((x-ownPlayer!.x)/85,-1,1));
+          if (player.sprinting && !latest.knockedOut && !latest.carried && !reducedMotion.matches) {
+            sprintDust(this,x,y,x-sprite.x,y-sprite.y);
+          }
           view.nextStep = time+290/(player.sprinting ? sprintMultiplier : 1);
         } else if (!moving) view.nextStep = 0;
         if (latest.hit!==undefined && latest.hit!==view.lastHit) {

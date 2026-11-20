@@ -16,6 +16,8 @@ import { npcs, type NpcId } from './npcs';
 import type { BillPolicies, PlenaryView } from './plenary';
 import { money } from './politics';
 
+const categoryKeys:Record<EquipmentCategory,string> = {equipment:'e',burglary:'a',sabotage:'s',utilities:'u'};
+
 function marketVendorPortrait(npc:NpcId) {
   const vendor = npcs[npc];
   return 'portrait' in vendor ? vendor.portrait : vendor.sprite;
@@ -51,6 +53,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   let currentVendor:NpcId|undefined;
   let dismissed = false;
   let last = '';
+  let infiltrator = false;
   let projectsEnabled = true;
   let surveillanceEnabled = true;
   let decorationsEnabled = true;
@@ -70,6 +73,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     const activate = keys.get(event.key)?.activate;
     if (!activate) return;
     event.preventDefault();
+    event.stopPropagation();
     activate();
   }
   const onMarketKey = (event:KeyboardEvent)=>runShortcut(event,marketKeys);
@@ -80,7 +84,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
   function renderCatalog(npc:NpcId,token:number,wallet:number,inventory:readonly WorldItem[],equipped:readonly WorldItem[], furnishings:readonly OfficeFurniture[], policies:BillPolicies|undefined, budget:number,direct:boolean,suppliesSeconds?:number) {
     const catalog = npcs[npc].catalog;
     if (!catalog) return;
-    const kinds = (catalog==='equipment' ? equipmentCategoryKinds(category) : marketKinds[catalog]).filter(kind=>(projectsEnabled || kind!=='forensicKit') && (surveillanceEnabled || !isSpyProduct(kind)) && decorationProductEnabled(kind,decorationsEnabled,portraitsAndVipEnabled));
+    const kinds = (catalog==='equipment' ? equipmentCategoryKinds(category) : marketKinds[catalog]).filter(kind=>(kind!=='ghostAdviser' || infiltrator) && (projectsEnabled || kind!=='forensicKit') && (surveillanceEnabled || !isSpyProduct(kind)) && decorationProductEnabled(kind,decorationsEnabled,portraitsAndVipEnabled));
     const owned = [...inventory,...equipped];
     const visible = kinds.slice(page*pageSize,(page+1)*pageSize);
     const pageCount = Math.ceil(kinds.length/pageSize);
@@ -118,7 +122,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
     const nextPage = ()=>goTo(page+1);
     marketKeys.clear();
     if (catalog==='equipment') for (const [key,{label}] of Object.entries(equipmentCategories)) {
-      marketKeys.set('category:'+key,{name:label,activate:()=>changeCategory(key as EquipmentCategory)});
+      marketKeys.set(categoryKeys[key as EquipmentCategory],{name:label,activate:()=>changeCategory(key as EquipmentCategory)});
     }
     stock.forEach(({item,price},index)=>marketKeys.set(String(index+1),{name:item.name+' · '+money(price),activate:()=>select(index)}));
     if (product && !product.status) marketKeys.set('Enter',{name:'Comprar',activate:buy});
@@ -142,9 +146,13 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       {catalog==='food' && suppliesSeconds!==undefined && <p className="market-supplies">
         Abastecimento · {investmentRules.suppliesDiscount}% de desconto por mais {suppliesSeconds} s
       </p>}
-      {catalog==='equipment' ? <nav className="market-categories" aria-label="Categorias da loja">
+      {catalog==='equipment' ? <nav className="market-catalog-label market-categories" aria-label="Categorias da loja">
         {Object.entries(equipmentCategories).map(([key,{label}])=><button key={key} type="button" aria-pressed={key===category}
-          onClick={()=>changeCategory(key as EquipmentCategory)}>{label}</button>)}
+          aria-label={label} aria-keyshortcuts={categoryKeys[key as EquipmentCategory]}
+          onClick={()=>changeCategory(key as EquipmentCategory)}>
+          <svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>{label}
+          <kbd className="action-key" aria-hidden="true">{categoryKeys[key as EquipmentCategory].toUpperCase()}</kbd>
+        </button>)}
       </nav> : <div className="market-catalog-label"><span><svg className="hud-glyph" aria-hidden="true"><use href="#icon-inventory"/></svg>Comprar</span></div>}
       <div className="market-catalog-layout">
         <div className="market-products" aria-label="Produtos">
@@ -200,6 +208,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       return actions;
     },
     render(view:PlenaryView) {
+      infiltrator = view.role==='Infiltrado';
       projectsEnabled = view.projectVotingEnabled!==false;
       surveillanceEnabled = view.surveillanceEnabled!==false;
       decorationsEnabled = view.decorationsEnabled!==false;
@@ -252,7 +261,7 @@ export function createMarketPanel(send:(action:GameplayAction)=>void,requestDocu
       const furnishings = view.gameplay?.officeFurnishings ?? [];
       if (currentVendor!==state.npc) { category = 'equipment'; page = 0; selected = 0; }
       currentVendor = state.npc;
-      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,projectsEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,wallet,inventory,equipped,furnishings,policies,budget,suppliesSeconds]);
+      const key = JSON.stringify([state.npc,state.token,state.shop,state.direct,state.text,state.feedback,state.options,infiltrator,projectsEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,wallet,inventory,equipped,furnishings,policies,budget,suppliesSeconds]);
       if (key===last) return;
       last = key;
       token = state.token;

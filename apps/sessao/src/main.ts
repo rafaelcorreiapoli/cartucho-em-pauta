@@ -1,3 +1,4 @@
+import './lobby-motion.css';
 import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
@@ -370,7 +371,7 @@ async function connect(join: () => Promise<Room>) {
         roleIntro.dataset.role = view.role;
         roleTitle.textContent = view.role;
         roleObjective.textContent = view.gameMode==='calote'
-          ? view.role==='Infiltrado' ? 'Mantenha o orçamento negativo por 30 segundos seguidos para provocar o calote.' : 'Evite 30 segundos seguidos no vermelho. Sobreviva até o fim da sessão ou elimine todos os infiltrados.'
+          ? view.role==='Infiltrado' ? `Mantenha o orçamento negativo por ${view.caloteDebtSeconds ?? 30} segundos seguidos para provocar o calote.` : `Evite ${view.caloteDebtSeconds ?? 30} segundos seguidos no vermelho. Sobreviva até o fim da sessão ou elimine todos os infiltrados.`
           : view.role==='Infiltrado'
           ? `Sabote o Congresso sem revelar seu papel. Faça a estabilidade cair a zero ou terminar a sessão abaixo de ${stabilityRules.target}.`
           : `Proteja o Congresso. Termine a sessão com pelo menos ${stabilityRules.target} de estabilidade ou tire de jogo todos os infiltrados.`;
@@ -385,6 +386,9 @@ async function connect(join: () => Promise<Room>) {
         'VOCÊ ESTÁ EM ÚLTIMO NA PESQUISA', 'Faça campanha para proteger seu mandato.','election');
       if (!caloteAlertLevel(view)) centerAlert.clear('calote');
       if (!lastInElection(view,joined.sessionId)) centerAlert.clear('election');
+      if (previousView && view.treasuryRescue && view.treasuryRescue.sequence!==previousView.treasuryRescue?.sequence) {
+        centerAlert.show(view.treasuryRescue.name,'SALVOU A PÁTRIA!','treasury-rescue');
+      }
       audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
       ballotCountdown.update(view.ballotCountdown);
