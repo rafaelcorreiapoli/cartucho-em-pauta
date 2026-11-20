@@ -2,6 +2,7 @@ import type { CandyRound } from './candy';
 import type { BetsRound } from './bets';
 import {npcs} from './npcs';
 import { incendiary } from './fire';
+import {ghostAdviser} from './ghost-advisers';
 import type { RechargeStation } from './station-recharge';
 import { firstAidKit } from './medical';
 import { money } from './politics';
@@ -25,6 +26,7 @@ export const decorationPopularity = {portrait:4,vip:2} as const;
 export const objects = {
   firstAidKit,
   incendiary,
+  ghostAdviser,
   extinguisher:{name:'Extintor',portrait:'extintor.webp',description:'Leve até as chamas e interaja com o incêndio para apagá-lo.'},
   forensicKit:{name:'Kit de Perícia',portrait:'retrato-kit-pericia.webp',description:'Analisa um documento publicado no Correio Interno.'},
   ...foods,

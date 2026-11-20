@@ -99,12 +99,12 @@ export class PlenaryMatch {
     this.refreshAgendaEligibility();
   }
 
-  private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
+  private cash = {initial:0,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,incidents:0,projects:0,cassationFees:0,diverted:0};
 
   economySummary(physical:number) {
     const totals = this.economy.totals();
     const issued = this.cash.initial+this.cash.npcIssued+this.cash.spawned;
-    const spent = this.cash.expired+this.cash.publicDuty+this.cash.projects+this.cash.cassationFees;
+    const spent = this.cash.incidents+this.cash.expired+this.cash.publicDuty+this.cash.projects+this.cash.cassationFees;
     const held = totals.humans+totals.npcs+totals.reserve+physical+this.budget;
     return {...totals,...this.cash,physical,budget:this.budget,issued,spent,
       discrepancy:Math.round((issued-spent-held)*100)/100 || 0};
@@ -412,7 +412,7 @@ export class PlenaryMatch {
     }, new Set(players.filter(player=>player.bot).map(player=>player.id)),phoneGamesEnabled,projectVotingEnabled,electionsEnabled,photosEnabled,surveillanceEnabled,decorationsEnabled,portraitsAndVipEnabled,gameMode,initialWallet);
     this.economy.setAgendaCrisisAvailability(id=>this.canRepairOutage(id),id=>this.canFightCrisis(id));
     const {humans,reserve} = this.economy.totals();
-    this.cash = {initial:humans+reserve+initialBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,projects:0,cassationFees:0,diverted:0};
+    this.cash = {initial:humans+reserve+initialBudget,npcIssued:0,spawned:0,expired:0,treasury:0,salaries:0,publicDuty:0,incidents:0,projects:0,cassationFees:0,diverted:0};
     this.election.reset(players.map(({id,nick,character}) => ({id,name:nick,character})),now,random);
     campaignReady = true;
     this.infiltratorName = [...this.infiltrators].map(id => this.economy.name(id)).join(', ') || undefined;
@@ -578,6 +578,13 @@ export class PlenaryMatch {
     return {
       players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
+      isInfiltrator:id=>current() && this.infiltrators.has(id) && !!this.election.office(id),
+      incidentNow:now,
+      incidentExpense:amount=>{
+        if (!current() || this.phase!=='negotiation' || !Number.isSafeInteger(amount) || amount<=0) return;
+        this.changeBudget(-amount,now);
+        this.cash.incidents+=amount;
+      },
       spendSubsidized:(id,price,subsidy)=>{
         if (!current() || Math.round(subsidy*10)>Math.round(this.budget*10) || !this.economy.spend(id,price)) return false;
         this.changeBudget(-subsidy,now);
@@ -1086,6 +1093,7 @@ export class PlenaryMatch {
       this.recordGameplay({type:'fire-started',actor,position:{x,y},at:now,place:name,witnesses:[],
         ownOffice:ownsOfficeRoom?.(actor,name)});
     });
+    if (damage && this.gameMode==='calote') { this.changeBudget(-damage,now); this.cash.incidents+=damage; }
     if (damage && this.gameMode==='classic') {
       this.stability = clamp(this.stability-damage);
       if (!this.stability) {
@@ -1287,7 +1295,7 @@ export class PlenaryMatch {
       outage:this.powerOut ? this.power.view(id,now,!this.canUsePower(now)) : undefined,
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
-      fires:this.running ? this.fire.view(this.phase==='negotiation') : undefined,
+      fires:this.running ? this.fire.view(this.phase==='negotiation')?.map(fire=>({...fire,budget:this.gameMode==='calote'})) : undefined,
       isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,

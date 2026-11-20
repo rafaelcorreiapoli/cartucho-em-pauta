@@ -68,7 +68,7 @@ test('salary increase preserves the previous receipt, applies next payday and ac
   match.advance(360000);
   expect(view(match,360000).politics!.wallet-before).toBe(1.25);
   expect(view(match,360000).payroll?.last?.received).toBe(1.25);
-  expect(view(match,360000).budget).toBe(959.5);
+  expect(view(match,360000).budget).toBe(959.5-match.economySummary(0).incidents);
   Reflect.get(match,'economy').spend('a',.1);
   expect(match.economySummary(0).discrepancy).toBe(0);
   const economy = Reflect.get(match,'economy');

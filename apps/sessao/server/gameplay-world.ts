@@ -7,6 +7,9 @@ import { localPerception, type Player } from '../src/map';
 
 export type GameplayWorld = {
   training?:boolean;
+  isInfiltrator?:(id:string)=>boolean;
+  incidentNow?:number;
+  incidentExpense?:(amount:number)=>void;
   nextEventId?:()=>number;
   policies?:BillPolicies;
   publicBudget?:number;

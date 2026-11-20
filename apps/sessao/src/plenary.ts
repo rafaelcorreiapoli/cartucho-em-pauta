@@ -160,6 +160,7 @@ export type PlenaryView = {
   automaticProjectsEnabled?:boolean; automaticProjects?:import('./automatic-projects').AutomaticProjectsView;
   payroll?:PayrollView; election?:ElectionView; billQuorum:number;
   outage?:PowerView; canSabotagePower?:boolean;
+  ghostAdvisers?:import('./ghost-advisers').GhostAdviserIncident;
   complaints?:ComplaintView; fires?:FireView[]; fireInteraction?:FireInteraction; isolationSeconds?:number; gameplay?:GameplayView; politics?:PoliticsView; auditNote?:string; hearing?:{target:string; voted:number; quorum?:number; vote?:Vote}; hearingResult?:string; cassationIn?:number; cassation?:CassationView; cassationResult?:{text:string};
   policies?:BillPolicies; yes:Impact; no:Impact; outcome?:Outcome; outcomes:Outcome[]; winner?:Role; reason?:string; congressDestroyed?:boolean; infiltratorName?:string; finalRoster?:readonly SessionParticipant[];
 };

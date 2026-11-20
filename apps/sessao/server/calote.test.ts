@@ -170,3 +170,30 @@ test('a partial deposit that leaves the budget negative does not restart the deb
   match.advance(30_000);
   expect(view(match,30_000).winner).toBe('Infiltrado');
 });
+
+test('parallel fires drain the calote budget as incidents, stop individually, and preserve the ledger',()=>{
+  const match=start();
+  const fire=Reflect.get(match,'fire');
+  fire.startTraining(0); fire.startTraining(1);
+  const before=view(match,0);
+  match.advance(6000);
+  expect(view(match,6000).budget).toBe(before.budget-4);
+  expect(view(match,6000).stability).toBe(before.stability);
+  expect(view(match,6000).fires).toHaveLength(2);
+  expect(view(match,6000).fires?.every(fire=>fire.budget)).toBe(true);
+  fire.extinguish(0);
+  match.advance(12000);
+  expect(view(match,12000).budget).toBe(before.budget-6);
+  expect(match.economySummary(0).discrepancy).toBe(0);
+});
+
+test('adviser incident spending can start debt and does not reset an existing calote countdown',()=>{
+  const match=start();
+  budget(match,1,0);
+  match.gameplayWorld(players,1000,()=>true).incidentExpense?.(2);
+  expect(view(match,1000)).toMatchObject({budget:-1,caloteIn:30});
+  match.gameplayWorld(players,11000,()=>true).incidentExpense?.(1);
+  expect(view(match,11000)).toMatchObject({budget:-2,caloteIn:20});
+  match.advance(31000);
+  expect(view(match,31000).winner).toBe('Infiltrado');
+});
