@@ -1,3 +1,4 @@
+import {createMineArt} from './land-mine-art';
 import {createFpsDebug} from './fps-debug';
 import {sprintDust} from './sprint-dust';
 import { stationRecharge, type RechargeStation } from './station-recharge';
@@ -99,6 +100,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private doors!: Phaser.GameObjects.Graphics;
     private board!: Phaser.GameObjects.Text;
     private views = new Map<string,ActorView>();
+    private mineMarkers = new Map<number,Phaser.GameObjects.Container>();
     private groundMarkers = new Map<number,Phaser.GameObjects.Container>();
     private renderedGround?:readonly GroundItem[];
     private renderedDecorations?:readonly Decoration[];
@@ -144,8 +146,14 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private assetsFailed = false;
 
     preload() {
-      this.load.on('progress',(value:number)=>loading(value*.99));
-      this.load.on('loaderror',()=>{ this.assetsFailed = true; loading(-1); });
+      const progress = (value:number)=>loading(value*.99);
+      const failed = ()=>{ this.assetsFailed = true; loading(-1); };
+      this.load.on('progress',progress);
+      this.load.on('loaderror',failed);
+      this.load.once('complete',()=>{
+        this.load.off('progress',progress);
+        this.load.off('loaderror',failed);
+      });
       const lobbyArt = ['logo-infiltrados.webp','sala-articulacao.webp','congress-saved.webp','congress-destroyed.webp',...bills.map(bill=>bill.icon)];
       for (const npc of Object.values(mapNpcs)) if ('portrait' in npc) lobbyArt.push(npc.portrait);
       for (const asset of lobbyArt) this.load.image(`preload-${asset}`,`${import.meta.env.BASE_URL}assets/${asset}`);
@@ -322,6 +330,18 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       });
     }
 
+    private renderMines() {
+      const mines = plenaryView?.gameplay?.mines ?? [];
+      const visible = new Set(mines.map(mine=>mine.id));
+      for (const [id,marker] of this.mineMarkers) if (!visible.has(id)) {
+        marker.destroy();
+        this.mineMarkers.delete(id);
+      }
+      for (const mine of mines) if (!this.mineMarkers.has(mine.id)) {
+        this.mineMarkers.set(mine.id,createMineArt(this,mine));
+      }
+    }
+
     private renderGroundItems() {
       const {ground:groundItems} = worldSnapshot;
       if (this.renderedGround===groundItems) return;
@@ -430,6 +450,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           restMovement(local.state.player);
         }
       }
+      this.renderMines();
       this.renderGroundItems();
       this.renderDecorations();
       const officeViews = plenaryView?.gameplay?.offices;
@@ -460,7 +481,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const nightVision = running && !!plenaryView?.outage && !!plenaryView?.gameplay?.nightVision;
+      const nightVision = running && !!plenaryView?.gameplay?.nightVision;
       const powerOut = !!plenaryView?.outage && !nightVision;
       const filter = nightVision ? 'grayscale(1)' : '';
       if (this.game.canvas.style.filter!==filter) this.game.canvas.style.filter = filter;

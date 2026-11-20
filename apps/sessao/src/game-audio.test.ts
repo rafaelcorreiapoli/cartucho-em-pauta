@@ -74,26 +74,26 @@ test('cancelling a Federal transfer stops the siren without playing arrival audi
   expect(Reflect.get(sources[0],'stops')).toBe(1);
 });
 
-test('campaign applause plays as an effect and respects mute and SFX volume',()=>{
+test.each(['applause','powerDown'] as const)('%s plays once as an effect and respects mute and SFX volume',cue=>{
   const {audio,sources,buffers} = fixture();
-  buffers.set('applause',{key:'applause',duration:1});
+  buffers.set(cue,{key:cue,duration:1});
   Reflect.set(audio,'effectsGain',{gain:{setTargetAtTime(){}},connect(){},disconnect(){}});
   const context = Reflect.get(audio,'context');
   const createSource = context.createBufferSource.bind(context);
   context.createBufferSource = ()=>Object.assign(createSource(),{playbackRate:{value:1}});
   context.createGain = ()=>({gain:{value:1},connect(){},disconnect(){}});
-  audio.cue('applause');
+  audio.cue(cue);
   expect(sources).toHaveLength(1);
-  expect(sources[0].buffer).toBe(buffers.get('applause'));
+  expect(sources[0].buffer).toBe(buffers.get(cue));
   expect(sources[0].loop).toBe(false);
   audio.preferences.update({muted:true});
-  audio.cue('applause');
+  audio.cue(cue);
   expect(sources).toHaveLength(1);
   audio.preferences.update({muted:false,sfxVolume:0});
-  audio.cue('applause');
+  audio.cue(cue);
   expect(sources).toHaveLength(1);
   audio.preferences.update({sfxVolume:.5});
-  audio.cue('applause');
+  audio.cue(cue);
   expect(sources).toHaveLength(2);
 });
 

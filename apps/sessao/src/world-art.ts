@@ -1,4 +1,6 @@
 import type Phaser from 'phaser';
+import {spriteOriginX} from './sprite-alignment';
+import {adaptiveWalkArt, adaptivePoseArt, actorFrameWorldSize} from './adaptive-character-art';
 import { federalPatrolRules, federalPatrolSheets, federalBreachArt } from './federal-patrol';
 import { visitorRoster, visitorSheets } from './visitors';
 import {
@@ -186,11 +188,12 @@ export function updateActorView(
   y: number,
   moving: boolean,
   time: number,
-  options: { reducedMotion?: boolean; concealed?: boolean; showStatus?: boolean; frozen?: boolean } = {},
+  options: { reducedMotion?: boolean; concealed?: boolean; showStatus?: boolean; frozen?: boolean; pixelScale?: number } = {},
 ) {
   const { sprite, label, office } = view;
   const { character, direction, visitor } = latest;
-  const { sheet, frame } = characterArt(character, visitor);
+  const pixelScale = options.pixelScale ?? scene.cameras.main.zoom;
+  const base = characterArt(character, visitor);
   const reducedMotion = options.reducedMotion ?? false;
   const swing = latest.swing;
   if (swing && swing.startedAt !== view.swingAt) {
@@ -315,18 +318,26 @@ export function updateActorView(
     .setText(status);
   const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
   if (office.style.color !== officeColor) office.setColor(officeColor);
+  const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
+  const walk = art ? {key: base.sheet.key, frame: base.frame, animation: `${visitor ?? character}`} : adaptiveWalkArt(scene, character, visitor, pixelScale);
   if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
-    sprite.play(`${visitor ?? character}-${row}`, true);
+    const key = `${walk.animation}-${row}`;
+    const previous = sprite.anims.currentAnim?.key;
+    const progress = sprite.anims.isPlaying && previous !== key && previous?.endsWith(`-${row}`) ? sprite.anims.getProgress() : undefined;
+    sprite.play(key, true);
+    if (progress !== undefined) sprite.anims.setProgress(progress);
     sprite.anims.timeScale = latest.sprinting ? sprintMultiplier : 1;
   } else {
     sprite.anims.stop();
-    const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
-    sprite.setTexture(art?.key ?? sheet.key, art?.frame ?? frame + row * 4);
+    const texture = art ? adaptivePoseArt(scene, art, pixelScale) : {key: walk.key, frame: walk.frame + row * 4};
+    sprite.setTexture(texture.key, texture.frame);
   }
   if (options.frozen && moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
     sprite.anims.stop();
-    sprite.setTexture(sheet.key, frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
+    sprite.setTexture(walk.key, walk.frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
   }
+  sprite.setDisplaySize(actorFrameWorldSize, actorFrameWorldSize);
+  sprite.setOrigin(spriteOriginX(sprite.texture.key, sprite.frame.name, sprite.flipX), downed?.originY ?? 1);
   if (grip && latest.cashInHand && !pose && !combatArt && !depositArt && !robberyArt) {
     const walkFrame = !handsBusy && typeof sprite.frame.name === 'number' ? sprite.frame.name % 4 : 0;
     const [handX, handY] = grip[walkFrame];
@@ -334,7 +345,7 @@ export function updateActorView(
     const side = sprite.flipX ? -1 : 1;
     briefcase
       .setOrigin(0.5, breachArt ? 1 : 0.12)
-      .setPosition(spriteX + (handX - 64) * sprite.scaleX * side, breachArt ? y : spriteY + (handY - 128) * sprite.scaleY)
+      .setPosition(spriteX + (handX - 64) * (actorFrameWorldSize / 128) * side, breachArt ? y : spriteY + (handY - 128) * (actorFrameWorldSize / 128))
       .setFlipX(sprite.flipX)
       .setAlpha(concealed ? 0.38 * opacity : opacity)
       .setVisible(true)

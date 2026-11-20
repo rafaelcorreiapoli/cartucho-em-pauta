@@ -56,3 +56,10 @@ https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.
   Source: https://mixkit.co/free-sound-effects/cinematic/
   License: https://mixkit.co/license/modal/sfxFree/
   Original speed; emitted only into the finished game by the existing Vite audio plugin.
+
+# Pane elétrica
+
+`pane-eletrica.wav`: “powerdown.wav”, faxcorp, Electricity Game Sound Pack.
+Fonte: https://opengameart.org/content/electricity-game-sound-pack
+Arquivo original, sem edição (aproximadamente 2 segundos).
+Licença: CC0 1.0 — https://creativecommons.org/publicdomain/zero/1.0/

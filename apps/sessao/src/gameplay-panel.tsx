@@ -417,6 +417,7 @@ export function createGameplayPanel(send:(action:GameplayAction)=>void, ownId:st
         }});
       } else if (selection?.source==='inventory') {
         const definition = objects[item.kind];
+        if (item.kind==='landMine') act('Instalar no chão','plant-mine');
         if (cashAmount(item) && state.locations.includes('treasury')) act('Entregar ao tesoureiro','deliver','treasury');
         const spyOptions = state.surveillance?.options.filter(option=>option.item===item.id) ?? [];
         spyOptions.forEach(option=>{

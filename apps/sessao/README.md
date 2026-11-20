@@ -381,3 +381,103 @@ Novas salas começam em Calote, com dois infiltrados, três NPCs, projetos autom
 O smoke `dev/automatic-projects-smoke.js` verifica o padrão do lobby, sigilo, quatro aprovações, imagens, anúncio em 800×450 e histórico. As imagens e seus prompts estão documentados em `docs/automatic-project-images.json` na raiz do repositório.
 
 A trilha de orçamento negativo no Calote é “Hitman”, de Kevin MacLeod (incompetech.com), sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), sem alterações e na velocidade original durante toda a contagem. Créditos disponíveis na entrada do jogo e em `public/assets/audio/CREDITS.md`.
+
+### Laboratório de resolução do Tiririca
+
+Com `bun run dev`, abra `/tiririca-resolution.html` para comparar a caminhada
+atual com uma recriação de maior detalhe nas três direções. A mesma página faz
+parte do build. Não muda o renderer da partida, câmera, percepção ou colisões.
+
+O laboratório carrega a referência de 128 px e somente a variante selecionada:
+128, 256 ou 512 px por quadro. A seleção automática escolhe a menor textura que
+cobre `tamanho CSS × devicePixelRatio`, limitada a 512. Uma tela pequena com alta
+densidade pode precisar da variante maior. Variantes já carregadas ficam em cache;
+a troca só ocorre após o término do carregamento. O controle manual permite
+comparar nitidez e alinhamento, inclusive com a animação pausada.
+
+`tiririca-walk-128.png` contém os primeiros 12 quadros da spritesheet original
+`sprites-expansao.png`. As versões 256/512 são uma recriação experimental por
+ImageGen em 20/11/2026, com alpha, derivadas da mesma imagem de 1448×1086 (362 px
+por quadro), normalizada para grades de 1024×768 e 2048×1536. Portanto, a textura
+512 não contém 512 px de detalhe nativo. A recriação muda alguns traços e poses;
+serve para avaliar o ganho de detalhe, não é uma substituição fiel aprovada.
+Antes de usar na partida, produzir um master realmente maior, revisar identidade,
+baseline e transições e cobrir também combate, celular, cofre e demais animações.
+
+### Revisão de todos os personagens
+
+Abra `/sprites.html` no mesmo servidor ou build. O catálogo usa os registros de
+arte do jogo: jogadores (parado, caminhada, ataque, golpe, queda, celular,
+arrombamento de cofre, dinheiro e saque), visitantes (parado, caminhada, golpe e
+queda), Federal (parado, caminhada e arrombamento de porta) e poses dos NPCs fixos.
+Mostra somente direções existentes, identificando as espelhadas. Parado usa o
+primeiro quadro da caminhada, assim como no jogo. A grade expõe todos os quadros com os recortes originais e a mesma ancoragem
+do jogo, para revelar inconsistências.
+
+Selecione personagem, pose e direção; pause, avance quadro a quadro, reduza a
+velocidade ou sobreponha o quadro anterior. O controle Repetir pode ser desligado
+para inspecionar o fim das ações pontuais. Fundos claro, escuro, mapa e grade
+ajudam a revisar transparência e bordas. O link guarda personagem/pose/direção e
+o último quadro selecionado manualmente, permitindo compartilhar a seleção.
+
+Cada pose pode ser marcada como pendente, aprovada ou revisar, com observação.
+Essa revisão cobre todas as direções da pose e fica no localStorage deste
+navegador; não é compartilhada automaticamente. Exporte o JSON para compartilhar
+os registros. Não altera nem aprova automaticamente os assets do jogo. O
+laboratório do Tiririca continua separado: nitidez validada por Rafael; pintura,
+contornos, sombras e proporções entre quadros ainda precisam de consistência.
+
+Os limites mostram o retângulo válido de cada quadro, com margem externa para
+inspecionar o atlas adjacente. Verde marca o recorte; vermelho indica que há alpha
+maior que 32 na borda. O quadro vizinho pode aparecer na margem: isso é contexto,
+não prova de vazamento. A sobreposição e os limites podem ser desligados.
+
+A caminhada do Japonês da Federal tem compensação de origem horizontal por
+quadro, compartilhada pelo Phaser e pelo laboratório. A medição dos 12 quadros
+alinha o eixo da cabeça em x=64 sem alterar pintura, posição no mundo ou movimento
+vertical. Inclui a direção espelhada e os renders de foto/câmera.
+
+Em **Lula · cofre ImageGen**, a imagem candidata é comparada à original em sincronia.
+O arquivo `lula-safe-breach-imagegen.png` preserva os três primeiros quadros e
+substitui somente a região do braço direito, mão e ferramenta do quadro 4 com
+ImageGen. Foram usadas as artes originais do Lula, Bolsonaro e Clodovil como
+referência para o padrão da ferramenta. Cabeça, tronco, braço esquerdo e pernas
+fora dessa região vêm da imagem original, sem novo desenho. A candidata tem 22 px de margem direita e ainda aguarda avaliação visual
+do gesto e da consistência da ferramenta e pintura com o elenco.
+
+O master da geração está em `dev/assets/lula-safe-breach-frame4-imagegen.png`.
+A integração offline é reproduzível com
+`uv run --with pillow python dev/lula-safe-breach-fit.py`; ela redimensiona o
+master e aplica uma máscara apenas ao braço/ferramenta, preservando os demais
+pixels e todos os outros quadros. A alteração é na imagem, sem compensação de
+coordenadas no renderer para o Lula. Continua só no laboratório antes de aplicar
+ao elenco. Links com `frame` abrem pausados nesse quadro.
+
+### Resolução adaptativa na partida
+
+O renderizador da partida usa as variantes registradas em
+`src/adaptive-character-art.ts`. Hoje, o Tiririca tem variantes de 256 e 512 px
+para parado/caminhada nas três direções (perfil esquerdo espelhado). As demais
+poses e personagens mantêm as spritesheets originais enquanto não houver
+variantes registradas. Nenhum caminho de arquivo desconhecido é sondado.
+
+A demanda é o tamanho de 37,76 unidades do quadro no mundo × escala efetiva da
+renderização. Na câmera principal, o zoom já inclui a densidade do canvas, sem
+multiplicar o DPR duas vezes. O jogo baixa somente a menor variante disponível
+que atende a essa demanda, reaproveita texturas já carregadas e usa a original
+quando 128 px bastam. Redimensionar a janela pode atualizar a escolha. Mantém o
+tamanho no mundo, posição, maleta, animação e campo de visão; normaliza a escala
+quando muda a dimensão nativa do quadro.
+
+O carregamento é feito pelo loader nativo do Phaser, sem bloquear a partida.
+Enquanto a imagem carrega, usa uma textura já disponível; após falha opcional,
+continua com a original e não repete o download a cada quadro. O carregador de
+entrada da sala acompanha somente os assets iniciais. Foto/câmera compartilham
+as mesmas regras, considerando a escala de seus próprios renders.
+
+O smoke `dev/adaptive-sprites-smoke.js` testa o renderer nativo e partidas reais:
+2560×1440 a 1× usa 256; a 2× usa 512; 390×844 a 1× mantém 128 sem baixar variantes
+maiores. Cobre mudança de escala, tamanho/posição/maleta, poses sem variante,
+carregamento em andamento e falha de download opcional sem reabrir o loader.
+A arte de alta resolução continua tendo o limite de detalhe nativo do master
+descrito no laboratório; ampliar a textura para 512 não cria detalhe adicional.

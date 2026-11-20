@@ -34,6 +34,7 @@ async (page) => {
       { ...base.people[0], character: 4, knockedOut: true, direction: 3 },
       { ...base.people[0], character: 0, visitor: 'joesley-batista', direction: 2 },
       { ...base.people[0], character: 0, visitor: 'japones-federal', direction: 1 },
+      ...[0, 1, 2, 3].map(direction => ({...base.people[0], character: 0, visitor: 'japones-federal', direction, moving: true})),
       { ...base.people[0], pocketing: true },
     ])
       comparisons.push(await compare({ ...base, people: [person] }));

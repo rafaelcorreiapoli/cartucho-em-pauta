@@ -61,7 +61,7 @@ export class PhotoRenderer {
     const width=worldWidth*scale,height=worldHeight*scale;
     const photo = frame as Photo;
     const subjects = photo.selfie ? { ...frame, people: frame.people.filter((person) => person.id !== photo.author.id) } : frame;
-    this.world.render(subjects, frame.time ?? photo.at ?? 0, true);
+    this.world.render(subjects, frame.time ?? photo.at ?? 0, true, scale);
     this.scene.children.depthSort();
     if (!this.texture) this.texture = this.scene.textures.addDynamicTexture('photography-frame', width, height) ?? undefined;
     const texture = this.texture;
