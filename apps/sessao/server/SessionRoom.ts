@@ -818,6 +818,7 @@ export class SessionRoom extends Room {
         player.phone = this.match.running ? this.gameplay.phoneActivity(player.id) : undefined;
         player.robberyTarget = exploring ? this.visitorRobberies.robberyTarget(player.id) : undefined;
         player.breachingSafe = exploring && this.gameplay.isBreachingSafe(player.id) ? true : undefined;
+        player.cloaked = this.match.running && this.gameplay.cloakActive(player,this.clock.currentTime) ? true : undefined;
         player.exposed = this.match.running ? this.gameplay.visibleItems(player.id,this.clock.currentTime) : undefined;
       }
       if (exploring) this.knockouts.update(this.gameplayWorld().players,players,

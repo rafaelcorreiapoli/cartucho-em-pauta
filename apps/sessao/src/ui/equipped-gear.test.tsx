@@ -59,3 +59,21 @@ test('night vision exposes an accessible on/off control without a cooldown',()=>
   expect(render()).toContain('aria-pressed="true"');
   expect(render()).not.toContain('Recarga');
 });
+
+test('cloak hotkey shows active duration then cooldown and becomes ready again',()=>{
+  const game=new Gameplay();
+  const player:Player={id:'cloak',nick:'Rafa',character:0,x:npcs.vendor.x,y:npcs.vendor.y+11,direction:0,moving:false};
+  const world={players:[player],now:0,voice:()=>true,earn:()=>{},office:()=>undefined,wallet:()=>10,spend:()=>true,publish:()=>{}};
+  game.act(player,{kind:'open-shop',target:'vendor'},world);
+  game.act(player,{kind:'shop-buy',target:'invisibilityCloak',token:game.view(player,world).dialogue?.token},world);
+  const tile=()=>equippedGearState(game.view(player,world))!.slots[1]!;
+  expect(tile().control).toEqual({key:'I',action:'use-cloak'});
+  game.act(player,{kind:'use-cloak'},world);
+  expect(tile()).toMatchObject({active:true,time:'10 s'});
+  expect(tile().label).toContain('Ativo: 10 s');
+  world.now=10_000;
+  expect(tile()).toMatchObject({active:false,time:'30 s'});
+  expect(tile().label).toContain('Recarga: 30 s');
+  world.now=40_000;
+  expect(tile().time).toBe('');
+});

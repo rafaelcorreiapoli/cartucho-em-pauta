@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import {spriteOriginX} from './sprite-alignment';
 import {adaptiveWalkArt, adaptivePoseArt, actorFrameWorldSize} from './adaptive-character-art';
 import { federalPatrolRules, federalPatrolSheets, federalBreachArt } from './federal-patrol';
@@ -45,6 +45,7 @@ export const decorationLabel = (item: Decoration) =>
         : objects[item.kind].name;
 
 export type ActorView = {
+  glassGlow?:Phaser.Filters.Glow;
   speedIcon:Phaser.GameObjects.Graphics;
   sprite: Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
@@ -245,7 +246,18 @@ export function updateActorView(
   const spriteX = x + (pose?.lungeX ?? (handling === 1 ? reach : handling === 3 ? -reach : 0));
   const spriteY = latest.carried ? y - 24 : y + (pose?.lungeY ?? -reach);
   const labelY = latest.carried ? y - 51 : y + 2;
-  const opacity =
+  const glass = !!latest.cloaked && !latest.knockedOut && !latest.carried;
+  if (glass && scene.game.renderer.type===Phaser.WEBGL && !view.glassGlow) {
+    sprite.enableFilters();
+    view.glassGlow = sprite.filters!.internal.addGlow(0xc4f5ff, 1.2, .8, 1, false, 10, 4);
+  } else if (!glass && view.glassGlow) {
+    sprite.filters!.internal.remove(view.glassGlow);
+    view.glassGlow = undefined;
+  }
+  if (glass) sprite.setTint(0xb9e8f2);
+  else if (view.glassGlow===undefined && sprite.tintTopLeft===0xb9e8f2) sprite.clearTint();
+  for (const part of [label,office,view.items,view.weapon,view.briefcase,view.speedIcon]) part?.setAlpha(glass ? .16 : 1);
+  const opacity = glass ? .24 :
     latest.knockedOut && !latest.carried
       ? 0.68
       : latest.recoveryProtected && (reducedMotion || Math.floor(time / 150) % 2 === 0)

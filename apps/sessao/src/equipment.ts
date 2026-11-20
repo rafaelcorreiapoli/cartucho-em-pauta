@@ -5,6 +5,7 @@ export const equipment = {
   binoculars:{slot:'vision',price:2,symbol:'🔭'},
   voiceModulator:{slot:'voice',price:3,symbol:'🎙️'},
   megaphone:{slot:'broadcast',price:4,symbol:'📣'},
+  invisibilityCloak:{slot:'armor',price:4,symbol:'◈'},
   vest:{slot:'armor',price:3,damageReduction:.35,symbol:'🛡️'},
   runningShoes:{slot:'feet',price:2,speedBonus:25,symbol:'👟'},
   briefcaseTracker:{slot:'tracker',price:2,symbol:'▣'},
@@ -26,6 +27,8 @@ export const briefcaseTracker = {duration:10_000,cooldown:30_000,price:2} as con
 export const concealment = {duration:45_000,price:2} as const;
 export const xray = {capacity:3,rechargePrice:1,duration:10_000, sweep:800} as const;
 export const xrayNeedsRecharge = (charges?:number) => (charges ?? 0)<xray.capacity;
+
+export const invisibilityCloak = {duration:10_000,cooldown:30_000} as const;
 
 export const binoculars = {duration:10_000,cooldown:30_000,multiplier:1.65} as const;
 
