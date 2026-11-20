@@ -185,3 +185,18 @@ test.each([30,45,60])('selected debt duration %s applies to the deadline and rec
   match.advance(11_000+seconds*1000);
   expect(view(match,11_000+seconds*1000)).toMatchObject({winner:'Infiltrado',reason:expect.stringContaining(`${seconds} segundos`)});
 });
+
+test('only a treasury deposit crossing out of debt announces who saved the country',()=>{
+  const match = start();
+  budget(match,-3,1_000);
+  const deposit = (amount:number,now:number)=>match.gameplayWorld(players,now,()=>false).deposit?.(ids[0],amount);
+  expect(deposit(1,2_000)).toBe(true);
+  expect(view(match,2_000).treasuryRescue).toBeUndefined();
+  expect(deposit(2,3_000)).toBe(true);
+  expect(view(match,3_000).treasuryRescue).toEqual({sequence:1,name:players[0].nick});
+  expect(deposit(1,4_000)).toBe(true);
+  expect(view(match,4_000).treasuryRescue?.sequence).toBe(1);
+  budget(match,-1,5_000);
+  expect(deposit(2,6_000)).toBe(true);
+  expect(view(match,6_000).treasuryRescue).toEqual({sequence:2,name:players[0].nick});
+});

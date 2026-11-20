@@ -385,6 +385,9 @@ async function connect(join: () => Promise<Room>) {
         'VOCÊ ESTÁ EM ÚLTIMO NA PESQUISA', 'Faça campanha para proteger seu mandato.','election');
       if (!caloteAlertLevel(view)) centerAlert.clear('calote');
       if (!lastInElection(view,joined.sessionId)) centerAlert.clear('election');
+      if (previousView && view.treasuryRescue && view.treasuryRescue.sequence!==previousView.treasuryRescue?.sequence) {
+        centerAlert.show(view.treasuryRescue.name,'SALVOU A PÁTRIA!','treasury-rescue');
+      }
       audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
       ballotCountdown.update(view.ballotCountdown);

@@ -198,6 +198,7 @@ export class PlenaryMatch {
   private gameMode:GameMode = 'classic';
   private caloteStartedAt?:number;
   private caloteDebtSeconds = 30;
+  private treasuryRescue?:{sequence:number;name:string};
 
   private changeBudget(amount:number,now:number) {
     if (this.gameMode==='calote') this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
@@ -358,6 +359,7 @@ export class PlenaryMatch {
     if (this.running || ids.length<this.minimumPlayers || ids[0]!==requester) return false;
     this.gameMode = gameMode;
     this.caloteStartedAt = undefined;
+    this.treasuryRescue = undefined;
     this.caloteDebtSeconds = isCaloteDebtSeconds(caloteDebtSeconds) ? caloteDebtSeconds : 30;
     this.automaticProjectsEnabled = automaticProjectsEnabled && gameMode==='calote' && !this.training;
     this.automaticProjects.reset(this.automaticProjectsEnabled,now,random);
@@ -616,8 +618,12 @@ export class PlenaryMatch {
           this.applyDebtPenalty(Math.min(now,this.sessionEndsAt));
           if (!this.running) return false;
         }
+        const wasNegative = this.budget<0;
         this.cash.treasury += amount;
         this.changeBudget(amount,now);
+        if (wasNegative && this.budget>=0) {
+          this.treasuryRescue = {sequence:(this.treasuryRescue?.sequence ?? 0)+1,name:players.find(player=>player.id===id)?.nick ?? id};
+        }
         if (this.treasuryBonus && now<this.treasuryBonus.until) {
           this.economy.earnXp(id,Math.min(Math.floor(amount),this.treasuryBonus.amount));
         }
@@ -1268,6 +1274,7 @@ export class PlenaryMatch {
     return {
       gameMode:this.gameMode,
       caloteDebtSeconds:this.caloteDebtSeconds,
+      treasuryRescue:this.treasuryRescue,
       caloteIn:this.gameMode==='calote' && this.running && this.caloteStartedAt!==undefined ?
         Math.max(0,Math.ceil((this.caloteStartedAt+this.caloteDebtSeconds*1000-now)/1000)) : undefined,
       grantsEnabled:this.grantsEnabled,projectVotingEnabled:this.projectVotingEnabled,electionsEnabled:this.electionsEnabled,photosEnabled:this.photosEnabled,surveillanceEnabled:this.surveillanceEnabled,decorationsEnabled:this.decorationsEnabled,portraitsAndVipEnabled:this.portraitsAndVipEnabled,
