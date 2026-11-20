@@ -3,13 +3,18 @@ import {GameAudio} from './game-audio';
 import {sessionVerdict} from './session-verdict';
 
 function fixture() {
-  const sources:{buffer?:unknown;loop:boolean;start:()=>void;stop:()=>void;connect:(node:unknown)=>unknown}[] = [];
-  const gain = ()=>({gain:{value:1,setTargetAtTime(){},setValueAtTime(){},linearRampToValueAtTime(){},cancelScheduledValues(){}},connect(){},disconnect(){}});
+  const sources:{buffer?:unknown;loop:boolean;starts:number[][];stopTimes:(number|undefined)[];start:(...args:number[])=>void;stop:(time?:number)=>void;connect:(node:unknown)=>unknown}[] = [];
+  const gain = ()=>({gain:{value:1,events:[] as {kind:string;value:number;time:number}[],setTargetAtTime(){},
+    setValueAtTime(value:number,time:number){this.events.push({kind:'set',value,time});},
+    linearRampToValueAtTime(value:number,time:number){this.events.push({kind:'ramp',value,time});},
+    cancelScheduledValues(){}},connect(){},disconnect(){}});
   const audio = new GameAudio();
   Reflect.set(audio,'context',{
     currentTime:1,createGain:gain,
     createBufferSource() {
-      const source = {loop:false,playbackRate:{value:1},stops:0,connect(node:unknown){return node;},disconnect(){},start(){},stop(){this.stops++;}};
+      const source = {loop:false,playbackRate:{value:1},stops:0,starts:[] as number[][],stopTimes:[] as (number|undefined)[],
+        connected:undefined as unknown,connect(node:unknown){this.connected = node;return node;},disconnect(){},
+        start(...args:number[]){this.starts.push(args);},stop(time?:number){this.stops++;this.stopTimes.push(time);}};
       sources.push(source);
       return source;
     },
@@ -19,7 +24,7 @@ function fixture() {
   Reflect.set(audio,'playing',true);
   Reflect.set(audio,'score','music');
   Reflect.set(audio,'matchTrack','covertAffair');
-  const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key}]));
+  const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key,duration:120}]));
   Reflect.set(audio,'buffers',buffers);
   return {audio,sources,buffers};
 }
@@ -71,7 +76,7 @@ test('cancelling a Federal transfer stops the siren without playing arrival audi
 
 test('campaign applause plays as an effect and respects mute and SFX volume',()=>{
   const {audio,sources,buffers} = fixture();
-  buffers.set('applause',{key:'applause'});
+  buffers.set('applause',{key:'applause',duration:1});
   Reflect.set(audio,'effectsGain',{gain:{setTargetAtTime(){}},connect(){},disconnect(){}});
   const context = Reflect.get(audio,'context');
   const createSource = context.createBufferSource.bind(context);
@@ -130,7 +135,87 @@ test('a selected track still loading does not fall back to the old music',()=>{
   audio.setScore('music');
   expect(sources).toHaveLength(1);
   expect(Reflect.get(audio,'music')).toBeUndefined();
-  buffers.set('covertAffair',{key:'covertAffair'});
+  buffers.set('covertAffair',{key:'covertAffair',duration:120});
   Reflect.get(audio,'startMusic').call(audio);
   expect(sources.at(-1)?.buffer).toBe(buffers.get('covertAffair'));
+});
+
+test.each(['covertAffair','spyGlass'] as const)('%s resumes after repeated Calote warnings while Calote restarts',track=>{
+  const {audio,sources} = fixture();
+  const context = Reflect.get(audio,'context');
+  Reflect.set(audio,'matchTrack',track);
+  Reflect.get(audio,'startMusic').call(audio);
+  expect(sources[0].starts).toEqual([[1,0]]);
+  context.currentTime = 11;
+  audio.setCaloteDanger(20);
+  expect(sources[0].stopTimes).toEqual([11.7]);
+  expect(sources[1].starts).toEqual([[11.7,0]]);
+  context.currentTime = 21;
+  audio.setCaloteDanger(undefined);
+  expect(sources[2].starts[0][0]).toBeCloseTo(21.7);
+  expect(sources[2].starts[0][1]).toBeCloseTo(10.7);
+  context.currentTime = 31;
+  audio.setCaloteDanger(20);
+  expect(sources[3].starts[0][1]).toBe(0);
+  context.currentTime = 41;
+  audio.setCaloteDanger(undefined);
+  expect(sources[4].starts[0][1]).toBeCloseTo(20.7);
+});
+
+test('lobby fades out completely before the match fades in',()=>{
+  const {audio,sources} = fixture();
+  const context = Reflect.get(audio,'context');
+  audio.setScore('lobbyMusic');
+  context.currentTime = 8;
+  audio.setScore('music');
+  expect(sources[0].stopTimes).toEqual([8.7]);
+  const outgoing = Reflect.get(sources[0],'connected').gain.events;
+  expect(outgoing.slice(-2)).toEqual([{kind:'set',value:1,time:8},{kind:'ramp',value:0,time:8.7}]);
+  expect(sources[1].starts).toEqual([[8.7,0]]);
+  const incoming = Reflect.get(sources[1],'connected').gain.events;
+  expect(incoming.at(-2)).toEqual({kind:'set',value:0,time:8.7});
+  expect(incoming.at(-1).kind).toBe('ramp');
+  expect(incoming.at(-1).value).toBe(1);
+  expect(incoming.at(-1).time).toBeCloseTo(9.4);
+});
+
+test('rapid reversals cancel a pending track and preserve the outgoing fade',()=>{
+  const {audio,sources} = fixture();
+  const context = Reflect.get(audio,'context');
+  Reflect.get(audio,'startMusic').call(audio);
+  context.currentTime = 11;
+  audio.setCaloteDanger(20);
+  context.currentTime = 11.2;
+  audio.setCaloteDanger(undefined);
+  expect(sources[1].stopTimes).toEqual([11.2]);
+  expect(sources[2].starts[0][0]).toBeCloseTo(11.7);
+  expect(sources[2].starts[0][1]).toBeCloseTo(10.7);
+  const events = Reflect.get(sources[1],'connected').gain.events;
+  expect(events.at(-2).value).toBe(0);
+});
+
+test('resuming wraps at the track duration and a new match clears the saved position',()=>{
+  const {audio,sources,buffers} = fixture();
+  const context = Reflect.get(audio,'context');
+  buffers.set('covertAffair',{key:'covertAffair',duration:10});
+  Reflect.get(audio,'startMusic').call(audio);
+  context.currentTime = 26;
+  audio.setCaloteDanger(20);
+  context.currentTime = 30;
+  audio.setCaloteDanger(undefined);
+  expect(sources.at(-1)!.starts[0][1]).toBeCloseTo(5.7);
+  context.currentTime = 35;
+  audio.setScore('lobbyMusic');
+  context.currentTime = 40;
+  audio.setScore('music');
+  expect(sources.at(-1)!.starts[0][1]).toBe(0);
+});
+
+test('leaving fades the music out instead of forcing an immediate stop',()=>{
+  const {audio,sources} = fixture();
+  Reflect.get(audio,'startMusic').call(audio);
+  Reflect.get(audio,'context').currentTime = 5;
+  audio.leave();
+  expect(sources[0].stopTimes).toEqual([5.7]);
+  expect(Reflect.get(audio,'positions').size).toBe(0);
 });
