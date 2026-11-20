@@ -27,6 +27,19 @@ async page => {
   await page.screenshot({animations:'disabled',path:'/tmp/sessao-exploration-map.png'});
   await page.keyboard.up('Tab');
   await plan.waitFor({state:'hidden'});
+  // Running with Shift must not turn the map shortcut into browser focus navigation.
+  await page.locator('#map').focus();
+  await page.keyboard.down('Shift');
+  for (let i=0;i<3;i++) {
+    await page.keyboard.down('Tab');
+    await plan.waitFor();
+    if (!await page.evaluate(()=>document.hasFocus() && document.activeElement?.id==='map')) {
+      throw Error('Shift+Tab deve manter o foco no mapa do jogo.');
+    }
+    await page.keyboard.up('Tab');
+    await plan.waitFor({state:'hidden'});
+  }
+  await page.keyboard.up('Shift');
   await page.keyboard.down('Tab');
   await plan.waitFor();
   await page.evaluate(()=>window.dispatchEvent(new Event('blur')));
