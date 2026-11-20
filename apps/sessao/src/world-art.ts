@@ -79,6 +79,7 @@ const briefcaseGrip = {
 } satisfies Record<(typeof NAMES)[number],readonly [WalkGrips,WalkGrips,WalkGrips]>;
 
 export function preloadWorldArt(scene: Phaser.Scene) {
+  scene.load.svg('cloak-presence',import.meta.env.BASE_URL+'assets/capa-presenca.svg',{width:256,height:256});
   for (const { texture, sprite } of Object.values(installationArt)) {
     scene.load.image(texture, import.meta.env.BASE_URL + 'assets/' + sprite);
   }
@@ -249,15 +250,15 @@ export function updateActorView(
   const glass = !!latest.cloaked && !latest.knockedOut && !latest.carried;
   if (glass && 'gl' in scene.game.renderer && !view.glassGlow) {
     sprite.enableFilters();
-    view.glassGlow = sprite.filters!.internal.addGlow(0xc4f5ff, 1.2, .8, 1, false, 10, 4);
+    view.glassGlow = sprite.filters!.internal.addGlow(0xc4f5ff, 1.1, .5, 1, true, 10, 4);
   } else if (!glass && view.glassGlow) {
     sprite.filters!.internal.remove(view.glassGlow);
     view.glassGlow = undefined;
   }
   if (glass) sprite.setTint(0xb9e8f2);
   else if (view.glassGlow===undefined && sprite.tintTopLeft===0xb9e8f2) sprite.clearTint();
-  for (const part of [label,office,view.items,view.weapon,view.briefcase,view.speedIcon]) part?.setAlpha(glass ? .16 : 1);
-  const opacity = glass ? .24 :
+  for (const part of [label,office,view.items,view.weapon,view.briefcase,view.speedIcon]) part?.setAlpha(glass ? 0 : 1);
+  const opacity = glass ? .075 :
     latest.knockedOut && !latest.carried
       ? 0.68
       : latest.recoveryProtected && (reducedMotion || Math.floor(time / 150) % 2 === 0)
@@ -348,6 +349,12 @@ export function updateActorView(
     sprite.anims.stop();
     sprite.setTexture(walk.key, walk.frame + row * 4 + (Math.floor((time * 9) / 1000) % 4));
   }
+  // Every wearer shares this featureless shape: no face, hair or outfit can identify them.
+  if (glass) {
+    sprite.anims.stop();
+    sprite.setTexture('cloak-presence');
+    if (moving && !reducedMotion) sprite.y += Math.sin(time/110)*.5;
+  }
   sprite.setDisplaySize(actorFrameWorldSize, actorFrameWorldSize);
   sprite.setOrigin(spriteOriginX(sprite.texture.key, sprite.frame.name, sprite.flipX), downed?.originY ?? 1);
   if (grip && latest.cashInHand && !pose && !combatArt && !depositArt && !robberyArt) {
@@ -359,7 +366,7 @@ export function updateActorView(
       .setOrigin(0.5, breachArt ? 1 : 0.12)
       .setPosition(spriteX + (handX - 64) * (actorFrameWorldSize / 128) * side, breachArt ? y : spriteY + (handY - 128) * (actorFrameWorldSize / 128))
       .setFlipX(sprite.flipX)
-      .setAlpha(concealed ? 0.38 * opacity : opacity)
+      .setAlpha(glass ? 0 : concealed ? 0.38 * opacity : opacity)
       .setVisible(true)
       .setDepth(spriteDepth + 0.1);
   } else view.briefcase?.setVisible(false);

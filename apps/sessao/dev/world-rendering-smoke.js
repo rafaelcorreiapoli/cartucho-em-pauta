@@ -35,17 +35,25 @@ async (page) => {
     }
     const base = structuredClone(qa.frame);
     const comparisons = [await compare(base)];
+    let cloakedImage;
     for (const person of [
       { ...base.people[0], phone: 'open', cashInHand: false },
       { ...base.people[0], cloaked: true },
+      { ...base.people[0], character: 4, cloaked: true },
       {...base.people[0],speedModifier:{factor:1.3,remainingMs:5000}},
       { ...base.people[0], character: 4, knockedOut: true, direction: 3 },
       { ...base.people[0], character: 0, visitor: 'joesley-batista', direction: 2 },
       { ...base.people[0], character: 0, visitor: 'japones-federal', direction: 1 },
       ...[0, 1, 2, 3].map(direction => ({...base.people[0], character: 0, visitor: 'japones-federal', direction, moving: true})),
       { ...base.people[0], pocketing: true },
-    ])
+    ]) {
       comparisons.push(await compare({ ...base, people: [person] }));
+      if (person.cloaked) {
+        const current = photo.toDataURL();
+        if (cloakedImage && current !== cloakedImage) throw new Error('Cloak reveals character identity');
+        cloakedImage = current;
+      }
+    }
     const safeFrame={...base,center:{x:qa.safe.safe.x,y:qa.safe.safe.y+19},camera:{...qa.safe.safe},people:[],ground:[],openSafes:[qa.safe.id]};
     comparisons.push(await compare(safeFrame));
     const openSafe=photo.toDataURL();
