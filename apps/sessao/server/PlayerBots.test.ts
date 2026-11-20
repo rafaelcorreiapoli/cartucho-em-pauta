@@ -1,4 +1,4 @@
-import {expect,test} from 'bun:test';
+import {expect,test,spyOn} from 'bun:test';
 import {terminals,type GameplayEvent} from '../src/gameplay';
 import {privateOffices} from '../src/private-offices';
 import {characterStats} from '../src/character-stats';
@@ -14,7 +14,7 @@ import {StationCooldowns} from './StationCooldowns';
 
 const host:Player = {id:'host',nick:'Bot 1',character:0,x:140,y:146,direction:0,moving:false};
 
-function gameWithBots(random:()=>number) {
+function gameWithBots(random:()=>number,featuresEnabled=true,projectVotingEnabled=featuresEnabled) {
   const human = {...host};
   const controls = new Map<string,ControlState>([[human.id,{player:human,route:[],ack:0}]]);
   const bots = new PlayerBots();
@@ -23,7 +23,9 @@ function gameWithBots(random:()=>number) {
   const cooldowns = new StationCooldowns();
   const match = new PlenaryMatch(MIN_PLAYERS,cooldowns);
   const gameplay = new Gameplay(cooldowns,()=>match.powerOut);
-  expect(match.start(human.id,players,0,random)).toBe(true);
+  expect(match.start(human.id,players,0,random,1,false,featuresEnabled,projectVotingEnabled,featuresEnabled,featuresEnabled,featuresEnabled,featuresEnabled,featuresEnabled)).toBe(true);
+  Object.assign(gameplay,{phoneGamesEnabled:featuresEnabled,projectVotingEnabled,
+    photosEnabled:featuresEnabled,surveillanceEnabled:featuresEnabled,decorationsEnabled:featuresEnabled,portraitsAndVipEnabled:featuresEnabled});
   gameplay.reset(0,random,players,random);
   for (const player of players) Object.assign(player,gameplay.officeSpawn(player.id));
   const ids = [...controls.keys()];
@@ -257,4 +259,23 @@ test('training guide approaches only for interactions and keeps space around the
   expect(destination).toBeDefined();
   expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeGreaterThanOrEqual(18);
   expect(Math.hypot(destination.x-human.x,destination.y-human.y)).toBeLessThanOrEqual(24);
+});
+
+test.each([true,false])('bots skip document filing when projects are disabled (other features=%s)',featuresEnabled=>{
+  const {advance,gameplay,worldAt,players,human,view,events} = gameWithBots(()=>0,featuresEnabled,false);
+  const bots = players.filter(player=>player.bot);
+  const actions = spyOn(gameplay,'act');
+  for (let now=35_000;now<=150_000;now+=5_000) {
+    advance(now);
+    for (const bot of bots) {
+      expect(gameplay.view(bot,worldAt(now)).inventory.some(item=>item.document)).toBe(false);
+      if (!featuresEnabled) expect(gameplay.phoneActivity(bot.id)).not.toBe('game');
+    }
+  }
+  expect(view(human.id,150_000).projectVotingEnabled).toBe(false);
+  expect(view(human.id,150_000).project).toBeUndefined();
+  expect(events.some(event=>event.type==='signed')).toBe(false);
+  expect(actions.mock.calls.some(([,action])=>action.kind==='supply' && action.place==='secretary' ||
+    action.kind==='sign-request' || action.kind==='talk' && action.target==='protocol')).toBe(false);
+  actions.mockRestore();
 });
