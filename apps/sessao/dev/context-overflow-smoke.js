@@ -98,10 +98,24 @@ async page => {
   const bagSlots = bag.locator('.bag-storage .congress-bag > .item-tile');
   if (await bagSlots.count()!==9) throw Error('O inventário deve ter nove slots.');
   if (await bag.getByText(/\d+\s*\/\s*9 slots/).count()) throw Error('O contador de slots ainda está visível.');
-  const storage = await bag.locator('.bag-storage').boundingBox();
+  const storage = await bag.locator('.congress-bag').boundingBox();
   const lastSlot = await bagSlots.last().boundingBox();
   if (!storage || !lastSlot || Math.abs(storage.y+storage.height-(lastSlot.y+lastSlot.height))>5) {
-    throw Error('A terceira linha deve chegar ao fim da área do inventário.');
+    throw Error('A terceira linha deve preencher a grade de itens.');
+  }
+  const cashSlots = bag.locator('.bag-cash-slots button');
+  if (await cashSlots.count()!==10) throw Error('As dez maletas devem aparecer como ícones.');
+  await bag.getByText('Maletas 10/10',{exact:true}).waitFor();
+  const cashGrid = await cashSlots.evaluateAll(buttons=>buttons.map(button=>{
+    const rect = button.getBoundingClientRect();
+    return {x:rect.x,y:rect.y,bottom:rect.bottom,icon:!!button.querySelector('img'),label:button.getAttribute('aria-label')};
+  }));
+  if (new Set(cashGrid.map(rect=>rect.y)).size!==2 ||
+      new Set(cashGrid.slice(0,5).map(rect=>rect.y)).size!==1 ||
+      new Set(cashGrid.slice(5).map(rect=>rect.y)).size!==1 ||
+      cashGrid[5].y<cashGrid[0].bottom || cashGrid[0].y<lastSlot.y+lastSlot.height ||
+      cashGrid.some(rect=>!rect.icon || !rect.label?.includes('R$'))) {
+    throw Error('As maletas devem formar duas fileiras de cinco ícones, abaixo dos itens.');
   }
   const bagGeometry = ()=>Promise.all([bag.boundingBox(),bag.locator('.bag-detail').boundingBox(),
     bag.locator('.bag-preview').boundingBox()]);
