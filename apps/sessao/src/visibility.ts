@@ -1,6 +1,6 @@
 import {walls,type Motion,type Rect} from './map';
 
-export function wallVision(origin:Motion,radius:number) {
+export function wallVision(origin:Motion,radius:number,showWallFaces=false) {
   const nearby = [...walls,...(origin.barriers ?? [])].filter(([x,y,w,h])=>
     x<=origin.x+radius && x+w>=origin.x-radius && y<=origin.y+radius && y+h>=origin.y-radius);
   const angles = Array.from({length:48},(_,index)=>index*Math.PI/24-Math.PI);
@@ -11,16 +11,20 @@ export function wallVision(origin:Motion,radius:number) {
   return angles.sort((a,b)=>a-b).map(angle=>{
     const dx = Math.cos(angle), dy = Math.sin(angle);
     let distance = radius;
-    for (const wall of nearby) distance = Math.min(distance,wallEntry(origin,dx,dy,wall));
+    for (const wall of nearby) distance = Math.min(distance,wallEntry(origin,dx,dy,wall,showWallFaces));
     return {x:dx*distance,y:dy*distance,dx,dy};
   });
 }
 
-function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect) {
+function wallEntry(origin:Motion,dx:number,dy:number,[x,y,w,h]:Rect,showWallFaces:boolean) {
   const [nearX,farX] = slab(origin.x,dx,x,x+w);
   const [nearY,farY] = slab(origin.y,dy,y,y+h);
   const near = Math.max(nearX,nearY,0);
-  return near<=Math.min(farX,farY) ? near : Infinity;
+  const far = Math.min(farX,farY);
+  if (near>far) return Infinity;
+  // Reveal thickness across the broad face, never along a divider viewed end-on.
+  const broadFace = w>=h ? nearY>=nearX : nearX>=nearY;
+  return showWallFaces && broadFace ? Math.max(near,far) : near;
 }
 
 function slab(origin:number,direction:number,min:number,max:number) {

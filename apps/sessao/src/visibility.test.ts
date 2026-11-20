@@ -104,3 +104,23 @@ test('the relocated services can all be reached from the Secretariat',()=>{
     expect(findRoute(stations.secretary,point).at(-1)).toEqual(point);
   }
 });
+
+
+test('visual light reveals the wall above the player without exposing floor behind it',()=>{
+  const origin = {x:140,y:146,barriers:[[120,130,40,8]] as const};
+  const north = wallVision(origin,35,true).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+  expect(north?.y).toBeCloseTo(-16);
+  expect(wallBetween(origin,{x:140,y:125})).toBe(true);
+  expect(characterVisible(origin,{x:140,y:125},35)).toBe(false);
+  const limited = wallVision(origin,10,true).find(ray=>Math.abs(ray.dx)<1e-8 && ray.dy<0);
+  expect(limited?.y).toBeCloseTo(-10);
+});
+
+test('visual light reveals vertical thickness but stops at walls viewed end-on',()=>{
+  const origin = {x:140,y:146,barriers:[[153,135,3,25]] as const};
+  const east = wallVision(origin,60,true).find(ray=>Math.abs(ray.dy)<1e-8 && ray.dx>0);
+  expect(east?.x).toBeCloseTo(16);
+  const endOn = wallVision({x:140,y:146,barriers:[[153,144,45,4]]},60,true)
+    .find(ray=>Math.abs(ray.dy)<1e-8 && ray.dx>0);
+  expect(endOn?.x).toBeCloseTo(13);
+});
