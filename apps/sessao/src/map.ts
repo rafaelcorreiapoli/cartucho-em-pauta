@@ -42,7 +42,7 @@ const obstacles = [
 ];
 
 export type MovementModifier = {factor:number; remainingMs:number};
-export type Player = Motion & { id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; breachingSafe?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; interactionSpeedBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
+export type Player = Motion & { id: string; nick: string; npc?:true; visitor?:import('./visitors').VisitorId; bot?:true; former?:boolean; character: number; direction: number; moving: boolean; handlingObject?:number; breachingSafe?:true; breachingDoor?:true; robberyTarget?:Motion & {direction:number}; pocketing?:boolean; cashInHand?:true; speed?:number; publicTransport?:true; speedModifier?:MovementModifier; staminaRegenModifier?:MovementModifier; stamina?:number; staminaMax?:number; runningShoes?:true; interactionSpeedBonus?:number; sprinting?:true; knockedOut?:boolean; carrying?:true; carried?:true; swing?:WeaponSwing; hit?:number; recoveryProtected?:true; health?:number; phone?:import('./gameplay').PhoneActivity; exposed?:import('./gameplay').ExposedItem[] };
 export type Motion = { x: number; y: number; barriers?:readonly Rect[] };
 export const idle = { x: 0, y: 0 };
 

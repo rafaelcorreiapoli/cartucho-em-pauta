@@ -1,3 +1,5 @@
+import {FederalPatrol} from './FederalPatrol';
+import {federalPatrolRules} from '../src/federal-patrol';
 import {canReachPerson} from '../src/interactions';
 import { extinguisherSpawns } from '../src/fire';
 import { powerRules } from '../src/power';
@@ -61,6 +63,7 @@ export class Gameplay {
   private lastPolicyHeal = 0;
   private roomSamples = new Map<string,{room:string; at:number; x:number; y:number; active:boolean; plenaryVisit:boolean; concealedCash:boolean; securityPeer?:string; vip?:{id:number; peer:string}}>();
   private privateOffices = new PrivateOffices();
+  private readonly federalPatrol = new FederalPatrol(this.privateOffices);
   private items = new Map<number,Item>();
   private requests = new Map<number,Request>();
   private phone = new PhoneSession();
@@ -196,6 +199,7 @@ export class Gameplay {
     this.roomSamples.clear();
     this.lastPolicyHeal = now;
     this.privateOffices.reset(players,officeRandom);
+    this.federalPatrol.reset(false);
     this.syncOfficeDoors(players,now);
     this.album.reset();
     this.exposed.clear();
@@ -341,6 +345,7 @@ export class Gameplay {
   }
 
   healthFraction(player:Player, now:number) {
+    if (player.visitor===federalPatrolRules.skin) return 1;
     const {hp,max} = this.combat.view(player,now);
     return hp/max;
   }
@@ -489,6 +494,30 @@ export class Gameplay {
     if (kind==='xray') data.charges = xray.capacity;
     this.items.set(data.id,{data,place});
     return data;
+  }
+
+  get federalPlayers() { return this.federalPatrol.players; }
+  enableFederalPatrol(enabled:boolean) { this.federalPatrol.reset(enabled); }
+
+  tickFederalPatrol(world:GameplayWorld,seconds:number,active:boolean,random = Math.random) {
+    this.federalPatrol.tick(world.now,seconds,active,office=>{
+      for (const player of world.players) {
+        const channel = this.privateOffices.channels.get(player.id);
+        if (channel?.kind!=='office-cash' || channel.ends<=world.now || channel.office.layout.id!==office.id ||
+            roomAt(player)!==office.name || player.moving || player.knockedOut || player.carried ||
+            player.x!==channel.origin.x || player.y!==channel.origin.y || world.present?.(player.id)===false) continue;
+        if (!world.detain?.(player.id,federalPatrolRules.detentionMs)) continue;
+        this.privateOffices.channels.delete(player.id);
+        player.pocketing = undefined;
+        for (const item of this.inventory(player.id)) {
+          if (item.data.kind!=='briefcase') continue;
+          world.cashFlow?.('expired',cashAmount(item.data) ?? 0);
+          this.remove(item);
+        }
+        world.feedback?.(player.id,'Flagrante! Suas maletas foram apreendidas. Solitária por 10 segundos.');
+      }
+    },random);
+    this.syncOfficeDoors(world.players,world.now);
   }
 
   hasOfficeChannel(id:string) { return this.privateOffices.channels.has(id); }
@@ -645,7 +674,7 @@ export class Gameplay {
         this.transport.detach(player,world);
         publishGameplay(world,player,'character-recovered');
       },
-      canHit:player=>world.present?.(player.id)!==false,
+      canHit:player=>player.visitor!==federalPatrolRules.skin && world.present?.(player.id)!==false,
       armored:player=>!!this.wearing(player.id,'vest'),
       hit:(attacker,target,damage)=>{
         const details = {target:target.id,kind:attacker.swing?.weapon,
@@ -1406,8 +1435,7 @@ export class Gameplay {
         world.feedback?.(id,'Dinheiro embolsado.');
       } else {
         if (target==='door') {
-          office.doorUntil = world.now+officeRules.breachMs;
-          office.doorBreachedBy = id;
+          offices.breachDoor(office.layout.id,world.now,id);
         } else {
           office.cabinetUntil = world.now+officeRules.breachMs;
           office.cabinetBreachedBy = id;
