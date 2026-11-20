@@ -128,7 +128,7 @@ test('repeat purchases stack in the chosen hotbar slot and planting uses one min
   Object.assign(owner,{x:180,y:146});
   plant();
   expect(game.view(owner,world).inventory.find(entry=>entry.id===item.id)?.quantity).toBe(1);
-  expect(reconcileHotbar(hotbar,game.view(owner,world).inventory)).toEqual(hotbar);
+  expect(reconcileHotbar(hotbar,game.view(owner,world).inventory)).toEqual([...hotbar]);
   const mines = game.view(owner,world).mines!;
   expect(mines).toHaveLength(2);
   expect(new Set(mines.map(mine=>mine.id)).size).toBe(2);
