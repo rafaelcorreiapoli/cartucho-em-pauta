@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {caloteAlertLevel,lastInElection} from './center-alert';
+import {caloteAlertLevel,lastInElection,cassationAnnounced} from './center-alert';
 import {PlenaryMatch} from '../../server/PlenaryMatch';
 import type {ElectionView} from '../elections';
 
@@ -20,4 +20,20 @@ test('election warning follows actual last-place risk and ignores spectators and
   expect(lastInElection(view,'spectator')).toBe(false);
   expect(lastInElection({...view,phase:'finished'},'a')).toBe(false);
   expect(lastInElection({...view,election:{...election,polls:polls.slice(0,3)}},'a')).toBe(false);
+});
+
+test('cassation summons is global, once per call, and does not replay on reconnect or ballot opening',()=>{
+  const previous = {...base,phase:'negotiation' as const};
+  const called = {...previous,cassationIn:20};
+  const ballot = {...previous,phase:'hearing' as const,cassation:{candidates:[],eligible:false,voted:0,electorate:3,quorum:2}};
+  expect(cassationAnnounced(called,previous)).toBe(true);
+  expect(cassationAnnounced({...called,cassationIn:19},called)).toBe(false);
+  expect(cassationAnnounced(ballot,called)).toBe(false);
+  expect(cassationAnnounced(ballot,{...called,cassationIn:0})).toBe(false);
+  expect(cassationAnnounced(ballot,previous)).toBe(true);
+  expect(cassationAnnounced(ballot,ballot)).toBe(false);
+  expect(cassationAnnounced(called,undefined)).toBe(false);
+  expect(cassationAnnounced(ballot,undefined)).toBe(false);
+  expect(cassationAnnounced({...called,phase:'finished'},previous)).toBe(false);
+  expect(cassationAnnounced(called,{...previous,cassationResult:{text:'Encerrada'}})).toBe(true);
 });

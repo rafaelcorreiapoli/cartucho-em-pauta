@@ -3,6 +3,7 @@ import type {Plugin} from 'vite';
 // Mixkit permits incorporation in the game, but not redistribution of the samples
 // as source assets. Vite emits them into the finished game and serves them in dev.
 const samples = {
+  'cassation-summons.mp3':'https://assets.mixkit.co/active_storage/sfx/677/677-preview.mp3',
   'federal-siren.mp3':'https://assets.mixkit.co/active_storage/sfx/1643/1643-preview.mp3',
   'federal-trombone.mp3':'https://assets.mixkit.co/active_storage/sfx/471/471-preview.mp3',
 };

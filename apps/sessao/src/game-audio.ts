@@ -6,7 +6,7 @@ const files = {
   lobbyMusic:'corredores-de-brasilia.mp3',
   covertAffair:'covert-affair.mp3', spyGlass:'spy-glass.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
-  caloteMusic:'hitman.mp3',
+  caloteMusic:'hitman.mp3', cassationMusic:'the-escalation.mp3', cassationSummons:'cassation-summons.mp3',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
   summons:'convocacao.wav', approved:'aprovado.wav', rejected:'rejeitado.wav',
   election:'eleicao.wav', alert:'alerta.wav', end:'fim.wav', cash:'caixa.wav', pickup:'item-obtido.wav',
@@ -20,7 +20,7 @@ const files = {
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
-type Score = 'lobbyMusic'|'music'|'hearingMusic'|'caloteMusic'|'victory'|'defeat';
+type Score = 'lobbyMusic'|'music'|'hearingMusic'|'caloteMusic'|'cassationMusic'|'victory'|'defeat';
 const matchTracks = ['covertAffair','spyGlass'] as const;
 type MatchTrack = typeof matchTracks[number];
 type MusicTrack = Score | MatchTrack;
@@ -151,7 +151,7 @@ export class GameAudio {
 
   private startMusic() {
     const requested = this.score==='lobbyMusic' || isFinalScore(this.score) ? this.score :
-      this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'covertAffair' : this.score;
+      this.score==='cassationMusic' ? 'cassationMusic' : this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'covertAffair' : this.score;
     // Wait for the selected track instead of briefly playing a different one while loading.
     const score = requested;
     if (!this.buffers.has(requested) && this.music?.score!==requested) this.stopMusic(MUSIC_FADE);
