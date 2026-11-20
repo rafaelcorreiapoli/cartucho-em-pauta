@@ -19,6 +19,7 @@ const firstFilingDelayMs = 30_000;
 const subsequentFilingDelayMs = 120_000;
 const walkingSpeedFactor = .8;
 const safeDifference = 6;
+const infiltratorVoteChance = .65;
 
 type Bot = {
   control:ControlState;
@@ -110,7 +111,10 @@ export class PlayerBots {
         if (ballot?.eligible && ballot.choice===undefined && view.remaining<=HEARING_MS/1000-2-bot.index*2) {
           const candidates = ballot.candidates.filter(candidate=>candidate.id!==id);
           const suspect = candidates.find(candidate=>candidate.name===bot.suspicion);
-          const target = suspect ?? candidates[Math.floor(Math.random()*candidates.length)];
+          const infiltrators = candidates.filter(candidate=>world.isInfiltrator?.(candidate.id));
+          const prioritizeInfiltrator = infiltrators.length>0 && Math.random()<infiltratorVoteChance;
+          const pool = prioritizeInfiltrator ? infiltrators : candidates;
+          const target = !prioritizeInfiltrator && suspect ? suspect : pool[Math.floor(Math.random()*pool.length)];
           match.castCassation(id,target?.id ?? null,now);
         }
         continue;

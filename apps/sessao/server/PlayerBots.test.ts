@@ -288,32 +288,35 @@ test.each([true,false])('bots skip document filing when projects are disabled (o
   expect(gameplay.hasSafeInsurance(bot.id)).toBe(true);
 });
 
-test('bots vote once in cassation, prefer their observed suspect and never vote for themselves',()=>{
-  const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
-  Reflect.set(match,'cassationReadyAt',0);
-  expect(match.callCassation({...human,...stations.audit},1_000)).toBeUndefined();
-  expect(view(human.id,1_000).cassationIn).toBe(5);
-  match.advance(5_999);
-  expect(view(human.id,5_999).cassation).toBeUndefined();
-  match.advance(6_000);
-  expect(view(human.id,6_000).cassation).toBeDefined();
-  const first = players.find(player=>player.bot)!;
-  const botStates = Reflect.get(bots,'bots') as Map<string,{suspicion?:string}>;
-  botStates.get(first.id)!.suspicion = human.nick;
-  const tick = (now:number)=>bots.tick(match,gameplay,worldAt(now),()=>true,now);
-  tick(6_000);
-  expect(view(human.id,6_000).cassation?.voted).toBe(0);
-  tick(18_000);
-  const votes = view(human.id,18_000).cassation!.votes!;
-  expect(votes).toHaveLength(5);
-  expect(votes.find(vote=>vote.voter===first.id)?.candidate).toBe(human.id);
-  const candidates = view(human.id,18_000).cassation!.candidates.map(candidate=>candidate.id);
-  for (const vote of votes) {
-    expect(vote.candidate).not.toBe(vote.voter);
-    expect(candidates).toContain(vote.candidate!);
-  }
-  tick(19_000);
-  expect(view(human.id,19_000).cassation?.votes).toEqual(votes);
+test('bots vote once in cassation, can follow an observed suspect and never vote for themselves',()=>{
+  const random = spyOn(Math,'random').mockReturnValue(.99);
+  try {
+    const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
+    Reflect.set(match,'cassationReadyAt',0);
+    expect(match.callCassation({...human,...stations.audit},1_000)).toBeUndefined();
+    expect(view(human.id,1_000).cassationIn).toBe(5);
+    match.advance(5_999);
+    expect(view(human.id,5_999).cassation).toBeUndefined();
+    match.advance(6_000);
+    expect(view(human.id,6_000).cassation).toBeDefined();
+    const first = players.find(player=>player.bot)!;
+    const botStates = Reflect.get(bots,'bots') as Map<string,{suspicion?:string}>;
+    botStates.get(first.id)!.suspicion = human.nick;
+    const tick = (now:number)=>bots.tick(match,gameplay,worldAt(now),()=>true,now);
+    tick(6_000);
+    expect(view(human.id,6_000).cassation?.voted).toBe(0);
+    tick(18_000);
+    const votes = view(human.id,18_000).cassation!.votes!;
+    expect(votes).toHaveLength(5);
+    expect(votes.find(vote=>vote.voter===first.id)?.candidate).toBe(human.id);
+    const candidates = view(human.id,18_000).cassation!.candidates.map(candidate=>candidate.id);
+    for (const vote of votes) {
+      expect(vote.candidate).not.toBe(vote.voter);
+      expect(candidates).toContain(vote.candidate!);
+    }
+    tick(19_000);
+    expect(view(human.id,19_000).cassation?.votes).toEqual(votes);
+  } finally { random.mockRestore(); }
 });
 
 test('cassation bots skip disconnected voters and candidates even if they were suspected',()=>{
@@ -329,4 +332,37 @@ test('cassation bots skip disconnected voters and candidates even if they were s
   const votes = view(human.id,18_000).cassation!.votes!;
   expect(votes).toHaveLength(4);
   expect(votes.some(vote=>vote.voter===absent.id || vote.candidate===absent.id)).toBe(false);
+});
+
+
+test('cassation bots prioritize eligible infiltrators on the favorable random branch',()=>{
+  const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
+  const infiltrator = players.find(player=>worldAt(0).isInfiltrator?.(player.id))!;
+  Reflect.set(match,'cassationReadyAt',0);
+  match.callCassation({...human,...stations.audit},1_000);
+  match.advance(6_000);
+  const random = spyOn(Math,'random').mockReturnValue(.64);
+  try { bots.tick(match,gameplay,worldAt(18_000),()=>true,18_000); }
+  finally { random.mockRestore(); }
+  const votes = view(human.id,18_000).cassation!.votes!;
+  const otherBots = votes.filter(vote=>vote.voter!==infiltrator.id);
+  expect(otherBots.length).toBeGreaterThan(0);
+  expect(otherBots.every(vote=>vote.candidate===infiltrator.id)).toBe(true);
+  expect(votes.every(vote=>vote.candidate!==vote.voter)).toBe(true);
+});
+
+test('cassation bots can still vote incorrectly at the probability boundary',()=>{
+  const {human,bots,players,match,view,gameplay,worldAt} = gameWithBots(()=>.4,false);
+  const infiltrator = players.find(player=>worldAt(0).isInfiltrator?.(player.id))!;
+  const innocent = players.find(player=>player.id!==infiltrator.id)!;
+  const botStates = Reflect.get(bots,'bots') as Map<string,{suspicion?:string}>;
+  for (const bot of botStates.values()) bot.suspicion = innocent.nick;
+  Reflect.set(match,'cassationReadyAt',0);
+  match.callCassation({...human,...stations.audit},1_000);
+  match.advance(6_000);
+  const random = spyOn(Math,'random').mockReturnValue(.65);
+  try { bots.tick(match,gameplay,worldAt(18_000),()=>true,18_000); }
+  finally { random.mockRestore(); }
+  const votes = view(human.id,18_000).cassation!.votes!;
+  expect(votes.filter(vote=>vote.voter!==innocent.id).every(vote=>vote.candidate===innocent.id)).toBe(true);
 });
