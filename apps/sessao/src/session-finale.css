@@ -42,6 +42,12 @@
   text-wrap: balance;
   text-shadow: 0 .09em .4em #000, 0 0 .65em color-mix(in srgb,var(--finale-accent),transparent 65%);
 }
+.finale-personal-verdict {
+  margin: 1rem 0;
+  font: 900 clamp(1.8rem, 4vw, 3rem)/1.1 var(--party-display);
+}
+.finale-personal-verdict[data-result="victory"] { color: #baf5c0; }
+.finale-personal-verdict[data-result="defeat"] { color: #ffb3a0; }
 .finale-reason { margin: 1rem 0; font-size: clamp(1rem, 2vw, 1.25rem); }
 .finale-teams { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.25rem; margin-block: 2rem; }
 .finale-team {

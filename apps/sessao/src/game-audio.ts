@@ -1,6 +1,7 @@
 import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/audio';
 
 const files = {
+  victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav',
   music:'corredores-de-brasilia.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
   caloteMusic:'hitman.mp3',
@@ -15,7 +16,8 @@ const files = {
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
-type Score = 'music'|'hearingMusic'|'caloteMusic';
+type Score = 'music'|'hearingMusic'|'caloteMusic'|'victory'|'defeat';
+const isFinalScore = (score:Score) => score==='victory' || score==='defeat';
 export type Cue = Exclude<Sample,Score | `foot${number}`>;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
@@ -78,7 +80,7 @@ export class GameAudio {
         const response = await fetch(`${import.meta.env.BASE_URL}assets/audio/${files[key]}`);
         if (!response.ok) return;
         this.buffers.set(key,await context.decodeAudioData(await response.arrayBuffer()));
-        if (key==='music' || key==='hearingMusic' || key==='caloteMusic') this.startMusic();
+        if (key==='music' || key==='hearingMusic' || key==='caloteMusic' || key==='victory' || key==='defeat') this.startMusic();
       } catch {}
     })).then(() => {});
     this.startMusic();
@@ -122,8 +124,9 @@ export class GameAudio {
   }
 
   private startMusic() {
-    const requested = this.caloteDanger ? 'caloteMusic' : this.score;
-    const score = this.buffers.has(requested) ? requested : 'music';
+    const requested = isFinalScore(this.score) ? this.score : this.caloteDanger ? 'caloteMusic' : this.score;
+    const score = this.buffers.has(requested) || isFinalScore(requested) ? requested : 'music';
+    if (isFinalScore(requested) && !this.buffers.has(requested)) this.stopMusic(.7);
     const buffer = this.buffers.get(score);
     if (!this.playing || this.music?.score===score || !buffer || !this.context || !this.musicGain) return;
     const now = this.context.currentTime;
@@ -131,7 +134,7 @@ export class GameAudio {
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
     source.buffer = buffer;
-    source.loop = true;
+    source.loop = !isFinalScore(score);
     gain.gain.setValueAtTime(0,now);
     gain.gain.linearRampToValueAtTime(1,now+.7);
     source.connect(gain).connect(this.musicGain);

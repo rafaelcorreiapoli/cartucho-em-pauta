@@ -1,3 +1,4 @@
+import {sessionVerdict} from './session-verdict';
 import {DialogHeader} from './ui/dialog-header';
 import {useDialogKeys} from './ui/use-dialog-keys';
 import { DialogDismiss } from './ui/dialog-dismiss';
@@ -23,7 +24,8 @@ const finaleParticles = Array.from({length:44},(_,index)=>({
   '--particle-duration':`${3+(index%7)*.6}s`,
 }) as CSSProperties);
 
-export function SessionResult({gameMode,winner,reason,stability,congressDestroyed,finalRoster=[]}:Pick<PlenaryView,'gameMode'|'winner'|'reason'|'stability'|'congressDestroyed'|'finalRoster'>) {
+export function SessionResult({gameMode,winner,role,reason,stability,congressDestroyed,finalRoster=[]}:Pick<PlenaryView,'gameMode'|'winner'|'role'|'reason'|'stability'|'congressDestroyed'|'finalRoster'>) {
+  const verdict = sessionVerdict({winner,role,congressDestroyed});
   const outcome = winner==='Parlamentar' ? 'saved' : winner==='Infiltrado' || congressDestroyed || gameMode!=='calote' && stability===0 ? 'destroyed' : 'ended';
   const headline = outcome==='saved' ? 'O Congresso foi salvo!' :
     outcome==='destroyed' ? gameMode==='calote' ? 'O Congresso deu calote!' : 'O Congresso foi destruído!' : 'Sessão encerrada';
@@ -46,6 +48,9 @@ export function SessionResult({gameMode,winner,reason,stability,congressDestroye
     </div>}
     <div className="finale-content">
       <h2 id="session-finale-title">{headline}</h2>
+      {verdict && <p className="finale-personal-verdict" data-result={verdict}>
+        {verdict==='victory' ? 'Você venceu!' : 'Você perdeu!'}
+      </p>}
       {reason && <p className="finale-reason">{reason}</p>}
       {!winner && <p className="finale-no-winner">Sem vencedores</p>}
       <div className="finale-teams">
