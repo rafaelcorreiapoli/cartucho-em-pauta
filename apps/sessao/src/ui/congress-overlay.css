@@ -1259,3 +1259,16 @@
 }
 
 #session:has(#congress-app-panel) #election-indicator-mount { visibility:hidden; pointer-events:none; }
+
+/* Keep transient notices readable without opaque cards. */
+#session .right-hud :is(.hud-notice,#electoral-notice) {
+  border:0;
+  background:none;
+  box-shadow:none;
+  padding:3px 0;
+  text-align:right;
+  font-weight:500;
+  paint-order:stroke fill;
+  -webkit-text-stroke:.35px #07100b;
+  text-shadow:0 1px 2px #07100b99;
+}
