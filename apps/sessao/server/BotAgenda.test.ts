@@ -65,8 +65,9 @@ test('insurance remains an optional decision instead of a compulsory purchase',(
 });
 
 test('a bot with a full backpack keeps its money instead of retrying an impossible purchase',()=>{
-  const {step,player,game,actions,wallet} = scenario();
-  for (let slot=0;slot<INVENTORY_SLOTS;slot++) game.giveTrainingItem(player.id,'lockpick');
+  const {step,player,game,match,actions,wallet} = scenario();
+  for (const kind of ['lockpick','lockKit','proLockKit','decoder','cabinetLock','doorLock','forensicKit','firstAidKit','incendiary'] as const) game.giveTrainingItem(player.id,kind);
+  expect(game.view(player,match.gameplayWorld([player],0,()=>false)).inventory).toHaveLength(INVENTORY_SLOTS);
   const before = wallet();
   for (let time=90_000;time<=100_000;time+=1000) step(time);
   expect(actions.some(action=>action.kind==='shop-buy' && action.target==='safeTrap')).toBe(false);
