@@ -1,3 +1,4 @@
+import {federalPatrolRules,federalPatrolSheets,federalBreachArt} from './federal-patrol';
 import {visitorRoster,visitorSheets} from './visitors';
 import { stationRecharge, type RechargeStation } from './station-recharge';
 import { createInteractionOutline, hitInteractionArt } from './interaction-outline';
@@ -173,7 +174,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       for (const [key,weapon] of Object.entries(weapons)) {
         this.load.image(`weapon-${key}`,import.meta.env.BASE_URL+'assets/'+weapon.sprite);
       }
-      for (const {key,path} of [...characterSheets,...visitorSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
+      for (const {key,path} of [...characterSheets,...visitorSheets,...federalPatrolSheets,...combatSheets,...phoneSheets,...safeBreachSheets,...safeDepositSheets,...npcRobberySheets]) this.load.spritesheet(key,path,{frameWidth:128,frameHeight:128});
       for (const [id,npc] of Object.entries(mapNpcs)) {
         this.load.image(`npc-${id}`,import.meta.env.BASE_URL+'assets/'+npc.sprite);
       }
@@ -207,7 +208,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           this.anims.create({key:`${character}-${direction}`,frames,frameRate:9,repeat:-1});
         }
       }
-      for (const {id} of visitorRoster) for (let direction=0;direction<3;direction++) {
+      for (const {id} of [...visitorRoster,{id:federalPatrolRules.skin}]) for (let direction=0;direction<3;direction++) {
         this.anims.create({key:`${id}-${direction}`,frames:Array.from({length:4},(_,step)=>({key:`${id}-walk`,frame:direction*4+step})),frameRate:9,repeat:-1});
       }
       const syncCanvas = () => {
@@ -731,8 +732,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
         if (!downed) view.fallAt = undefined;
         const recoil = view.hitAt===undefined ? undefined : hitArt(character,direction,time-view.hitAt,visitor);
         const combatArt = downed ?? recoil ?? attack;
-        const breachArt = latest.breachingSafe && !combatArt && !pose && !latest.carrying
-          ? safeBreachArt(character,time,reducedMotion.matches) : undefined;
+        const breachArt = latest.breachingDoor && visitor===federalPatrolRules.skin
+          ? federalBreachArt(facing,time,reducedMotion.matches)
+          : latest.breachingSafe && !combatArt && !pose && !latest.carrying
+            ? safeBreachArt(character,time,reducedMotion.matches) : undefined;
         const depositing = latest.pocketing && !moving && !combatArt && !pose && !latest.carrying;
         if (depositing) view.depositStarted ??= time;
         else view.depositStarted = undefined;

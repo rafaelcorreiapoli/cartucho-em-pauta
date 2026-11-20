@@ -32,6 +32,7 @@ const clamp = (value:number) => Math.max(0,Math.min(stabilityRules.maximum,value
 
 export class PlenaryMatch {
   training = false;
+  private federalDetentions = new Map<string,{gameUntil:number;realUntil:number}>();
   onTrainingEvent?:(event:GameplayEvent)=>void;
   clearTrainingCrisis(now:number) {
     if (!this.training) return;
@@ -390,6 +391,7 @@ export class PlenaryMatch {
     this.fire.reset(now,random);
     this.power = new Power();
     this.stationCooldowns.reset();
+    this.federalDetentions.clear();
     this.policies.clear();
     this.treasuryBonus = undefined;
     this.complaints.reset();
@@ -576,7 +578,7 @@ export class PlenaryMatch {
     const generation = this.matchGeneration;
     const current = ()=>this.running && generation===this.matchGeneration;
     return {
-      players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id)),now,
+      players:players.filter(player => this.electorate.has(player.id) || this.npcIds.has(player.id) || player.visitor==='japones-federal'),now,
       policies:this.activePolicies(now),publicBudget:this.budget,
       isInfiltrator:id=>current() && this.infiltrators.has(id) && !!this.election.office(id),
       incidentNow:now,
@@ -598,6 +600,20 @@ export class PlenaryMatch {
       projectFilingError:(id,project)=>current() ? this.projectFilingError(id,project,now) : 'Partida encerrada.',
       projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
       hasMandate:id=>!!this.election.office(id),
+      detain:(id,duration,realNow=now+this.pausedDuration)=>{
+        if (!current() || !this.electorate.has(id) || this.isolated(id)) return false;
+        this.economy.detain(id,now+duration);
+        this.federalDetentions.set(id,{gameUntil:now+duration,realUntil:realNow+duration});
+        this.refreshAgendaEligibility(now);
+        return true;
+      },
+      releaseDetention:(id,realUntil)=>{
+        const detention = this.federalDetentions.get(id);
+        if (!current() || !detention || detention.realUntil!==realUntil) return;
+        this.economy.releaseDetention(id,detention.gameUntil);
+        this.federalDetentions.delete(id);
+        this.refreshAgendaEligibility();
+      },
       cashFlow:(kind,amount)=>{ if (current()) this.cash[kind] += amount; },
       deposit:(id,amount)=>{
         if (!current() || !this.running || !this.electorate.has(id) || amount<=0) return false;
@@ -1296,7 +1312,10 @@ export class PlenaryMatch {
       canStartAsInfiltrator:this.localSolo && !this.running && id===ids[0] ? true : undefined,
       canSabotagePower:this.canSabotagePower(id,now) || undefined,
       fires:this.running ? this.fire.view(this.phase==='negotiation')?.map(fire=>({...fire,budget:this.gameMode==='calote'})) : undefined,
-      isolationSeconds:this.isolated(id) ? this.economy.suspensionRemaining(id,now) : undefined,
+      isolationReason:this.isolated(id) && (this.federalDetentions.get(id)?.realUntil ?? 0)>realNow ? 'federal' : undefined,
+      isolationSeconds:this.isolated(id) ? this.federalDetentions.has(id)
+        ? Math.max(0,Math.ceil((this.federalDetentions.get(id)!.realUntil-realNow)/1000))
+        : this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,
       hearingResult:this.hearingResult,

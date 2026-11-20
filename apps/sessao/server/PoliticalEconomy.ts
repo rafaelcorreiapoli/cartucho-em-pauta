@@ -396,6 +396,16 @@ export class PoliticalEconomy {
     return Math.max(0,Math.ceil(((this.suspensionEndsAt(id) ?? now)-now)/1000));
   }
 
+  detain(id:string,until:number) {
+    const account = this.accounts.get(id);
+    if (account) account.suspendedUntil = Math.max(until,account.suspendedUntil ?? 0);
+  }
+
+  releaseDetention(id:string,until:number) {
+    const account = this.accounts.get(id);
+    if (account?.suspendedUntil===until) account.suspendedUntil = undefined;
+  }
+
   suspend(id:string,until:number) {
     const account = this.accounts.get(id);
     if (account) {
