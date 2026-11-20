@@ -18,8 +18,9 @@ Caminhos a partir da raiz do repositório:
   catálogo como referência da família.
 
 Antes de gerar uma capa de invisibilidade para a loja, abra os portraits do
-Raio X, da Visão noturna e do Colete. O ícone atual `capa-invisibilidade.webp`,
-derivado de um SVG plano, está fora desse padrão e não é referência aprovada.
+Raio X, da Visão noturna e do Colete. O antigo ícone vetorial da capa,
+um manto triangular com estrela e preenchimento plano, exemplifica um
+desenho fora desse padrão e não é referência aprovada.
 
 ## Direção de arte
 
