@@ -663,7 +663,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const cached = this.fogGeometry;
             if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.powerOut!==powerOut || cached.barriers!==barriers) {
               this.fogGeometry = {x:wallX,y:wallY,radius,powerOut,barriers,
-                points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
+                points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius,true)};
               const {points} = this.fogGeometry;
               const size = this.fogTexture.width;
               const center = size/2;

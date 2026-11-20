@@ -87,7 +87,7 @@ export class PhotoRenderer {
         ctx.fillStyle = '#081710a8';
         ctx.beginPath();
         ctx.rect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
-        const [first, ...edge] = wallVision(frame.center, VISION_RADIUS);
+        const [first, ...edge] = wallVision(frame.center, VISION_RADIUS,true);
         ctx.moveTo(x + first.x, y + first.y);
         for (const point of edge) ctx.lineTo(x + point.x, y + point.y);
         ctx.closePath();
