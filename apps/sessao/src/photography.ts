@@ -10,7 +10,7 @@ export const PHOTO_LOOK_UP = 19;
 export const PHOTO_LIMIT = 12;
 export const ROOM_PHOTO_LIMIT = 144;
 export type PhotoPerson = Contact & Motion & Pick<Player,
-  'npc'|'former'|'handlingObject'|'breachingSafe'|'breachingDoor'|'robberyTarget'|'cashInHand'|'sprinting'|'carrying'|'swing'|'recoveryProtected'> & {
+  'speedModifier'|'npc'|'former'|'handlingObject'|'breachingSafe'|'breachingDoor'|'robberyTarget'|'cashInHand'|'sprinting'|'carrying'|'swing'|'recoveryProtected'> & {
   character:number; visitor?:import('./visitors').VisitorId; direction:number; moving?:boolean; pocketing?:boolean; knockedOut?:boolean; carried?:boolean; exposed?:ExposedItem[]; phone?:import('./gameplay').PhoneActivity; gameSession?:number; office?:Office;
 };
 export type Decoration = Motion & {
@@ -48,6 +48,7 @@ export function photoPerson(person:Player):PhotoPerson {
     direction:person.direction,moving:person.moving,npc:person.npc,former:person.former,
     handlingObject:person.handlingObject,breachingSafe:person.breachingSafe,breachingDoor:person.breachingDoor,
     robberyTarget:person.robberyTarget ? {...person.robberyTarget} : undefined,pocketing:person.pocketing,
+    speedModifier:person.speedModifier ? {...person.speedModifier} : undefined,
     cashInHand:person.cashInHand,sprinting:person.sprinting,carrying:person.carrying,
     swing:person.swing ? {...person.swing} : undefined,recoveryProtected:person.recoveryProtected,
     knockedOut:person.knockedOut,carried:person.carried,

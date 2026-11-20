@@ -534,6 +534,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.office.destroy();
           view.items.destroy();
           view.weapon.destroy();
+          view.speedIcon.destroy();
           view.briefcase?.destroy();
           this.views.delete(id);
         }
@@ -555,6 +556,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.office.setVisible(false);
           view?.items.setVisible(false);
           view?.weapon.setVisible(false);
+          view?.speedIcon.setVisible(false);
           view?.briefcase?.setVisible(false);
           continue;
         }

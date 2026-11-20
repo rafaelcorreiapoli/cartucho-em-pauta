@@ -43,6 +43,7 @@ export const decorationLabel = (item: Decoration) =>
         : objects[item.kind].name;
 
 export type ActorView = {
+  speedIcon:Phaser.GameObjects.Graphics;
   sprite: Phaser.GameObjects.Sprite;
   label: Phaser.GameObjects.Text;
   office: Phaser.GameObjects.Text;
@@ -141,6 +142,10 @@ export function createWorldAnimations(scene: Phaser.Scene) {
 export function createActorView(scene: Phaser.Scene, player: Player, resolution = 3): ActorView {
   const { sheet, frame } = characterArt(player.character, player.visitor);
   return {
+    speedIcon:scene.add.graphics().lineStyle(1.5,0xffdc73,1)
+      .beginPath().moveTo(-5,-3).lineTo(-2,0).lineTo(-5,3)
+      .moveTo(1,-3).lineTo(4,0).lineTo(1,3).strokePath()
+      .setDepth(HEIGHT+30).setVisible(false),
     nextStep: 0,
     weapon: scene.add.image(0, 0, 'weapon-baton').setVisible(false),
     items: scene.add.container().setDepth(HEIGHT + 26),
@@ -261,6 +266,8 @@ export function updateActorView(
       .setRotation(pose.angle)
       .setDepth(y + (facing === 2 ? -0.1 : 0.1));
   }
+  view.speedIcon.setVisible((latest.speedModifier?.factor ?? 1)>1 && (latest.speedModifier?.remainingMs ?? 0)>0)
+    .setPosition(x,spriteY-43);
   const name = latest.nick;
   label
     .setVisible(true)
@@ -335,7 +342,7 @@ export function updateActorView(
 }
 
 export function destroyActorView(view: ActorView) {
-  for (const object of [view.sprite, view.label, view.office, view.items, view.weapon, view.briefcase]) object?.destroy();
+  for (const object of [view.sprite, view.label, view.office, view.items, view.weapon, view.speedIcon, view.briefcase]) object?.destroy();
 }
 
 export function createGroundArt(scene: Phaser.Scene, item: { kind: keyof typeof objects; x: number; y: number }) {

@@ -10,8 +10,9 @@ test('every technical product has one category and the specialized tool cannot b
   expect(equipmentCategoryKinds('equipment')).toContain('briefcaseTracker');
   expect(marketProduct('equipment','masterDecoder')).toBeUndefined();
 });
-test('snack counter sells only pizza, chocolates and coffee',()=>{
-  expect(marketKinds.food).toEqual(['pizza','chocolates','coffee']);
-  expect(marketProduct('food','energyDrink')).toBeUndefined();
+test('snack counter sells pizza, chocolates, coffee and energy drinks',()=>{
+  expect(marketKinds.food).toEqual(['pizza','chocolates','coffee','energyDrink']);
+  expect(marketProduct('food','energyDrink')?.price).toBe(1.5);
+  expect(describeFood(foods.energyDrink.effect)).toBe('+50% velocidade por 20 s');
   expect(describeFood(foods.chocolates.effect)).toBe('+40 PV · −20 stamina');
 });
