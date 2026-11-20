@@ -10,7 +10,7 @@ export const MAX_STAMINA = baseStamina;
 const staminaDrain = 25*STEP_SECONDS;
 const staminaRecovery = 20*STEP_SECONDS;
 export type MovementInput = { seq: number; revision?:number; plenary?:boolean; sprint?:true; motion?: Motion; destination?: Motion; door?:number };
-export type ControlState = { player: Player; route: Motion[]; ack: number; revision?:number; plenary?:boolean; isolated?:boolean };
+export type ControlState = { player: Player; route: Motion[]; ack: number; revision?:number; plenary?:boolean; isolated?:boolean; detaining?:boolean };
 
 function recoverStamina(player:Player) {
   const max = player.staminaMax ?? MAX_STAMINA;
@@ -38,7 +38,7 @@ export function restMovement(player:Player) {
 }
 
 export function applyInput(state: ControlState, input: MovementInput) {
-  if (state.player.knockedOut) {
+  if (state.player.knockedOut || state.detaining) {
     state.route = [];
     restMovement(state.player);
     state.ack = input.seq;

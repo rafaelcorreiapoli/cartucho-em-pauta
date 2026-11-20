@@ -1,4 +1,5 @@
 import {expect,test} from 'bun:test';
+import {federalPatrolRules} from '../src/federal-patrol';
 import {Client,type Room} from '@colyseus/sdk';
 import {defineRoom,defineServer,matchMaker} from 'colyseus';
 import {BunWebSockets} from '@colyseus/bun-websockets';
@@ -77,6 +78,15 @@ test('room confirms host-only addon, broadcasts the inspector, arrests and relea
     await wait(()=>game.hasOfficeChannel(host.sessionId));
     inspector.speed = 68;
     await wait(()=>controls.get(host.sessionId)?.isolated===true && views.get(host.sessionId)?.isolationReason==='federal');
+    const caught=controls.get(host.sessionId)!;
+    const atScene={x:caught.player.x,y:caught.player.y};
+    expect(caught.detaining).toBe(true);
+    expect(roomAt(caught.player)).toBe(home.name);
+    host.send('input',{seq:caught.ack+1,revision:caught.revision,plenary:!!caught.plenary,motion:{x:1,y:1}});
+    await Bun.sleep(200);
+    expect(controls.get(host.sessionId)!.player).toMatchObject(atScene);
+    expect(controls.get(host.sessionId)!.detaining).toBe(true);
+    await wait(()=>controls.get(host.sessionId)?.detaining!==true,federalPatrolRules.flagrantPauseMs+1000);
     expect(roomAt(controls.get(host.sessionId)!.player)).toBe(isolationRoom.name);
     expect(views.get(host.sessionId)).toMatchObject({isolationSeconds:10,isolationReason:'federal'});
     expect(game.view(owner,world()).inventory.some(item=>item.kind==='briefcase')).toBe(false);

@@ -95,11 +95,11 @@ export class SessionRoom extends Room {
       players:world.players.concat(this.gameplay.ghostAdvisers.players),
       // Physical actions continue while the legislative clock is paused.
       now:this.clock.currentTime,
-      detain:(id:string,duration:number)=>{
+      detain:(id:string,duration:number,_realNow?:number,arrivalDelay=0)=>{
         const realNow = this.clock.currentTime;
-        if (!world.detain?.(id,duration,realNow)) return false;
+        if (!world.detain?.(id,duration,realNow,arrivalDelay)) return false;
         // Ballots pause match time, but a Federal detention lasts ten real seconds.
-        this.clock.setTimeout(()=>world.releaseDetention?.(id,realNow+duration),duration);
+        this.clock.setTimeout(()=>world.releaseDetention?.(id,realNow+arrivalDelay+duration),arrivalDelay+duration);
         return true;
       },
       feedback:(id:string,message:string)=>this.clients.getById(id)?.send('gameplay-feedback',message),
@@ -771,21 +771,26 @@ export class SessionRoom extends Room {
       const inSession = this.match.phase==='ballot' || this.match.phase==='hearing';
       for (const [index,[id,state]] of [...this.players].entries()) {
         const isolated = this.match.isolated(id);
+        const detaining = this.match.federalTransferPending(id,realNow) || undefined;
         const plenary = inSession && !isolated;
-        if (!!state.plenary===plenary && !!state.isolated===isolated) continue;
+        if (!!state.plenary===plenary && !!state.isolated===isolated && state.detaining===detaining) continue;
         const wasIsolated = state.isolated;
+        const wasDetaining = state.detaining;
         state.isolated = isolated;
+        state.detaining = detaining;
         state.plenary = plenary;
         this.resetMovement(state);
         state.player.moving = false;
         state.player.sprinting = undefined;
         if (isolated) {
-          this.visitorRobberies.leave(id);
-          this.gameplay.stopMegaphone(id,world);
-          this.gameplay.leave(state.player,world,false);
-          Object.assign(state.player,isolationRoom.spawn,{direction:0});
+          if (!wasIsolated) {
+            this.visitorRobberies.leave(id);
+            this.gameplay.stopMegaphone(id,world);
+            this.gameplay.leave(state.player,world,false);
+          }
+          if (!detaining) Object.assign(state.player,isolationRoom.spawn,{direction:0});
         } else if (plenary) Object.assign(state.player,PLENARY_SEATS[index],{direction:2});
-        else if (wasIsolated) Object.assign(state.player,isolationRoom.exit,{direction:2});
+        else if (wasIsolated && !wasDetaining) Object.assign(state.player,isolationRoom.exit,{direction:2});
       }
       const installations = this.match.updateFireInstallation(now,id=>{
         if (!world.present(id) || this.gameplay.hasOfficeChannel(id) || this.visitorRobberies.robberyProgress(id,this.clock.currentTime)!==undefined) return;

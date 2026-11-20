@@ -1,3 +1,4 @@
+import {federalAudioStage} from './federal-patrol';
 import {sessionVerdict} from './session-verdict';
 import './lobby-motion.css';
 import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
@@ -470,7 +471,11 @@ async function connect(join: () => Promise<Room>) {
     joined.onMessage('audit-result',({text,critical}:{text:string;critical:boolean}) => {
       hud.notify('Corregedoria',text,critical);
     });
+    let previousDetention:{detaining?:boolean}|undefined;
     joined.onMessage('control',(snapshot: ControlState) => {
+      const federalStage = federalAudioStage(previousDetention,snapshot);
+      if (federalStage) audio.federal(federalStage);
+      previousDetention = {detaining:snapshot.detaining};
       inVotingArea = inPlenary(snapshot.player) && !snapshot.isolated;
       const inside = String(inVotingArea);
       if (session.dataset.inPlenary!==inside) session.dataset.inPlenary = inside;

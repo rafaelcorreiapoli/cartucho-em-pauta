@@ -513,7 +513,7 @@ export class Gameplay {
         if (channel?.kind!=='office-cash' || channel.ends<=world.now || channel.office.layout.id!==office.id ||
             roomAt(player)!==office.name || player.moving || player.knockedOut || player.carried ||
             player.x!==channel.origin.x || player.y!==channel.origin.y || world.present?.(player.id)===false) continue;
-        if (!world.detain?.(player.id,federalPatrolRules.detentionMs)) continue;
+        if (!world.detain?.(player.id,federalPatrolRules.detentionMs,world.now,federalPatrolRules.flagrantPauseMs)) continue;
         this.privateOffices.channels.delete(player.id);
         player.pocketing = undefined;
         for (const item of this.inventory(player.id)) {
