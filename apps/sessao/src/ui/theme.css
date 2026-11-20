@@ -122,8 +122,7 @@
 .automatic-projects-history li { position:relative; display:grid; place-items:center; width:clamp(36px,4vw,56px); aspect-ratio:1; flex:none; overflow:hidden; border:1px solid #779c7c80; border-radius:6px; background:#10241dcc; color:#a7b5a4; font:650 24px/1 system-ui,sans-serif; }
 .automatic-projects-history li[data-next="true"] { border-color:#e0bb67; }
 .automatic-projects-history img { display:block; width:100%; height:100%; object-fit:cover; }
-.automatic-projects-history li:has([role="timer"]) > span { transform:translateY(-6px); font-size:19px; }
-.automatic-projects-history strong { position:absolute; inset:auto 0 3px; text-align:center; color:var(--color-hud-budget); font:650 11px/1 system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.automatic-projects-history strong { position:absolute; inset:auto 0 0; padding:2px 0; background:#07140d99; backdrop-filter:blur(3px); text-align:center; color:var(--color-hud-budget); font:650 11px/1 system-ui,sans-serif; font-variant-numeric:tabular-nums; }
 .automatic-projects-history [data-urgent="true"] { color:#ffac96; }
 .automatic-project-announcement { position:fixed; z-index:25; top:50%; left:50%; transform:translate(-50%,-50%); width:min(650px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; display:grid; grid-template-columns:minmax(140px,38%) 1fr; background:#10261bf5; border:2px solid #e0bb67; border-radius:16px; box-shadow:0 18px 80px #000b; color:#fff0c9; pointer-events:none; }
 .automatic-project-announcement img { width:100%; height:100%; min-height:250px; object-fit:cover; }
