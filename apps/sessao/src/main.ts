@@ -1,3 +1,4 @@
+import {readMatchPreferences,saveMatchPreference} from './match-preferences';
 import {sessionVerdict} from './session-verdict';
 import './lobby-motion.css';
 import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
@@ -84,7 +85,7 @@ const entrance = mountRoomEntrance(document.querySelector<HTMLElement>('#room-en
   new URL(location.href).searchParams.get('sala') ?? '',(nick,roomId,tutorial)=>{
     try { localStorage.setItem(nicknameStorage,nick); } catch {}
     audio.unlock();
-    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick,tutorial}));
+    void connect(()=>roomId ? client.joinById(roomId,{nick}) : client.create('plenary',{nick,tutorial}),!roomId && !tutorial);
   });
 let connecting = false;
 const renderLoading = mountAssetLoading(document.getElementById('asset-loading-mount')!,()=>void room?.leave());
@@ -145,7 +146,7 @@ function showLobby(message: string) {
   entrance.update({message});
 }
 
-async function connect(join: () => Promise<Room>) {
+async function connect(join: () => Promise<Room>,restorePreferences=false) {
   if (room || connecting) return;
   connecting = true;
   entrance.update({busy:true,message:'Conectando…'});
@@ -153,7 +154,10 @@ async function connect(join: () => Promise<Room>) {
     const joined = await join();
     room = joined;
     const sendCommand = createRoomCommandSender((channel,command)=>{
-      if (!ballotCountdown.open) joined.send(channel,command);
+      if (!ballotCountdown.open) {
+        joined.send(channel,command);
+        if (previousView?.host===joined.sessionId && !previousView.tutorial) saveMatchPreference(channel,command);
+      }
     });
     const tutorialHud = mountTutorial(action=>joined.send("tutorial",action));
     const characterPicker = mountCharacterPicker(document.querySelector<HTMLElement>('#characters')!,joined.sessionId,
@@ -384,6 +388,13 @@ async function connect(join: () => Promise<Room>) {
     }
     let suppressXpEffect = false;
     joined.onMessage('plenary',(view: PlenaryView) => {
+      if (restorePreferences && view.host===joined.sessionId && view.phase==='lobby' && !view.tutorial) {
+        restorePreferences = false;
+        for (const [channel,command] of Object.entries(readMatchPreferences())) {
+          if (channel!=='infiltrators') sendCommand(
+            channel as Parameters<typeof sendCommand>[0],command as Parameters<typeof sendCommand>[1]);
+        }
+      }
       if (previousView && caloteAlertLevel(view)>caloteAlertLevel(previousView)) centerAlert.show(
         caloteAlertLevel(view)===2 ? 'CALOTE IMINENTE' : 'ORÇAMENTO NEGATIVO', 'Recupere o saldo na Tesouraria para evitar a derrota.','calote');
       if (previousView && lastInElection(view,joined.sessionId) && !lastInElection(previousView,joined.sessionId)) centerAlert.show(
