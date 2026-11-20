@@ -61,6 +61,7 @@ export type ObjectKind = keyof typeof objects;
 
 export function consumableAction(item:Pick<WorldItem,'id'|'kind'>) {
   const {kind} = item;
+  if (kind==='landMine') return {label:'Implantar no chão',action:{kind:'plant-mine',item:item.id}} as const;
   if (!('use' in objects[kind])) return;
   const label = kind==='firstAidKit' ? 'Curar' : kind==='mensalUnderwear' || kind==='briefcaseTracker' ? 'Usar' :
     isDrink(kind) ? 'Beber' : 'Comer';

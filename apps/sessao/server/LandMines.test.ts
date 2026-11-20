@@ -1,7 +1,7 @@
 import {expect,test} from 'bun:test';
 import {Gameplay} from './Gameplay';
 import type {GameplayWorld} from './gameplay-world';
-import type {GameplayEvent} from '../src/gameplay';
+import {consumableAction,type GameplayEvent} from '../src/gameplay';
 import type {Player} from '../src/map';
 import {landMine} from '../src/land-mines';
 import {marketProduct,equipmentCategoryKinds} from '../src/market-catalog';
@@ -14,7 +14,7 @@ function setup() {
   const [owner,victim] = players;
   game.giveTrainingItem(owner.id,'landMine');
   const item = game.view(owner,world).inventory.find(item=>item.kind==='landMine')!;
-  const plant = ()=>game.act(owner,{kind:'plant-mine',item:item.id},world);
+  const plant = ()=>game.act(owner,consumableAction(item)!.action,world);
   return {game,world,events,owner,victim,item,plant};
 }
 test('mine is sold as sabotage; planting consumes the held item and arms after a delay',()=>{
