@@ -132,3 +132,29 @@ test('an authoritative cassation without a majority renders its verdict',()=>{
   expect(html).toContain('Resultado da cassação');
   expect(html).toContain('Ninguém foi cassado');
 });
+
+test.each([
+  ['Parlamentar','Parlamentar','Você venceu!'],
+  ['Parlamentar','Infiltrado','Você perdeu!'],
+  ['Infiltrado','Infiltrado','Você venceu!'],
+  ['Infiltrado','Parlamentar','Você perdeu!'],
+] as const)('personal result when %s wins and player is %s',(winner,role,message)=>{
+  for (const gameMode of ['calote','classic'] as const) {
+    const markup = renderToStaticMarkup(<SessionResult gameMode={gameMode} winner={winner} role={role} stability={48}/>);
+    expect(markup).toContain(message);
+    expect(markup).not.toContain(message==='Você venceu!' ? 'Você perdeu!' : 'Você venceu!');
+  }
+});
+
+test('spectators and a cancelled session have no personal victory or defeat',()=>{
+  for (const props of [{winner:'Parlamentar' as const},{role:'Parlamentar' as const}]) {
+    const markup = renderToStaticMarkup(<SessionResult {...props} stability={48}/>);
+    expect(markup).not.toContain('Você venceu!');
+    expect(markup).not.toContain('Você perdeu!');
+  }
+});
+
+test('solo collapse also tells the player they lost',()=>{
+  const html = renderToStaticMarkup(<SessionResult role="Parlamentar" congressDestroyed stability={0}/>);
+  expect(html).toContain('Você perdeu!');
+});

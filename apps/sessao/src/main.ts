@@ -1,3 +1,4 @@
+import {sessionVerdict} from './session-verdict';
 import './lobby-motion.css';
 import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
@@ -388,6 +389,7 @@ async function connect(join: () => Promise<Room>) {
       if (!lastInElection(view,joined.sessionId)) centerAlert.clear('election');
       if (previousView && view.treasuryRescue && view.treasuryRescue.sequence!==previousView.treasuryRescue?.sequence) {
         centerAlert.show(view.treasuryRescue.name,'SALVOU A PÁTRIA!','treasury-rescue');
+        audio.cue('rescue');
       }
       audio.setCaloteDanger(view.gameMode==='calote' && view.budget<0 && ['negotiation','ballot','hearing'].includes(view.phase) ? view.caloteIn : undefined);
       tutorialHud.render(view.phase==='lobby' ? undefined : view.tutorial,!!view.gameplay?.binocularSeconds);
@@ -449,9 +451,9 @@ async function connect(join: () => Promise<Room>) {
       }
       if ((phase==='lobby' || phase==='finished') && view.phase==='negotiation') audio.cue('session');
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
-      else if (view.phase==='finished') audio.cue('end');
+      else if (view.phase==='finished' && !sessionVerdict(view)) audio.cue('end');
       phase = view.phase;
-      audio.setScore(phase==='hearing' ? 'hearingMusic' : 'music');
+      audio.setScore(phase==='finished' ? sessionVerdict(view) ?? 'music' : phase==='hearing' ? 'hearingMusic' : 'music');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
