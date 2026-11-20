@@ -104,6 +104,7 @@ export function fieldActions(view:PlenaryView|undefined, player:Player|undefined
         }
       }
       for (const target of state.npcNearby ?? []) {
+        if (target==='campaignVendor') continue; // The campaign action opens Duda's dedicated catalog.
         const npc = npcs[target];
         if (npc.catalog) actions.push({label:`Abrir loja · ${npc.name}`,icon:'inventory',action:{kind:'open-shop',target}});
         else actions.push({label:`${npc.label} · Falar com ${npc.name}`,icon:'document',action:{kind:'talk',target}});

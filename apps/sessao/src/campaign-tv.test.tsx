@@ -2,7 +2,9 @@ import {expect,test} from 'bun:test';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {PlenaryMatch} from '../server/PlenaryMatch';
 import {CampaignTv} from './campaign-tv';
-import {stations} from './plenary';
+import {npcs} from './npcs';
+import {canStand} from './map';
+import {NpcDialogues} from '../server/NpcDialogues';
 import type {Player} from './map';
 
 test('the campaign TV displays the authorized ad using the viewer’s side and motion preference',()=>{
@@ -10,7 +12,10 @@ test('the campaign TV displays the authorized ad using the viewer’s side and m
   const match = new PlenaryMatch(1);
   expect(match.start(candidate.id,[candidate],0,()=>.9)).toBe(true);
   expect(match.electionAction(candidate,{kind:'advertise'},1,false)).toBeUndefined();
-  const advertisement = match.electionAction({...candidate,...stations.press},{kind:'advertise'},2,false);
+  const customer = {...candidate,...npcs.campaignVendor.interaction};
+  expect(canStand(customer.x,customer.y)).toBe(true);
+  expect(new NpcDialogues().nearbyNpcs(customer)).toContain('campaignVendor');
+  const advertisement = match.electionAction(customer,{kind:'advertise'},2,false);
   expect(advertisement).toMatchObject({name:'Bia',character:2});
   if (!advertisement) throw new Error('Expected the server to authorize the ad');
 

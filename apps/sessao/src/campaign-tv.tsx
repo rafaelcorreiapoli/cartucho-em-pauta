@@ -26,7 +26,7 @@ export function CampaignTv({ad,localPlayerId,sequence,reducedMotion}:{
   </>;
 }
 
-export function createCampaignTv(session:HTMLElement, localPlayerId:string) {
+export function createCampaignTv(session:HTMLElement, localPlayerId:string,onBroadcast:()=>void=()=>{}) {
   const host = document.createElement('div');
   host.className = 'campaign-tv-host';
   session.append(host);
@@ -60,6 +60,7 @@ export function createCampaignTv(session:HTMLElement, localPlayerId:string) {
     if (ad) positionTv();
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     flushSync(()=>root.render(<CampaignTv ad={ad} localPlayerId={localPlayerId} sequence={++sequence} reducedMotion={reducedMotion}/>));
+    if (ad) onBroadcast();
     timer = ad ? setTimeout(playNext,reducedMotion ? airtime : airtime+2*slideTime) : undefined;
   }
 
