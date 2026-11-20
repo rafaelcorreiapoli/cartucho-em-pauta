@@ -1237,24 +1237,24 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   expect(economy.spend(player.id,view().wallet)).toBe(true);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
-  economy.earn(player.id,.4);
+  economy.earn(player.id,1.9);
   draw();
   expect(render()).not.toContain('Consuma dois alimentos diferentes');
   economy.earn(player.id,.1);
   draw();
   expect(render()).toContain('Consuma dois alimentos diferentes');
   expect(view().missions.active.find(mission=>mission.kind==='bandejaGourmet')?.target).toBe(agendaCounts.bandejaGourmet);
-  economy.earn(player.id,.5);
+  economy.earn(player.id,2);
   game.act(player,{kind:'open-shop',target:'snackVendor'},world);
-  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
-  game.act(player,{kind:'shop-buy',target:'coxinha',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'chocolates',token:game.view(player,world).dialogue?.token},world);
+  game.act(player,{kind:'shop-buy',target:'chocolates',token:game.view(player,world).dialogue?.token},world);
   expect(view().wallet).toBe(0);
-  expect(game.owns(player.id,'coxinha')).toBe(true);
+  expect(game.owns(player.id,'chocolates')).toBe(true);
   draw();
   expect(render()).toContain('Consuma dois alimentos diferentes');
   expect(render()).toContain('0 / 2');
 
-  const snack = game.view(player,world).inventory.find(item=>item.kind==='coxinha')!;
+  const snack = game.view(player,world).inventory.find(item=>item.kind==='chocolates')!;
   expect(game.act(player,{kind:'use',item:snack.id},world)).toBe('Objeto utilizado.');
   expect(render()).toContain('0 / 2');
 
@@ -1262,7 +1262,7 @@ test('Bandeja Gourmet appears with two obtainable foods and counts consumption i
   game.giveTrainingItem(player.id,'coffee');
   Object.assign(player,game.officeSpawn(player.id)!);
   let xpAfterCoffee = 0;
-  for (const kind of ['coffee','coxinha'] as const) {
+  for (const kind of ['coffee','chocolates'] as const) {
     const item = game.view(player,world).inventory.find(item=>item.kind===kind)!;
     expect(game.act(player,{kind:'use',item:item.id},world)).toBe(kind==='coffee' ? 'Café bebido.' : 'Objeto utilizado.');
     if (kind==='coffee') {

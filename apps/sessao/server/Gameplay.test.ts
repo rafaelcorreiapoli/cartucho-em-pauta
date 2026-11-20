@@ -214,7 +214,7 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   Object.assign(alice,{x:npcs.vendor.x,y:npcs.vendor.y+12});
   game.act(alice,{kind:'open-shop',target:'vendor'},world);
   game.act(alice,{kind:'shop-buy',target:'briefcaseTracker',token:game.view(alice,world).dialogue?.token},world);
-  const tracker = game.view(alice,world).inventory.find(item=>item.kind==='briefcaseTracker')!;
+  const tracker = game.view(alice,world).equipped!.find(item=>item.kind==='briefcaseTracker')!;
   expect(tracker).toBeDefined();
 
   const create = Reflect.get(game,'create').bind(game);
@@ -226,8 +226,8 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   const stashed = create('briefcase',{storage:`office:${office.id}`});
   create('bundle',{ground});
 
-  const use = {kind:'use',item:tracker.id} as const;
-  expect(game.act(bob,use,world)).toBe('O objeto não está com você.');
+  const use = {kind:'use-tracker'} as const;
+  expect(game.act(bob,use,world)).toBe('Equipe o Rastreador de maletas.');
   expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
   expect(game.act(alice,use,world)).toContain('Rastreador ativo');
   expect(game.view(alice,world).inventory).toEqual([]);
@@ -247,6 +247,13 @@ test('a purchased briefcase tracker privately follows cash custody for ten secon
   expect(game.view(alice,world).briefcaseTracking?.seconds).toBe(1);
   world.now = 10_000;
   expect(game.view(alice,world).briefcaseTracking).toBeUndefined();
+  expect(game.view(alice,world).equipped).toContainEqual(tracker);
+  expect(game.view(alice,world).equipmentCooldowns?.[tracker.id]).toBe(30);
+  expect(game.act(alice,use,world)).toBe('Rastreador em recarga.');
+  world.now = 40_000;
+  expect(game.act(alice,use,world)).toContain('Rastreador ativo');
+  expect(game.view(alice,world).equipped).toContainEqual(tracker);
+  expect(game.view(alice,world).briefcaseTracking?.seconds).toBe(10);
 });
 
 test.each([3,12])('cash reappears sooner with %i competing players', contenders=>{

@@ -19,7 +19,11 @@ async page => {
 
   const guest = await page.context().newPage();
   try {
-    await guest.goto(invite);
+    if (new URL(invite).origin!=='https://cartuchao.io' || new URL(invite).pathname!=='/infiltrados-no-congresso/jogar') throw new Error('Endereço do convite incorreto');
+    const localInvite = new URL(base);
+    localInvite.searchParams.set('sala',code);
+    await guest.goto(localInvite.href);
+    if (await guest.getByRole('button',{name:'Criar sala'}).count()) throw new Error('Convite oferece criar sala');
     const guestNick = guest.getByRole('textbox',{name:'Seu nick'});
     const guestCode = guest.getByRole('textbox',{name:'Código da sala'});
     if (await guestCode.inputValue()!==code) throw new Error('Código do convite não preenchido');

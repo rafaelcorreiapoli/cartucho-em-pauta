@@ -791,3 +791,5 @@ dialog.match-settings { box-sizing:border-box; width:min(720px,calc(100vw - 24px
   .match-settings .lobby-count { align-items:start; flex-direction:column; }
   .match-settings .lobby-count > div { flex-wrap:wrap; }
 }
+ .match-settings .lobby-options > label.lobby-count { grid-column:auto; justify-content:flex-start; flex-direction:row; align-items:center; }
+.match-settings .lobby-count > small { flex-basis:100%; color:#bbcabd; line-height:1.5; }

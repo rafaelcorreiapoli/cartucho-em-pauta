@@ -32,9 +32,9 @@ export function RoomEntrance({initialNick,roomCode,busy,message,onConnect,nickRe
       <label className="nick-field">Seu nick <input id="nick" name="nick" ref={nickRef} maxLength={NICK_LIMIT}
         autoComplete="nickname" placeholder="Como vão chamar você?" defaultValue={initialNick} required
         onInput={event=>event.currentTarget.setCustomValidity('')}/></label>
-      <button className="hud-button" id="create" type="button" disabled={busy} onClick={()=>submit(false)}>Criar sala</button>
-      <button className="hud-button hud-button--secondary" type="button" disabled={busy} onClick={()=>submit(false,true)}>Aprender a jogar</button>
-      <div className="join-fields">
+      {!roomCode && <><button className="hud-button" id="create" type="button" disabled={busy} onClick={()=>submit(false)}>Criar sala</button>
+      <button className="hud-button hud-button--secondary" type="button" disabled={busy} onClick={()=>submit(false,true)}>Aprender a jogar</button></>}
+      <div className={roomCode ? "join-fields join-invite" : "join-fields"}>
         <label>Código da sala <input key={roomCode} id="room-id" name="room-id" maxLength={64} autoComplete="off"
           defaultValue={roomCode} required/></label>
         <button className="hud-button hud-button--secondary" type="submit" disabled={busy}>Entrar</button>

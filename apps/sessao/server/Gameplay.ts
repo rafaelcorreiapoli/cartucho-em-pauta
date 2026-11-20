@@ -81,6 +81,7 @@ export class Gameplay {
   private serial = 0;
   private binocularUse = new Map<string,{activeUntil:number; readyAt:number}>();
   private scanning = new Map<string,{item:number;ends:number;balances:Map<string,number>;reported:Set<string>}>();
+  private trackerReadyAt = new Map<number,number>();
   private briefcaseTrackingUntil = new Map<string,number>();
   private concealedUntil = new Map<string,number>();
   private exposed = new Map<string,Set<number>>();
@@ -200,6 +201,7 @@ export class Gameplay {
     this.exposed.clear();
     this.concealedUntil.clear();
     this.briefcaseTrackingUntil.clear();
+    this.trackerReadyAt.clear();
     this.scanning.clear();
     this.binocularUse.clear();
     this.pendingInstallations.clear();
@@ -826,6 +828,7 @@ export class Gameplay {
     const equipmentCooldowns:Record<number,number> = {};
     for (const item of equipped) {
       const seconds = item.kind==='megaphone' ? Math.ceil(Math.max(0,(this.megaphoneRecharge.get(item.id)?.until ?? 0)-world.now)/1000) :
+        item.kind==='briefcaseTracker' ? Math.ceil(Math.max(0,(this.trackerReadyAt.get(item.id) ?? 0)-world.now)/1000) :
         item.kind==='binoculars' ? Math.ceil(Math.max(0,(this.binocularUse.get(id)?.readyAt ?? 0)-world.now)/1000) :
         equippedWeapon([item]) ? this.combat.weaponRecharge(player,world.now) : undefined;
       if (seconds) equipmentCooldowns[item.id] = seconds;
@@ -1387,7 +1390,7 @@ export class Gameplay {
   private consumeFood(player:Player, effect:FoodEffect) {
     if (effect.hp) this.combat.heal(player,effect.hp);
     const max = player.staminaMax ?? MAX_STAMINA;
-    if (effect.stamina) player.stamina = Math.min(max,(player.stamina ?? max)+effect.stamina);
+    if (effect.stamina) player.stamina = Math.max(0,Math.min(max,(player.stamina ?? max)+effect.stamina));
     if (effect.speed) player.speedModifier = {factor:effect.speed.factor,remainingMs:effect.speed.durationMs};
     if (effect.staminaRegen) player.staminaRegenModifier = {factor:effect.staminaRegen.factor,remainingMs:effect.staminaRegen.durationMs};
   }
@@ -1612,6 +1615,16 @@ export class Gameplay {
         callCassation:()=>world.callCassation ? world.callCassation(player) : 'Cassação indisponível.',
         swapMissions:()=>world.swapMissions?.(id) ?? 'unavailable',
       });
+    if (action.kind==='use-tracker') {
+      const item = this.wearing(id,'briefcaseTracker');
+      if (!item) return this.reject(player,world,'Equipe o Rastreador de maletas.');
+      if ((this.trackerReadyAt.get(item.id) ?? 0)>world.now) return this.reject(player,world,'Rastreador em recarga.');
+      const until = world.now+briefcaseTracker.duration;
+      this.briefcaseTrackingUntil.set(id,until);
+      this.trackerReadyAt.set(item.id,until+briefcaseTracker.cooldown);
+      this.event(world,player,'used',item,undefined,{witnesses:[]});
+      return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
+    }
     if (action.kind==='use-binoculars') {
       if (!this.wearing(id,'binoculars')) return this.reject(player,world,'Equipe o Binóculo.');
       if ((this.binocularUse.get(id)?.readyAt ?? 0)>world.now) return this.reject(player,world,'Binóculo em recarga.');
@@ -1777,13 +1790,6 @@ export class Gameplay {
       case 'use':
         if (cashAmount(data)) return this.reject(player,world,'Leve o dinheiro ao cofre do seu gabinete.');
         if (!('use' in definition)) return this.reject(player,world,'Este objeto não pode ser usado dessa forma.');
-        if (data.kind==='briefcaseTracker') {
-          if ((this.briefcaseTrackingUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'O rastreador já está ativo.');
-          this.remove(item);
-          this.briefcaseTrackingUntil.set(id,world.now+briefcaseTracker.duration);
-          this.event(world,player,'used',data,undefined,{witnesses:[]});
-          return `Rastreador ativo por ${briefcaseTracker.duration/1000} s. Segure Tab para ver as maletas.`;
-        }
         if (data.kind==='mensalUnderwear') {
           if ((this.concealedUntil.get(id) ?? 0)>world.now) return this.reject(player,world,'Você já está ocultando dinheiro.');
           this.remove(item);

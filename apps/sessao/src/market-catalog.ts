@@ -18,10 +18,11 @@ const supplies = {
   incendiary,
 } as const;
 
-const {officeTv,officeRug,officeChair,...securityGoods} = officeGoods;
+const {officeTv,officeRug,officeChair,masterDecoder,...securityGoods} = officeGoods;
 const furniture = {officeTv,officeRug,officeChair};
 const technical = {...equipment,...securityGoods,...spyProducts,...supplies};
-const catalogs = {equipment:technical,food:foods,furniture,credentials:credentialGoods} as const;
+const snackMenu = {pizza:foods.pizza,chocolates:foods.chocolates,coffee:foods.coffee};
+const catalogs = {equipment:technical,food:snackMenu,furniture,credentials:credentialGoods} as const;
 type Catalog = keyof typeof catalogs;
 type TechnicalProduct = keyof typeof technical;
 
@@ -37,9 +38,20 @@ export function isCredentialGood(kind:unknown):kind is keyof typeof credentialGo
 export const marketKinds = {
   credentials:Object.keys(credentialGoods) as (keyof typeof credentialGoods)[],
   equipment:Object.keys(technical) as TechnicalProduct[],
-  food:Object.keys(foods) as (keyof typeof foods)[],
+  food:Object.keys(snackMenu) as (keyof typeof foods)[],
   furniture:Object.keys(furniture) as (keyof typeof furniture)[],
 };
+
+export const equipmentCategories = {
+  equipment:{label:'Equipamentos',kinds:['xray','binoculars','voiceModulator','megaphone','vest','runningShoes','baton','briefcaseTracker']},
+  burglary:{label:'Arrombamento',kinds:['lockpick','lockKit','proLockKit','decoder']},
+  sabotage:{label:'Sabotagem',kinds:['mensalUnderwear','incendiary']},
+  utilities:{label:'Utilidades',kinds:['firstAidKit','forensicKit','doorLock','cabinetLock','wiretap','spyCamera','bugDetector']},
+} as const;
+export type EquipmentCategory = keyof typeof equipmentCategories;
+export function equipmentCategoryKinds(category:EquipmentCategory) {
+  return equipmentCategories[category].kinds.filter(kind=>marketKinds.equipment.includes(kind));
+}
 
 export const discountedPrice = (price:number,discount:number=policyDiscountPercent) => Math.max(.1,Math.round(price*(100-discount)/10)/10);
 

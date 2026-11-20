@@ -161,6 +161,13 @@ export function createPhonePhotos(
       return {captured,presented};
     },
     flash() {
+      const flash = document.createElement('div');
+      flash.className = 'photo-screen-flash';
+      flash.setAttribute('aria-hidden','true');
+      document.body.append(flash);
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const animation = flash.animate([{opacity:reduced ? .12 : .65},{opacity:0}],{duration:220,easing:'ease-out'});
+      animation.onfinish = animation.oncancel = ()=>flash.remove();
       if (cameraPreview?.isConnected) {
         cameraPreview.animate([{filter:'brightness(3)'},{filter:'brightness(1)'}],{duration:220});
       }

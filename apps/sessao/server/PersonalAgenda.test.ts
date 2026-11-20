@@ -247,7 +247,7 @@ test('mission draws skip unavailable offices, exhausted purchases and unaffordab
   metrics.wallet = 6;
   agenda.updateEligibility(metrics,3,true,3);
   const eligible = agenda.view(metrics).active.map(mission=>mission.kind);
-  expect(eligible).toContain('comprarLagosta');
+  expect(eligible).not.toContain('comprarLagosta');
   expect(eligible).toContain('protocolo');
   expect(eligible).not.toContain('televisao');
 });
@@ -1560,7 +1560,7 @@ test('phone time from separate calls cannot complete Debate Democrático',()=>{
 });
 
 test('Bandeja Gourmet needs access to a second distinct food beyond free coffee',()=>{
-  const draw = (wallet:number,owned?:'coffee'|'coxinha',hasOffice=true)=>{
+  const draw = (wallet:number,owned?:'coffee'|'chocolates',hasOffice=true)=>{
     const state = {...metrics,wallet,owns:(kind:string)=>kind===owned,hasOffice:()=>hasOffice};
     const agenda = new PersonalAgenda(state,1,()=>0,()=>{});
     Reflect.set(agenda,'missions',[]);
@@ -1570,9 +1570,9 @@ test('Bandeja Gourmet needs access to a second distinct food beyond free coffee'
   };
   expect(draw(0)).toBe(false);
   expect(draw(0,'coffee')).toBe(false);
-  expect(draw(0,'coxinha')).toBe(true);
-  expect(draw(.5)).toBe(true);
-  expect(draw(.5,undefined,false)).toBe(false);
+  expect(draw(0,'chocolates')).toBe(true);
+  expect(draw(2)).toBe(true);
+  expect(draw(2,undefined,false)).toBe(false);
 });
 
 test('a pizza-serving mission preserves credited guests and requires enough new guests',()=>{

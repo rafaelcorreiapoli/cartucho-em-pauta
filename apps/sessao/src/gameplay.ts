@@ -32,7 +32,7 @@ export const objects = {
   ...spyProducts,
   ...officeGoods,
   briefcase:{exposable:true,name:'Maleta de dinheiro',portrait:'retrato-maleta.webp',description:'Uma contribuição espontânea com alça.',amount:3},
-  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Uso único.`,use:'consume'},
+  briefcaseTracker:{name:'Rastreador de maletas',portrait:'retrato-rastreador-maletas.webp',description:`Revela todas as maletas de dinheiro na planta (Tab) por ${briefcaseTracker.duration/1000} s. Recarga automática de ${briefcaseTracker.cooldown/1000} s. Cargas ilimitadas.`},
   mensalUnderwear:{name:'Cueca do Mensalão',portrait:'retrato-cueca-mensalao.webp',description:`Esconde por ${concealment.duration/1000} s o dinheiro que você está carregando.`,use:'consume'},
   xray:{name:'Raio X',portrait:'retrato-raio-x.webp',description:`Cada carga revela por ${xray.duration/1000} s o saldo de NPCs e cofres dentro da sua visão.`},
   bundle:{exposable:true,name:'Maço de dinheiro',portrait:'retrato-maco.webp',description:'Um maço de procedência criativamente indefinida.',amount:1},
@@ -109,7 +109,7 @@ type PhoneActionKind = typeof phoneActions[number];
 const gameplayActions = ['supply','collect','offer','sign-request','accept','decline','drop','use','destroy','stamp','edit','verify-document','store','recover','deliver',
   ...phoneActions,'photo','selfie','expose','conceal',
   'info-show','info-copy','info-accept','info-decline','info-close','photo-delete','photo-publish',
-  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
+  'install','uninstall','mark','slice','talk','open-shop','replace-gear','dialogue-choice','dialogue-close',...officeActions,'shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat'] as const;
 type GameplayActionKind = typeof gameplayActions[number];
 export type GameplayAction = {kind:GameplayActionKind; item?:number; target?:string; place?:string; direction?:SnakeDirection; token?:number; quantity?:number; expectedCash?:number; cells?:[number,number]};
 export type PhoneAction = GameplayAction & {kind:PhoneActionKind};
@@ -120,7 +120,7 @@ export function isPhoneAction(action:GameplayAction):action is PhoneAction {
 
 const articulationActions = new Set<GameplayActionKind>([
   ...officeActions,
-  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
+  'edit','phone-open','call','answer','game-start','game-turn','bets-spin','candy-start','candy-swap','photo','selfie','install','uninstall','mark','slice','photo-publish','talk','open-shop','dialogue-choice','replace-gear','shop-buy','scan-xray','recharge-xray','use-binoculars','use-tracker','equip','unequip','toggle-megaphone','toggle-modulator','attack','aid','carry','release','inspect-down','treat',
 ]);
 
 export function canUseGameplayAction(action:GameplayAction, articulating:boolean) {
