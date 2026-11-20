@@ -1,6 +1,6 @@
 import {worldAssets} from './world-assets';
 import {NAMES} from './map';
-import {characterArt, characterSheets, combatSheets, phoneSheets, safeBreachSheets, safeDepositSheets, npcRobberySheets, attackArt, phoneArt, safeBreachArt, safeDepositArt, npcRobberyArt} from './character-art';
+import {characterArt, characterSheets, collantSheets, combatSheets, phoneSheets, safeBreachSheets, safeDepositSheets, npcRobberySheets, attackArt, phoneArt, safeBreachArt, safeDepositArt, npcRobberyArt} from './character-art';
 import {visitorRoster, visitorSheets} from './visitors';
 import {federalPatrolRules, federalPatrolSheets} from './federal-patrol';
 import {mapNpcs} from './npcs';
@@ -13,7 +13,7 @@ const directions: readonly SpriteDirection[] = [
   {label: 'Costas', row: 2}, {label: 'Esquerda · espelhado', row: 1, flip: true},
 ];
 const fixed = (label: string): readonly SpriteDirection[] => [{label, row: 0}];
-const sheets = [...characterSheets, ...combatSheets, ...phoneSheets, ...safeBreachSheets, ...safeDepositSheets, ...npcRobberySheets, ...visitorSheets, ...federalPatrolSheets];
+const sheets = [...collantSheets, ...characterSheets, ...combatSheets, ...phoneSheets, ...safeBreachSheets, ...safeDepositSheets, ...npcRobberySheets, ...visitorSheets, ...federalPatrolSheets];
 function path(key: string) {
   const sheet = sheets.find(sheet => sheet.key === key);
   if (!sheet) throw new Error(`Spritesheet não registrada: ${key}`);
@@ -46,6 +46,16 @@ const players = NAMES.map((name, character): SpriteSubject => {
 });
 export const spriteCatalog: SpriteSubject[] = [
   ...players,
+  {id:'collant',name:'Collant da Invisibilidade',group:'Transformações',clips:[
+    ...walking('collant-walk').map(entry=>({...entry,directions:directions.map((d,row)=>({label:row===3 ? 'Esquerda' : d.label,row}))})),
+    clip('attack','Atacar','collant-attack',{fps:10,loop:false}),
+    clip('hit','Receber golpe','collant-hit',{fps:1000/55,loop:false}),
+    clip('fall','Cair / caído','collant-fall',{fps:10,loop:false}),
+    clip('phone','Usar celular','collant-phone',{fps:1000/135,directions:fixed('Frente')}),
+    clip('safe-breach','Arrombar','collant-safe-breach',{fps:5,directions:fixed('Costas')}),
+    clip('safe-deposit','Embolsar dinheiro','collant-safe-deposit',{count:8,fps:5,directions:fixed('Pose única')}),
+    clip('npc-robbery','Roubar','collant-npc-robbery',{count:8,fps:1000/180,directions:[{label:'Direita',row:0},{label:'Esquerda · espelhado',row:0,flip:true}]}),
+  ]},
   ...visitorRoster.map(({id, name}): SpriteSubject => ({id, name, group: 'Visitantes', clips: [
     ...walking(`${id}-walk`),
     clip('hit', 'Receber golpe', `${id}-hit`, {fps: 1000 / 55, loop: false}),

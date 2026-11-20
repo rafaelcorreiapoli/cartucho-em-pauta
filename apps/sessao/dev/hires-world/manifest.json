@@ -2792,5 +2792,241 @@
       1254,
       1254
     ]
+  },
+  {
+    "id": "collant-walk",
+    "original": "collant-walk.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      4
+    ],
+    "reference": "capa-invisibilidade-walk.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-622eae2c-f8fa-4e70-9736-f4164aa499fd.png",
+    "sourceSha256": "a6a46ed5e3b0613e544c838ac2a87ce7bac295de9f2f0a9e40ea02a8363d31d7",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompts": "collant-prompts.json",
+    "referenceFrameSize": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "collant-attack",
+    "original": "collant-attack.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "reference": "characters-hd/lula-attack-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-c89c0fe9-118f-45c6-8b4c-766e0fa6b529.png",
+    "sourceSha256": "f8d0eb7e7f3acea63c8d9f891b83f1f040fc0dc32883bc8b57f40b20f940d3a9",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompts": "collant-prompts.json"
+  },
+  {
+    "id": "collant-hit",
+    "original": "collant-hit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "reference": "characters-hd/lula-hit-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-8dfb95f3-857e-4f33-a6b6-f1442b746ba8.png",
+    "sourceSha256": "f474198d007ffee8a90e8391c47570ce8fdca8bc4a85bb415df0501372e0d58b",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompts": "collant-prompts.json"
+  },
+  {
+    "id": "collant-fall",
+    "original": "collant-fall.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      3
+    ],
+    "reference": "characters-hd/lula-fall-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-ceeb0640-858c-42f3-94a2-c20f9127ea34.png",
+    "sourceSha256": "61bb9231f0156d216be5d4526e24d9e51bdeab7b9f49b3d3c0b330f08b13e789",
+    "nativeSize": [
+      1448,
+      1086
+    ],
+    "masterSize": [
+      1448,
+      1086
+    ],
+    "prompts": "collant-prompts.json"
+  },
+  {
+    "id": "collant-phone",
+    "original": "collant-phone.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      1
+    ],
+    "reference": "characters-hd/lula-phone-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-14c8396c-61fc-4408-b0cf-bd7d5d07751f.png",
+    "sourceSha256": "1d46113530f3f27bd4f8a193a7c6c85fc069713941a287ef697a5be1ea64efca",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompts": "collant-prompts.json",
+    "frameBoxes": [
+      [
+        0,
+        0,
+        627,
+        627
+      ],
+      [
+        627,
+        0,
+        1254,
+        627
+      ],
+      [
+        0,
+        627,
+        627,
+        1254
+      ],
+      [
+        627,
+        627,
+        1254,
+        1254
+      ]
+    ],
+    "keepProps": true
+  },
+  {
+    "id": "collant-safe-breach",
+    "original": "collant-safe-breach.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      1
+    ],
+    "reference": "characters-hd/lula-safe-breach-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-95c2d0b3-b30c-416b-8b2b-99a421f74af9.png",
+    "sourceSha256": "e0bdc38d8bf30b517619f2bb9405199e9b685cef5c113da97f241ac6db6bfa30",
+    "nativeSize": [
+      1254,
+      1254
+    ],
+    "masterSize": [
+      1254,
+      1254
+    ],
+    "prompts": "collant-prompts.json",
+    "frameBoxes": [
+      [
+        0,
+        0,
+        627,
+        627
+      ],
+      [
+        627,
+        0,
+        1254,
+        627
+      ],
+      [
+        0,
+        627,
+        627,
+        1254
+      ],
+      [
+        627,
+        627,
+        1254,
+        1254
+      ]
+    ],
+    "keepProps": true
+  },
+  {
+    "id": "collant-safe-deposit",
+    "original": "collant-safe-deposit.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      2
+    ],
+    "reference": "characters-hd/lula-safe-deposit-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-bfce8f7b-37de-4081-830d-0ac7f96c3c90.png",
+    "sourceSha256": "26623f5d42cd2b5e92d645167854b1b007e741bb16752e81e10c22c5f1eb6df7",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "masterSize": [
+      1774,
+      887
+    ],
+    "prompts": "collant-prompts.json",
+    "keepProps": true
+  },
+  {
+    "id": "collant-npc-robbery",
+    "original": "collant-npc-robbery.webp",
+    "kind": "animation",
+    "grid": [
+      4,
+      2
+    ],
+    "reference": "characters-hd/lula-npc-robbery-128.webp",
+    "sourceKind": "generated",
+    "sourceFile": "exec-24257296-66db-49d9-a292-dab4a4f6a880.png",
+    "sourceSha256": "cc6875616ed5df794d71504aeebbbe6f5ab778a73971f81ffc2c54576267e278",
+    "nativeSize": [
+      1774,
+      887
+    ],
+    "masterSize": [
+      1774,
+      887
+    ],
+    "prompts": "collant-prompts.json",
+    "keepProps": true
   }
 ]

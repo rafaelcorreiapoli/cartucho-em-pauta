@@ -7,6 +7,7 @@ import { visitorRoster, visitorSheets } from './visitors';
 import {
   characterArt,
   characterSheets,
+  collantSheets,
   combatSheets,
   downedArt,
   hitArt,
@@ -86,7 +87,6 @@ const cloakGrip:readonly WalkGrips[] = [
 ];
 
 export function preloadWorldArt(scene: Phaser.Scene) {
-  scene.load.spritesheet('cloak-walk',import.meta.env.BASE_URL+'assets/capa-invisibilidade-walk.webp',{frameWidth:256,frameHeight:256});
   for (const { texture, sprite } of Object.values(installationArt)) {
     loadWorldImage(scene, texture, sprite);
   }
@@ -97,6 +97,7 @@ export function preloadWorldArt(scene: Phaser.Scene) {
   }
   for (const { key, path } of [
     ...characterSheets,
+    ...collantSheets,
     ...visitorSheets,
     ...federalPatrolSheets,
     ...combatSheets,
@@ -207,6 +208,7 @@ export function updateActorView(
   const pixelScale = options.pixelScale ?? scene.cameras.main.zoom;
   const base = characterArt(character, visitor);
   const reducedMotion = options.reducedMotion ?? false;
+  const glass = !!latest.cloaked;
   const swing = latest.swing;
   if (swing && swing.startedAt !== view.swingAt) {
     view.swingAt = swing.startedAt;
@@ -219,28 +221,28 @@ export function updateActorView(
   const facing = pose?.facing ?? handling ?? direction;
   const reach = handling !== undefined && !reducedMotion ? (1 + Math.sin(time / 95)) * 0.5 : 0;
   const row = facing === 3 ? 1 : facing;
-  const attack = pose && profile ? attackArt(character, row, progress, profile.impactMs / profile.swingMs) : undefined;
+  const attack = pose && profile ? attackArt(character, row, progress, profile.impactMs / profile.swingMs, glass) : undefined;
   const downed =
-    latest.knockedOut || latest.carried ? downedArt(character, direction, time - (view.fallAt ?? -Infinity), visitor) : undefined;
+    latest.knockedOut || latest.carried ? downedArt(character, direction, time - (view.fallAt ?? -Infinity), visitor, glass) : undefined;
   if (!downed) view.fallAt = undefined;
-  const recoil = view.hitAt === undefined ? undefined : hitArt(character, direction, time - view.hitAt, visitor);
+  const recoil = view.hitAt === undefined ? undefined : hitArt(character, direction, time - view.hitAt, visitor, glass);
   const combatArt = downed ?? recoil ?? attack;
   const breachArt =
     latest.breachingDoor && visitor === federalPatrolRules.skin
       ? federalBreachArt(facing, time, reducedMotion)
       : latest.breachingSafe && !combatArt && !pose && !latest.carrying
-        ? safeBreachArt(character, time, reducedMotion)
+        ? safeBreachArt(character, time, reducedMotion, glass)
         : undefined;
   const depositing = latest.pocketing && !moving && !combatArt && !pose && !latest.carrying;
   if (depositing) view.depositStarted ??= options.frozen ? 0 : time;
   else view.depositStarted = undefined;
-  const depositArt = depositing ? safeDepositArt(character, time - (view.depositStarted ?? time), reducedMotion) : undefined;
+  const depositArt = depositing ? safeDepositArt(character, time - (view.depositStarted ?? time), reducedMotion, glass) : undefined;
   const robberyTarget = latest.robberyTarget;
   const robbing = robberyTarget && !moving && !combatArt && !pose && !latest.carrying;
   if (robbing) view.robberyStarted ??= options.frozen ? 0 : time;
   else view.robberyStarted = undefined;
   const robberyArt = robbing
-    ? npcRobberyArt(character, time - (view.robberyStarted ?? time), reducedMotion, latest, robberyTarget)
+    ? npcRobberyArt(character, time - (view.robberyStarted ?? time), reducedMotion, latest, robberyTarget, glass)
     : undefined;
   const phone = latest.phone;
   const usingPhone =
@@ -253,12 +255,11 @@ export function updateActorView(
     !combatArt &&
     !pose &&
     !latest.carrying;
-  const handsetArt = usingPhone ? phoneArt(character, time, reducedMotion) : undefined;
+  const handsetArt = usingPhone ? phoneArt(character, time, reducedMotion, glass) : undefined;
   const spriteX = x + (pose?.lungeX ?? (handling === 1 ? reach : handling === 3 ? -reach : 0));
   const spriteY = latest.carried ? y - 24 : y + (pose?.lungeY ?? -reach);
   const labelY = latest.carried ? y - 51 : y + 2;
-  const glass = !!latest.cloaked && !latest.knockedOut && !latest.carried;
-  for (const part of [label,office,view.items,view.weapon,view.briefcase,view.speedIcon]) part?.setAlpha(glass ? 0 : 1);
+  for (const part of [label,office,view.items,view.speedIcon]) part?.setAlpha(glass ? 0 : 1);
   const opacity = glass ? 1 :
     latest.knockedOut && !latest.carried
       ? 0.68
@@ -275,7 +276,7 @@ export function updateActorView(
     .setVisible(true)
     .setPosition(spriteX, spriteY)
     .setFlipX(downed?.flipX ?? recoil?.flipX ?? robberyArt?.flipX ?? (!handsetArt && !breachArt && !depositArt && facing === 3));
-  view.weapon.setVisible(!!pose);
+  view.weapon.setAlpha(1).setVisible(!!pose);
   if (pose && swing && profile) {
     view.weapon
       .setTexture(`weapon-${swing.weapon}`)
@@ -332,13 +333,15 @@ export function updateActorView(
     .setText(status);
   const officeColor = latest.former ? '#e6a38c' : '#cbd6db';
   if (office.style.color !== officeColor) office.setColor(officeColor);
-  // Every wearer shares this featureless shape: no face, hair or outfit can identify them.
+  const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
+  // Every action shares the same anonymous identity and adaptive detail tiers.
   if (glass) {
     sprite.anims.stop();
     const step = moving && !reducedMotion ? Math.floor(time*9*(latest.sprinting ? sprintMultiplier : 1)/1000)%4 : 0;
-    sprite.setTexture('cloak-walk',direction*4+step).setFlipX(false).clearTint();
+    const texture = adaptivePoseArt(scene,art ?? {key:'collant-walk',frame:direction*4+step},pixelScale);
+    sprite.setTexture(texture.key,texture.frame);
+    if (!art) sprite.setFlipX(false);
   } else {
-    const art = combatArt ?? robberyArt ?? depositArt ?? breachArt ?? handsetArt;
     const walk = art ? {key: base.sheet.key, frame: base.frame, animation: `${visitor ?? character}`} : adaptiveWalkArt(scene, character, visitor, pixelScale);
     if (moving && !pose && !combatArt && !breachArt && !depositArt && !robberyArt) {
       const key = `${walk.animation}-${row}`;

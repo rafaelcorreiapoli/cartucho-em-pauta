@@ -886,7 +886,7 @@ test('cloak purchased at technical support has server duration, item cooldown an
   world.now+=30_000;
   expect(game.act(alice,{kind:'use-cloak'},world)).toContain('ativo');
   alice.knockedOut=true;
-  expect(game.cloakActive(alice,world.now)).toBe(false);
+  expect(game.cloakActive(alice,world.now)).toBe(true);
   alice.knockedOut=false;
   expect(buyGear(alice,'vest')).toContain('Compra');
   const vest=game.view(alice,world).inventory.find(item=>item.kind==='vest')!;
@@ -896,6 +896,27 @@ test('cloak purchased at technical support has server duration, item cooldown an
   expect(game.view(alice,world).equipped?.some(item=>item.kind==='invisibilityCloak')).toBe(false);
 });
 
+test('the Collant keeps anonymous knockout and transport poses until its original deadline',()=>{
+  const match=setup();
+  const {alice,bob,game,world,buyGear}=match;
+  buyGear(bob,'invisibilityCloak');
+  const item=game.view(bob,world).inventory.find(item=>item.kind==='invisibilityCloak')!;
+  game.act(bob,{kind:'equip',item:item.id},world);
+  game.act(bob,{kind:'use-cloak'},world);
+  const deadline=world.now+10_000;
+  knockOut(match);
+  expect(bob.knockedOut).toBe(true);
+  expect(game.cloakActive(bob,world.now)).toBe(true);
+  expect(game.act(alice,{kind:'carry',target:bob.id},world)).toBe('Jogador carregado.');
+  game.tick(world,true);
+  expect(game.cloakActive(bob,world.now)).toBe(true);
+  game.act(alice,{kind:'selfie'},world);
+  expect(game.photoView(alice.id,world.now).album[0]?.photo.people.find(person=>person.id===bob.id))
+    .toMatchObject({cloaked:true,knockedOut:true,carried:true});
+  world.now=deadline;
+  expect(game.cloakActive(bob,world.now)).toBe(false);
+  expect(game.view(bob,world).equipmentCooldowns?.[item.id]).toBe(30);
+});
 
 test.each([[-1,-1],[-1,1],[1,-1],[1,1]])('diagonal attacks follow movement (%s, %s) and keep the weapon reach', (x,y) => {
   const attacker = player('Alice',70,110);

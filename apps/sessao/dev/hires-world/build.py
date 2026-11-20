@@ -31,7 +31,7 @@ def fit(source,target,size,offset=0,stretch=False):
 for rec in records:
  if len(sys.argv)>1 and not any(rec['id'].startswith(prefix) for prefix in sys.argv[1:]):continue
  source=Image.open(HERE/'masters'/f'{rec["id"]}.webp').convert('RGBA')
- original=Image.open(ROOT/'public/assets'/rec['original']).convert('RGBA');kind=rec['kind'];variants=[]
+ original=Image.open(ROOT/'public/assets'/rec.get('reference',rec['original'])).convert('RGBA');kind=rec['kind'];variants=[]
  if kind=='portrait':
   n=rec['frame'];portraits.append((n,fit(source,cell(original,n,[2,4]),(512,512))));continue
  if kind=='image':
@@ -40,17 +40,18 @@ for rec in records:
    im=fit(source,original,size,stretch=rec.get('stretchToLegacyFrame',False));path=f'assets/world-hd/{rec["id"]}-{long}.webp';im.save(ROOT/'public'/path,lossless=True,method=4)
    variants.append({'key':f'hires:{rec["id"]}:{long}','path':path,'width':size[0],'height':size[1],'size':long})
  elif kind in ['animation','atlas']:
-  grid=rec['grid'];base=rec.get('frameSize',[128,128]);oldgrid=[original.width//base[0],original.height//base[1]]
+  grid=rec['grid'];base=rec.get('frameSize',[128,128]);reference_size=rec.get('referenceFrameSize',base);oldgrid=[original.width//reference_size[0],original.height//reference_size[1]]
   for factor in ([1,2,4] if kind=='animation' else [2,4]):
    size=[n*factor for n in base];outputgrid=[2,3] if kind=='atlas' else grid
    atlas=Image.new('RGBA',(outputgrid[0]*size[0],outputgrid[1]*size[1]))
    for n in range(grid[0]*grid[1]):
     src=source.crop(rec['frameBoxes'][n]) if 'frameBoxes' in rec else cell(source,n,grid);target=cell(original,n,oldgrid)
-    if kind=='animation' or 'frameBoxes' in rec:src=body(src)
-    if kind=='animation':target=body(target)
+    if (kind=='animation' or 'frameBoxes' in rec) and not rec.get('keepProps',False):src=body(src)
+    if kind=='animation' and not rec.get('keepProps',False):target=body(target)
     offset=FEDERAL_X[n] if rec['id']=='japones-federal-walk' else 0
     im=fit(src,target,size,offset,stretch=rec.get('stretchToLegacyFrame',False));atlas.paste(im,(n%outputgrid[0]*size[0],n//outputgrid[0]*size[1]))
    long=size[0];path=f'assets/world-hd/{rec["id"]}-{long}.webp';atlas.save(ROOT/'public'/path,lossless=True,method=4)
+   if kind=='animation' and factor==1 and 'reference' in rec:atlas.save(ROOT/'public/assets'/rec['original'],lossless=True,method=4)
    variants.append({'key':f'{rec["id"]}-{long}' if kind=='animation' else f'hires:{rec["id"]}:{long}','path':path,'width':size[0],'height':size[1],'size':long})
  registry[rec['original']]={'id':rec['id'],'kind':kind,'width':128 if kind=='animation' else rec.get('frameSize',list(original.size))[0],'height':128 if kind=='animation' else rec.get('frameSize',list(original.size))[1],'variants':variants}
 if portraits:

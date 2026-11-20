@@ -368,7 +368,7 @@ export class Gameplay {
 
   cloakActive(player:Player,now:number) {
     const item = this.wearing(player.id,'invisibilityCloak');
-    return !player.knockedOut && !player.carried && !!item && (this.cloakUse.get(item.id)?.activeUntil ?? 0)>now;
+    return !!item && (this.cloakUse.get(item.id)?.activeUntil ?? 0)>now;
   }
 
   private stopCloak(id:string) {
@@ -743,7 +743,7 @@ export class Gameplay {
     this.updateMegaphone(world,exploring);
     if (!exploring) this.dialogues.reset();
     for (const player of world.players) {
-      if (!exploring || player.knockedOut || player.carried) this.stopCloak(player.id);
+      if (!exploring) this.stopCloak(player.id);
       if (player.knockedOut || player.carried) this.stopBinoculars(player.id);
       if (player.knockedOut) this.stopModulator(player.id);
     }
