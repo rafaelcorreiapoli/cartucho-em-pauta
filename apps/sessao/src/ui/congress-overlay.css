@@ -827,8 +827,8 @@
 .bag-filters button[aria-pressed="true"] { background: #294335; color: #f0d69b; box-shadow: inset 0 -2px #e9c77c; }
 .bag-storage { display: flex; flex-direction: column; min-height: 0; overflow: auto; padding: 3px; }
 .bag-layout .congress-bag {
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 114px;
+  min-height: 114px;
   grid-template-columns: repeat(3,minmax(0,1fr));
   grid-template-rows: repeat(3,minmax(32px,1fr));
   gap: 9px;
@@ -841,12 +841,12 @@
   border-radius: var(--hud-item-tile-radius);
   background: linear-gradient(155deg,#223a2d86,#0f231adc);
 }
-.bag-layout .item-tile img { width: 69%; height: 69%; object-fit: contain; }
+.bag-layout .item-tile img { position: absolute; width: 69%; height: 69%; object-fit: contain; }
 .bag-layout button:disabled { opacity: .45; cursor: default; }
-.bag-detail { min-width: 0; min-height: 0; border-left: 1px solid #4c6e597d; padding-left: 16px; }
+.bag-detail { display: flex; flex-direction: column; gap: 8px; overflow: auto; min-width: 0; min-height: 0; border-left: 1px solid #4c6e597d; padding-left: 16px; }
 .bag-detail > p,
 .bag-detail .object-card {
-  height: 100%;
+  flex: 0 0 auto;
   box-sizing: border-box;
   margin: 0;
   padding: 13px;
@@ -855,7 +855,7 @@
   background: var(--hud-item-detail-surface);
 }
 .bag-detail > p { display: grid; place-items: center; text-align: center; color: #bac9b8; }
-.bag-detail .object-card { display: grid; grid-template-rows: minmax(0,1fr) min(47%,178px); gap: 8px; }
+.bag-detail .object-card { display: grid; grid-template-rows: auto auto; gap: 8px; }
 .bag-item-info,.bag-item-actions { min-height: 0; overflow: auto; scrollbar-gutter: stable; }
 .bag-detail .object-card h3 { display: grid; justify-items: start; gap: 4px; font-size: 19px; }
 .bag-detail .object-card h3 img { width: 68px; height: 68px; object-fit: contain; }
@@ -894,7 +894,7 @@
   #gameplay-dialog[data-mode="bag"] h2 { font-size: 23px; }
   .bag-layout { row-gap: 8px; }
   .bag-filters button { padding-block: 5px; }
-  .bag-detail .object-card { grid-template-rows: minmax(0,1fr) min(62%,150px); padding: 8px; }
+  .bag-detail .object-card { grid-template-rows: auto auto; padding: 8px; }
   .bag-detail .object-card h3 img { width: 42px; height: 42px; }
   .bag-item-actions > button { min-height: 29px; margin-bottom: 3px; padding-block: 3px; }
   .bag-preview { padding-top: 6px; }
@@ -1230,6 +1230,11 @@
   scrollbar-width: thin;
   pointer-events: auto;
 }
+
+.bag-cash { margin-top: 9px; flex: none; }
+.bag-cash small { color: #bac9b8; }
+.bag-cash-slots { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 6px; margin-top: 5px; }
+.bag-cash-slots .item-tile { aspect-ratio: 1; width: 100%; }
 
 .market-categories { display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:8px 0; }
 .market-categories button { border:1px solid #a9935370; border-radius:8px; background:#1c3228; color:#d5d9c4; padding:8px 16px; font:700 .9rem/1.2 system-ui,sans-serif; cursor:pointer; }
