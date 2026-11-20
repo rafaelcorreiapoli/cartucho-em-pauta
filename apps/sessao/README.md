@@ -361,3 +361,5 @@ Custos por jogador com mandato na aprovação: Porrete R$ 10 mil (um porrete), R
 Novas salas começam em Calote, com dois infiltrados, três NPCs, projetos automáticos, fotos e eleições ligados. As outras opções começam desligadas. O tutorial preserva suas mecânicas de treinamento. A votação opcional de projetos permanece independente.
 
 O smoke `dev/automatic-projects-smoke.js` verifica o padrão do lobby, sigilo, quatro aprovações, imagens, anúncio em 800×450 e histórico. As imagens e seus prompts estão documentados em `docs/automatic-project-images.json` na raiz do repositório.
+
+A trilha de orçamento negativo no Calote é “Hitman”, de Kevin MacLeod (incompetech.com), sob [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), sem alterações e na velocidade original durante toda a contagem. Créditos disponíveis na entrada do jogo e em `public/assets/audio/CREDITS.md`.
