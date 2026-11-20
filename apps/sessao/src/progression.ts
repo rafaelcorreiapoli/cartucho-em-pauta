@@ -1,6 +1,6 @@
 export const MINIGAME_FRUIT_XP = 1;
 
-export const levelThresholds = [0,100,240,420,650,950] as const;
+export const levelThresholds = [0,70,168,294,455,665] as const;
 export const attributeUpgrades = {
   burglary:{label:'Arrombamento',description:'Arrombe portas, armários e cofres mais rápido.',bonus:25},
   concealment:{label:'Esconder dinheiro',description:'Guarde dinheiro no seu cofre mais rápido.',bonus:25},

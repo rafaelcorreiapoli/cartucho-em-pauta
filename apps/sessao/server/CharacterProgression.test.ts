@@ -6,16 +6,26 @@ import { readAttributeRequest } from '../src/progression';
 
 test('cumulative XP grants every crossed level, caps points and keeps excess XP',()=>{
   const progression = new CharacterProgression(1);
-  expect(progression.view()).toMatchObject({level:1,xp:0,nextLevelXp:100,available:0});
+  expect(progression.view()).toMatchObject({level:1,xp:0,nextLevelXp:70,available:0});
   progression.earn(80);
   progression.earn(35);
-  expect(progression.view()).toMatchObject({level:2,xp:115,nextLevelXp:240,available:1});
+  expect(progression.view()).toMatchObject({level:2,xp:115,nextLevelXp:168,available:1});
   progression.earn(315);
-  expect(progression.view()).toMatchObject({level:4,xp:430,levelStart:420,available:3});
+  expect(progression.view()).toMatchObject({level:4,xp:430,levelStart:294,available:3});
   progression.earn(1000);
   expect(progression.view()).toMatchObject({level:6,xp:1430,available:5});
   expect(progression.view().nextLevelXp).toBeUndefined();
   expect((Object.keys(agendas) as Agenda[]).every(kind=>missionReward(kind).xp>0)).toBe(true);
+});
+
+test.each([70,168,294,455,665])('levels up exactly at the reduced %i XP threshold',threshold=>{
+  const progression = new CharacterProgression(1);
+  progression.earn(threshold-1);
+  const before = progression.view();
+  progression.earn(1);
+  expect(progression.view()).toMatchObject({
+    xp:threshold,level:before.level+1,levelStart:threshold,available:before.available+1,
+  });
 });
 
 test('attribute requests cannot be replayed, forged or carried across matches',()=>{
