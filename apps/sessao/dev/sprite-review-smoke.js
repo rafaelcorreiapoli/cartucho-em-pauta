@@ -21,10 +21,10 @@ async (page) => {
   if ((await download).suggestedFilename() !== 'infiltrados-revisao-sprites.json') throw new Error('Missing review export');
   await page.screenshot({path: '/tmp/infiltrados-sprite-review-desktop.png'});
   const result = await page.evaluate(async () => {
-    const {spriteCatalog, spriteFrame, spriteSubjectResolution} = await import('/src/sprite-catalog.ts');
+    const {spriteCatalog, spriteFrame, spriteSubjectResolution, spriteSubjectHasResolutions} = await import('/src/sprite-catalog.ts');
     const images = new Map();
     let frames = 0;
-    for (const subject of [...spriteCatalog, ...spriteCatalog.filter(subject => subject.group === 'Jogadores').flatMap(subject => ['original', '128', '256', '512'].map(size => spriteSubjectResolution(subject, size)))]) for (const clip of subject.clips) {
+    for (const subject of [...spriteCatalog, ...spriteCatalog.filter(spriteSubjectHasResolutions).flatMap(subject => ['original', '128', '256', '512'].map(size => spriteSubjectResolution(subject, size)))]) for (const clip of subject.clips) {
       let image = images.get(clip.path);
       if (!image) {
         image = new Image(); image.src = '/' + clip.path; await image.decode(); images.set(clip.path, image);

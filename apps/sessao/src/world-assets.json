@@ -1,0 +1,3577 @@
+{
+  "alexandre-de-moraes-fall.webp": {
+    "id": "alexandre-de-moraes-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "alexandre-de-moraes-fall-128",
+        "path": "assets/world-hd/alexandre-de-moraes-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "alexandre-de-moraes-fall-256",
+        "path": "assets/world-hd/alexandre-de-moraes-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "alexandre-de-moraes-fall-512",
+        "path": "assets/world-hd/alexandre-de-moraes-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "alexandre-de-moraes-hit.webp": {
+    "id": "alexandre-de-moraes-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "alexandre-de-moraes-hit-128",
+        "path": "assets/world-hd/alexandre-de-moraes-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "alexandre-de-moraes-hit-256",
+        "path": "assets/world-hd/alexandre-de-moraes-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "alexandre-de-moraes-hit-512",
+        "path": "assets/world-hd/alexandre-de-moraes-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "alexandre-de-moraes-walk.png": {
+    "id": "alexandre-de-moraes-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "alexandre-de-moraes-walk-128",
+        "path": "assets/world-hd/alexandre-de-moraes-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "alexandre-de-moraes-walk-256",
+        "path": "assets/world-hd/alexandre-de-moraes-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "alexandre-de-moraes-walk-512",
+        "path": "assets/world-hd/alexandre-de-moraes-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "balcao-lanchonete.webp": {
+    "id": "balcao-lanchonete",
+    "kind": "image",
+    "width": 480,
+    "height": 253,
+    "variants": [
+      {
+        "key": "hires:balcao-lanchonete:128",
+        "path": "assets/world-hd/balcao-lanchonete-128.webp",
+        "width": 128,
+        "height": 67,
+        "size": 128
+      },
+      {
+        "key": "hires:balcao-lanchonete:256",
+        "path": "assets/world-hd/balcao-lanchonete-256.webp",
+        "width": 256,
+        "height": 135,
+        "size": 256
+      },
+      {
+        "key": "hires:balcao-lanchonete:512",
+        "path": "assets/world-hd/balcao-lanchonete-512.webp",
+        "width": 512,
+        "height": 270,
+        "size": 512
+      }
+    ]
+  },
+  "cadeira-reserva.webp": {
+    "id": "cadeira-reserva",
+    "kind": "image",
+    "width": 153,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:cadeira-reserva:128",
+        "path": "assets/world-hd/cadeira-reserva-128.webp",
+        "width": 102,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:cadeira-reserva:256",
+        "path": "assets/world-hd/cadeira-reserva-256.webp",
+        "width": 204,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:cadeira-reserva:512",
+        "path": "assets/world-hd/cadeira-reserva-512.webp",
+        "width": 408,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "cafeteira.webp": {
+    "id": "cafeteira",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:cafeteira:128",
+        "path": "assets/world-hd/cafeteira-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:cafeteira:256",
+        "path": "assets/world-hd/cafeteira-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:cafeteira:512",
+        "path": "assets/world-hd/cafeteira-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "campaign-feature.webp": {
+    "id": "campaign-feature",
+    "kind": "image",
+    "width": 144,
+    "height": 144,
+    "variants": [
+      {
+        "key": "hires:campaign-feature:128",
+        "path": "assets/world-hd/campaign-feature-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:campaign-feature:256",
+        "path": "assets/world-hd/campaign-feature-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:campaign-feature:512",
+        "path": "assets/world-hd/campaign-feature-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "campaign-special.webp": {
+    "id": "campaign-special",
+    "kind": "image",
+    "width": 144,
+    "height": 144,
+    "variants": [
+      {
+        "key": "hires:campaign-special:128",
+        "path": "assets/world-hd/campaign-special-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:campaign-special:256",
+        "path": "assets/world-hd/campaign-special-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:campaign-special:512",
+        "path": "assets/world-hd/campaign-special-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "campaign-spot.webp": {
+    "id": "campaign-spot",
+    "kind": "image",
+    "width": 144,
+    "height": 144,
+    "variants": [
+      {
+        "key": "hires:campaign-spot:128",
+        "path": "assets/world-hd/campaign-spot-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:campaign-spot:256",
+        "path": "assets/world-hd/campaign-spot-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:campaign-spot:512",
+        "path": "assets/world-hd/campaign-spot-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "chapolin-colorado.webp": {
+    "id": "chapolin-colorado",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:chapolin-colorado:128",
+        "path": "assets/world-hd/chapolin-colorado-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:chapolin-colorado:256",
+        "path": "assets/world-hd/chapolin-colorado-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:chapolin-colorado:512",
+        "path": "assets/world-hd/chapolin-colorado-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "daniel-vorcaro.webp": {
+    "id": "daniel-vorcaro",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:daniel-vorcaro:128",
+        "path": "assets/world-hd/daniel-vorcaro-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:daniel-vorcaro:256",
+        "path": "assets/world-hd/daniel-vorcaro-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:daniel-vorcaro:512",
+        "path": "assets/world-hd/daniel-vorcaro-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "delcidio-do-amaral-fall.webp": {
+    "id": "delcidio-do-amaral-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "delcidio-do-amaral-fall-128",
+        "path": "assets/world-hd/delcidio-do-amaral-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "delcidio-do-amaral-fall-256",
+        "path": "assets/world-hd/delcidio-do-amaral-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "delcidio-do-amaral-fall-512",
+        "path": "assets/world-hd/delcidio-do-amaral-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "delcidio-do-amaral-hit.webp": {
+    "id": "delcidio-do-amaral-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "delcidio-do-amaral-hit-128",
+        "path": "assets/world-hd/delcidio-do-amaral-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "delcidio-do-amaral-hit-256",
+        "path": "assets/world-hd/delcidio-do-amaral-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "delcidio-do-amaral-hit-512",
+        "path": "assets/world-hd/delcidio-do-amaral-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "delcidio-do-amaral-walk.png": {
+    "id": "delcidio-do-amaral-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "delcidio-do-amaral-walk-128",
+        "path": "assets/world-hd/delcidio-do-amaral-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "delcidio-do-amaral-walk-256",
+        "path": "assets/world-hd/delcidio-do-amaral-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "delcidio-do-amaral-walk-512",
+        "path": "assets/world-hd/delcidio-do-amaral-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "documento-legislativo.webp": {
+    "id": "documento-legislativo",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:documento-legislativo:128",
+        "path": "assets/world-hd/documento-legislativo-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:documento-legislativo:256",
+        "path": "assets/world-hd/documento-legislativo-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:documento-legislativo:512",
+        "path": "assets/world-hd/documento-legislativo-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "duda-mendonca.webp": {
+    "id": "duda-mendonca",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:duda-mendonca:128",
+        "path": "assets/world-hd/duda-mendonca-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:duda-mendonca:256",
+        "path": "assets/world-hd/duda-mendonca-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:duda-mendonca:512",
+        "path": "assets/world-hd/duda-mendonca-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "eduardo-cunha-tesoureiro.webp": {
+    "id": "eduardo-cunha-tesoureiro",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:eduardo-cunha-tesoureiro:128",
+        "path": "assets/world-hd/eduardo-cunha-tesoureiro-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:eduardo-cunha-tesoureiro:256",
+        "path": "assets/world-hd/eduardo-cunha-tesoureiro-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:eduardo-cunha-tesoureiro:512",
+        "path": "assets/world-hd/eduardo-cunha-tesoureiro-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "eneas-carneiro.webp": {
+    "id": "eneas-carneiro",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:eneas-carneiro:128",
+        "path": "assets/world-hd/eneas-carneiro-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:eneas-carneiro:256",
+        "path": "assets/world-hd/eneas-carneiro-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:eneas-carneiro:512",
+        "path": "assets/world-hd/eneas-carneiro-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "estante-apoio-tecnico.webp": {
+    "id": "estante-apoio-tecnico",
+    "kind": "image",
+    "width": 384,
+    "height": 285,
+    "variants": [
+      {
+        "key": "hires:estante-apoio-tecnico:128",
+        "path": "assets/world-hd/estante-apoio-tecnico-128.webp",
+        "width": 128,
+        "height": 95,
+        "size": 128
+      },
+      {
+        "key": "hires:estante-apoio-tecnico:256",
+        "path": "assets/world-hd/estante-apoio-tecnico-256.webp",
+        "width": 256,
+        "height": 190,
+        "size": 256
+      },
+      {
+        "key": "hires:estante-apoio-tecnico:512",
+        "path": "assets/world-hd/estante-apoio-tecnico-512.webp",
+        "width": 512,
+        "height": 380,
+        "size": 512
+      }
+    ]
+  },
+  "extintor.webp": {
+    "id": "extintor",
+    "kind": "image",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "hires:extintor:128",
+        "path": "assets/world-hd/extintor-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:extintor:256",
+        "path": "assets/world-hd/extintor-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:extintor:512",
+        "path": "assets/world-hd/extintor-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-armario.webp": {
+    "id": "gabinete-armario",
+    "kind": "image",
+    "width": 145,
+    "height": 230,
+    "variants": [
+      {
+        "key": "hires:gabinete-armario:128",
+        "path": "assets/world-hd/gabinete-armario-128.webp",
+        "width": 81,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-armario:256",
+        "path": "assets/world-hd/gabinete-armario-256.webp",
+        "width": 161,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-armario:512",
+        "path": "assets/world-hd/gabinete-armario-512.webp",
+        "width": 323,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-cofre-aberto.webp": {
+    "id": "gabinete-cofre-aberto",
+    "kind": "image",
+    "width": 280,
+    "height": 200,
+    "variants": [
+      {
+        "key": "hires:gabinete-cofre-aberto:128",
+        "path": "assets/world-hd/gabinete-cofre-aberto-128.webp",
+        "width": 128,
+        "height": 91,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-cofre-aberto:256",
+        "path": "assets/world-hd/gabinete-cofre-aberto-256.webp",
+        "width": 256,
+        "height": 183,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-cofre-aberto:512",
+        "path": "assets/world-hd/gabinete-cofre-aberto-512.webp",
+        "width": 512,
+        "height": 366,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-cofre.webp": {
+    "id": "gabinete-cofre",
+    "kind": "image",
+    "width": 160,
+    "height": 199,
+    "variants": [
+      {
+        "key": "hires:gabinete-cofre:128",
+        "path": "assets/world-hd/gabinete-cofre-128.webp",
+        "width": 103,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-cofre:256",
+        "path": "assets/world-hd/gabinete-cofre-256.webp",
+        "width": 206,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-cofre:512",
+        "path": "assets/world-hd/gabinete-cofre-512.webp",
+        "width": 412,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-poltrona.webp": {
+    "id": "gabinete-poltrona",
+    "kind": "image",
+    "width": 144,
+    "height": 140,
+    "variants": [
+      {
+        "key": "hires:gabinete-poltrona:128",
+        "path": "assets/world-hd/gabinete-poltrona-128.webp",
+        "width": 128,
+        "height": 124,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-poltrona:256",
+        "path": "assets/world-hd/gabinete-poltrona-256.webp",
+        "width": 256,
+        "height": 249,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-poltrona:512",
+        "path": "assets/world-hd/gabinete-poltrona-512.webp",
+        "width": 512,
+        "height": 498,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-tapete.webp": {
+    "id": "gabinete-tapete",
+    "kind": "image",
+    "width": 216,
+    "height": 72,
+    "variants": [
+      {
+        "key": "hires:gabinete-tapete:128",
+        "path": "assets/world-hd/gabinete-tapete-128.webp",
+        "width": 128,
+        "height": 43,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-tapete:256",
+        "path": "assets/world-hd/gabinete-tapete-256.webp",
+        "width": 256,
+        "height": 85,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-tapete:512",
+        "path": "assets/world-hd/gabinete-tapete-512.webp",
+        "width": 512,
+        "height": 171,
+        "size": 512
+      }
+    ]
+  },
+  "gabinete-tv.webp": {
+    "id": "gabinete-tv",
+    "kind": "image",
+    "width": 152,
+    "height": 113,
+    "variants": [
+      {
+        "key": "hires:gabinete-tv:128",
+        "path": "assets/world-hd/gabinete-tv-128.webp",
+        "width": 128,
+        "height": 95,
+        "size": 128
+      },
+      {
+        "key": "hires:gabinete-tv:256",
+        "path": "assets/world-hd/gabinete-tv-256.webp",
+        "width": 256,
+        "height": 190,
+        "size": 256
+      },
+      {
+        "key": "hires:gabinete-tv:512",
+        "path": "assets/world-hd/gabinete-tv-512.webp",
+        "width": 512,
+        "height": 381,
+        "size": 512
+      }
+    ]
+  },
+  "japones-federal-door-breach.png": {
+    "id": "japones-federal-door-breach",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "japones-federal-door-breach-128",
+        "path": "assets/world-hd/japones-federal-door-breach-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "japones-federal-door-breach-256",
+        "path": "assets/world-hd/japones-federal-door-breach-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "japones-federal-door-breach-512",
+        "path": "assets/world-hd/japones-federal-door-breach-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "japones-federal-walk.png": {
+    "id": "japones-federal-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "japones-federal-walk-128",
+        "path": "assets/world-hd/japones-federal-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "japones-federal-walk-256",
+        "path": "assets/world-hd/japones-federal-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "japones-federal-walk-512",
+        "path": "assets/world-hd/japones-federal-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joao-santana-fall.webp": {
+    "id": "joao-santana-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joao-santana-fall-128",
+        "path": "assets/world-hd/joao-santana-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joao-santana-fall-256",
+        "path": "assets/world-hd/joao-santana-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joao-santana-fall-512",
+        "path": "assets/world-hd/joao-santana-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joao-santana-hit.webp": {
+    "id": "joao-santana-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joao-santana-hit-128",
+        "path": "assets/world-hd/joao-santana-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joao-santana-hit-256",
+        "path": "assets/world-hd/joao-santana-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joao-santana-hit-512",
+        "path": "assets/world-hd/joao-santana-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joao-santana-walk.png": {
+    "id": "joao-santana-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joao-santana-walk-128",
+        "path": "assets/world-hd/joao-santana-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joao-santana-walk-256",
+        "path": "assets/world-hd/joao-santana-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joao-santana-walk-512",
+        "path": "assets/world-hd/joao-santana-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joesley-batista-fall.webp": {
+    "id": "joesley-batista-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joesley-batista-fall-128",
+        "path": "assets/world-hd/joesley-batista-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joesley-batista-fall-256",
+        "path": "assets/world-hd/joesley-batista-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joesley-batista-fall-512",
+        "path": "assets/world-hd/joesley-batista-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joesley-batista-hit.webp": {
+    "id": "joesley-batista-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joesley-batista-hit-128",
+        "path": "assets/world-hd/joesley-batista-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joesley-batista-hit-256",
+        "path": "assets/world-hd/joesley-batista-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joesley-batista-hit-512",
+        "path": "assets/world-hd/joesley-batista-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "joesley-batista-walk.png": {
+    "id": "joesley-batista-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "joesley-batista-walk-128",
+        "path": "assets/world-hd/joesley-batista-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "joesley-batista-walk-256",
+        "path": "assets/world-hd/joesley-batista-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "joesley-batista-walk-512",
+        "path": "assets/world-hd/joesley-batista-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "luciano-hang-fall.webp": {
+    "id": "luciano-hang-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "luciano-hang-fall-128",
+        "path": "assets/world-hd/luciano-hang-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "luciano-hang-fall-256",
+        "path": "assets/world-hd/luciano-hang-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "luciano-hang-fall-512",
+        "path": "assets/world-hd/luciano-hang-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "luciano-hang-hit.webp": {
+    "id": "luciano-hang-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "luciano-hang-hit-128",
+        "path": "assets/world-hd/luciano-hang-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "luciano-hang-hit-256",
+        "path": "assets/world-hd/luciano-hang-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "luciano-hang-hit-512",
+        "path": "assets/world-hd/luciano-hang-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "luciano-hang-walk.png": {
+    "id": "luciano-hang-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "luciano-hang-walk-128",
+        "path": "assets/world-hd/luciano-hang-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "luciano-hang-walk-256",
+        "path": "assets/world-hd/luciano-hang-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "luciano-hang-walk-512",
+        "path": "assets/world-hd/luciano-hang-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "maca-enfermaria.webp": {
+    "id": "maca-enfermaria",
+    "kind": "image",
+    "width": 560,
+    "height": 316,
+    "variants": [
+      {
+        "key": "hires:maca-enfermaria:128",
+        "path": "assets/world-hd/maca-enfermaria-128.webp",
+        "width": 128,
+        "height": 72,
+        "size": 128
+      },
+      {
+        "key": "hires:maca-enfermaria:256",
+        "path": "assets/world-hd/maca-enfermaria-256.webp",
+        "width": 256,
+        "height": 144,
+        "size": 256
+      },
+      {
+        "key": "hires:maca-enfermaria:512",
+        "path": "assets/world-hd/maca-enfermaria-512.webp",
+        "width": 512,
+        "height": 289,
+        "size": 512
+      }
+    ]
+  },
+  "marcelo-odebrecht-fall.webp": {
+    "id": "marcelo-odebrecht-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcelo-odebrecht-fall-128",
+        "path": "assets/world-hd/marcelo-odebrecht-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcelo-odebrecht-fall-256",
+        "path": "assets/world-hd/marcelo-odebrecht-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcelo-odebrecht-fall-512",
+        "path": "assets/world-hd/marcelo-odebrecht-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "marcelo-odebrecht-hit.webp": {
+    "id": "marcelo-odebrecht-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcelo-odebrecht-hit-128",
+        "path": "assets/world-hd/marcelo-odebrecht-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcelo-odebrecht-hit-256",
+        "path": "assets/world-hd/marcelo-odebrecht-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcelo-odebrecht-hit-512",
+        "path": "assets/world-hd/marcelo-odebrecht-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "marcelo-odebrecht-walk.png": {
+    "id": "marcelo-odebrecht-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcelo-odebrecht-walk-128",
+        "path": "assets/world-hd/marcelo-odebrecht-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcelo-odebrecht-walk-256",
+        "path": "assets/world-hd/marcelo-odebrecht-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcelo-odebrecht-walk-512",
+        "path": "assets/world-hd/marcelo-odebrecht-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "marcos-valerio-fall.webp": {
+    "id": "marcos-valerio-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcos-valerio-fall-128",
+        "path": "assets/world-hd/marcos-valerio-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcos-valerio-fall-256",
+        "path": "assets/world-hd/marcos-valerio-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcos-valerio-fall-512",
+        "path": "assets/world-hd/marcos-valerio-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "marcos-valerio-hit.webp": {
+    "id": "marcos-valerio-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcos-valerio-hit-128",
+        "path": "assets/world-hd/marcos-valerio-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcos-valerio-hit-256",
+        "path": "assets/world-hd/marcos-valerio-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcos-valerio-hit-512",
+        "path": "assets/world-hd/marcos-valerio-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "marcos-valerio-walk.png": {
+    "id": "marcos-valerio-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "marcos-valerio-walk-128",
+        "path": "assets/world-hd/marcos-valerio-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "marcos-valerio-walk-256",
+        "path": "assets/world-hd/marcos-valerio-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "marcos-valerio-walk-512",
+        "path": "assets/world-hd/marcos-valerio-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "moldura-congresso.webp": {
+    "id": "moldura-congresso",
+    "kind": "image",
+    "width": 161,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:moldura-congresso:128",
+        "path": "assets/world-hd/moldura-congresso-128.webp",
+        "width": 107,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:moldura-congresso:256",
+        "path": "assets/world-hd/moldura-congresso-256.webp",
+        "width": 215,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:moldura-congresso:512",
+        "path": "assets/world-hd/moldura-congresso-512.webp",
+        "width": 429,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "nestor-cervero-fall.webp": {
+    "id": "nestor-cervero-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "nestor-cervero-fall-128",
+        "path": "assets/world-hd/nestor-cervero-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "nestor-cervero-fall-256",
+        "path": "assets/world-hd/nestor-cervero-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "nestor-cervero-fall-512",
+        "path": "assets/world-hd/nestor-cervero-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "nestor-cervero-hit.webp": {
+    "id": "nestor-cervero-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "nestor-cervero-hit-128",
+        "path": "assets/world-hd/nestor-cervero-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "nestor-cervero-hit-256",
+        "path": "assets/world-hd/nestor-cervero-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "nestor-cervero-hit-512",
+        "path": "assets/world-hd/nestor-cervero-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "nestor-cervero-walk.png": {
+    "id": "nestor-cervero-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "nestor-cervero-walk-128",
+        "path": "assets/world-hd/nestor-cervero-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "nestor-cervero-walk-256",
+        "path": "assets/world-hd/nestor-cervero-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "nestor-cervero-walk-512",
+        "path": "assets/world-hd/nestor-cervero-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "pablo-marcal-fall.webp": {
+    "id": "pablo-marcal-fall",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "pablo-marcal-fall-128",
+        "path": "assets/world-hd/pablo-marcal-fall-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "pablo-marcal-fall-256",
+        "path": "assets/world-hd/pablo-marcal-fall-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "pablo-marcal-fall-512",
+        "path": "assets/world-hd/pablo-marcal-fall-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "pablo-marcal-hit.webp": {
+    "id": "pablo-marcal-hit",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "pablo-marcal-hit-128",
+        "path": "assets/world-hd/pablo-marcal-hit-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "pablo-marcal-hit-256",
+        "path": "assets/world-hd/pablo-marcal-hit-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "pablo-marcal-hit-512",
+        "path": "assets/world-hd/pablo-marcal-hit-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "pablo-marcal-walk.png": {
+    "id": "pablo-marcal-walk",
+    "kind": "animation",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "pablo-marcal-walk-128",
+        "path": "assets/world-hd/pablo-marcal-walk-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "pablo-marcal-walk-256",
+        "path": "assets/world-hd/pablo-marcal-walk-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "pablo-marcal-walk-512",
+        "path": "assets/world-hd/pablo-marcal-walk-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "painel-eletrico.webp": {
+    "id": "painel-eletrico",
+    "kind": "image",
+    "width": 144,
+    "height": 105,
+    "variants": [
+      {
+        "key": "hires:painel-eletrico:128",
+        "path": "assets/world-hd/painel-eletrico-128.webp",
+        "width": 128,
+        "height": 93,
+        "size": 128
+      },
+      {
+        "key": "hires:painel-eletrico:256",
+        "path": "assets/world-hd/painel-eletrico-256.webp",
+        "width": 256,
+        "height": 187,
+        "size": 256
+      },
+      {
+        "key": "hires:painel-eletrico:512",
+        "path": "assets/world-hd/painel-eletrico-512.webp",
+        "width": 512,
+        "height": 373,
+        "size": 512
+      }
+    ]
+  },
+  "palmirinha.webp": {
+    "id": "palmirinha",
+    "kind": "image",
+    "width": 384,
+    "height": 384,
+    "variants": [
+      {
+        "key": "hires:palmirinha:128",
+        "path": "assets/world-hd/palmirinha-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:palmirinha:256",
+        "path": "assets/world-hd/palmirinha-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:palmirinha:512",
+        "path": "assets/world-hd/palmirinha-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "ratinho.webp": {
+    "id": "ratinho",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:ratinho:128",
+        "path": "assets/world-hd/ratinho-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:ratinho:256",
+        "path": "assets/world-hd/ratinho-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:ratinho:512",
+        "path": "assets/world-hd/ratinho-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-assessor-fantasma.webp": {
+    "id": "retrato-assessor-fantasma",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-assessor-fantasma:128",
+        "path": "assets/world-hd/retrato-assessor-fantasma-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-assessor-fantasma:256",
+        "path": "assets/world-hd/retrato-assessor-fantasma-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-assessor-fantasma:512",
+        "path": "assets/world-hd/retrato-assessor-fantasma-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-binoculo.webp": {
+    "id": "retrato-binoculo",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-binoculo:128",
+        "path": "assets/world-hd/retrato-binoculo-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-binoculo:256",
+        "path": "assets/world-hd/retrato-binoculo-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-binoculo:512",
+        "path": "assets/world-hd/retrato-binoculo-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-bombom.webp": {
+    "id": "retrato-bombom",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-bombom:128",
+        "path": "assets/world-hd/retrato-bombom-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-bombom:256",
+        "path": "assets/world-hd/retrato-bombom-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-bombom:512",
+        "path": "assets/world-hd/retrato-bombom-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-cafe.webp": {
+    "id": "retrato-cafe",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-cafe:128",
+        "path": "assets/world-hd/retrato-cafe-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-cafe:256",
+        "path": "assets/world-hd/retrato-cafe-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-cafe:512",
+        "path": "assets/world-hd/retrato-cafe-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-cafezinho.webp": {
+    "id": "retrato-cafezinho",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-cafezinho:128",
+        "path": "assets/world-hd/retrato-cafezinho-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-cafezinho:256",
+        "path": "assets/world-hd/retrato-cafezinho-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-cafezinho:512",
+        "path": "assets/world-hd/retrato-cafezinho-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-camera-escondida.webp": {
+    "id": "retrato-camera-escondida",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-camera-escondida:128",
+        "path": "assets/world-hd/retrato-camera-escondida-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-camera-escondida:256",
+        "path": "assets/world-hd/retrato-camera-escondida-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-camera-escondida:512",
+        "path": "assets/world-hd/retrato-camera-escondida-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-carmem-carimbo.webp": {
+    "id": "retrato-carmem-carimbo",
+    "kind": "image",
+    "width": 384,
+    "height": 384,
+    "variants": [
+      {
+        "key": "hires:retrato-carmem-carimbo:128",
+        "path": "assets/world-hd/retrato-carmem-carimbo-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-carmem-carimbo:256",
+        "path": "assets/world-hd/retrato-carmem-carimbo-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-carmem-carimbo:512",
+        "path": "assets/world-hd/retrato-carmem-carimbo-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-colete.webp": {
+    "id": "retrato-colete",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-colete:128",
+        "path": "assets/world-hd/retrato-colete-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-colete:256",
+        "path": "assets/world-hd/retrato-colete-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-colete:512",
+        "path": "assets/world-hd/retrato-colete-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-coxinha.webp": {
+    "id": "retrato-coxinha",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-coxinha:128",
+        "path": "assets/world-hd/retrato-coxinha-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-coxinha:256",
+        "path": "assets/world-hd/retrato-coxinha-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-coxinha:512",
+        "path": "assets/world-hd/retrato-coxinha-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-cueca-mensalao.webp": {
+    "id": "retrato-cueca-mensalao",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-cueca-mensalao:128",
+        "path": "assets/world-hd/retrato-cueca-mensalao-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-cueca-mensalao:256",
+        "path": "assets/world-hd/retrato-cueca-mensalao-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-cueca-mensalao:512",
+        "path": "assets/world-hd/retrato-cueca-mensalao-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-daniel-vorcaro.webp": {
+    "id": "retrato-daniel-vorcaro",
+    "kind": "image",
+    "width": 384,
+    "height": 384,
+    "variants": [
+      {
+        "key": "hires:retrato-daniel-vorcaro:128",
+        "path": "assets/world-hd/retrato-daniel-vorcaro-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-daniel-vorcaro:256",
+        "path": "assets/world-hd/retrato-daniel-vorcaro-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-daniel-vorcaro:512",
+        "path": "assets/world-hd/retrato-daniel-vorcaro-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-decodificador.webp": {
+    "id": "retrato-decodificador",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-decodificador:128",
+        "path": "assets/world-hd/retrato-decodificador-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-decodificador:256",
+        "path": "assets/world-hd/retrato-decodificador-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-decodificador:512",
+        "path": "assets/world-hd/retrato-decodificador-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-detector-escutas.webp": {
+    "id": "retrato-detector-escutas",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-detector-escutas:128",
+        "path": "assets/world-hd/retrato-detector-escutas-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-detector-escutas:256",
+        "path": "assets/world-hd/retrato-detector-escutas-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-detector-escutas:512",
+        "path": "assets/world-hd/retrato-detector-escutas-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-documento.webp": {
+    "id": "retrato-documento",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-documento:128",
+        "path": "assets/world-hd/retrato-documento-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-documento:256",
+        "path": "assets/world-hd/retrato-documento-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-documento:512",
+        "path": "assets/world-hd/retrato-documento-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-energetico.webp": {
+    "id": "retrato-energetico",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-energetico:128",
+        "path": "assets/world-hd/retrato-energetico-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-energetico:256",
+        "path": "assets/world-hd/retrato-energetico-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-energetico:512",
+        "path": "assets/world-hd/retrato-energetico-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-fechadura-armario.webp": {
+    "id": "retrato-fechadura-armario",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-fechadura-armario:128",
+        "path": "assets/world-hd/retrato-fechadura-armario-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-fechadura-armario:256",
+        "path": "assets/world-hd/retrato-fechadura-armario-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-fechadura-armario:512",
+        "path": "assets/world-hd/retrato-fechadura-armario-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-fechadura.webp": {
+    "id": "retrato-fechadura",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-fechadura:128",
+        "path": "assets/world-hd/retrato-fechadura-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-fechadura:256",
+        "path": "assets/world-hd/retrato-fechadura-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-fechadura:512",
+        "path": "assets/world-hd/retrato-fechadura-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-ferramenta-especializada.webp": {
+    "id": "retrato-ferramenta-especializada",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-ferramenta-especializada:128",
+        "path": "assets/world-hd/retrato-ferramenta-especializada-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-ferramenta-especializada:256",
+        "path": "assets/world-hd/retrato-ferramenta-especializada-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-ferramenta-especializada:512",
+        "path": "assets/world-hd/retrato-ferramenta-especializada-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-fotografia.webp": {
+    "id": "retrato-fotografia",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-fotografia:128",
+        "path": "assets/world-hd/retrato-fotografia-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-fotografia:256",
+        "path": "assets/world-hd/retrato-fotografia-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-fotografia:512",
+        "path": "assets/world-hd/retrato-fotografia-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-gazua.webp": {
+    "id": "retrato-gazua",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-gazua:128",
+        "path": "assets/world-hd/retrato-gazua-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-gazua:256",
+        "path": "assets/world-hd/retrato-gazua-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-gazua:512",
+        "path": "assets/world-hd/retrato-gazua-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-grampo.webp": {
+    "id": "retrato-grampo",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-grampo:128",
+        "path": "assets/world-hd/retrato-grampo-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-grampo:256",
+        "path": "assets/world-hd/retrato-grampo-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-grampo:512",
+        "path": "assets/world-hd/retrato-grampo-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-incendiario.webp": {
+    "id": "retrato-incendiario",
+    "kind": "image",
+    "width": 128,
+    "height": 128,
+    "variants": [
+      {
+        "key": "hires:retrato-incendiario:128",
+        "path": "assets/world-hd/retrato-incendiario-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-incendiario:256",
+        "path": "assets/world-hd/retrato-incendiario-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-incendiario:512",
+        "path": "assets/world-hd/retrato-incendiario-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-kit-arrombamento.webp": {
+    "id": "retrato-kit-arrombamento",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-kit-arrombamento:128",
+        "path": "assets/world-hd/retrato-kit-arrombamento-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-kit-arrombamento:256",
+        "path": "assets/world-hd/retrato-kit-arrombamento-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-kit-arrombamento:512",
+        "path": "assets/world-hd/retrato-kit-arrombamento-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-kit-pericia.webp": {
+    "id": "retrato-kit-pericia",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-kit-pericia:128",
+        "path": "assets/world-hd/retrato-kit-pericia-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-kit-pericia:256",
+        "path": "assets/world-hd/retrato-kit-pericia-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-kit-pericia:512",
+        "path": "assets/world-hd/retrato-kit-pericia-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-kit-profissional.webp": {
+    "id": "retrato-kit-profissional",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-kit-profissional:128",
+        "path": "assets/world-hd/retrato-kit-profissional-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-kit-profissional:256",
+        "path": "assets/world-hd/retrato-kit-profissional-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-kit-profissional:512",
+        "path": "assets/world-hd/retrato-kit-profissional-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-lagosta.webp": {
+    "id": "retrato-lagosta",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-lagosta:128",
+        "path": "assets/world-hd/retrato-lagosta-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-lagosta:256",
+        "path": "assets/world-hd/retrato-lagosta-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-lagosta:512",
+        "path": "assets/world-hd/retrato-lagosta-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-leite-condensado.webp": {
+    "id": "retrato-leite-condensado",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-leite-condensado:128",
+        "path": "assets/world-hd/retrato-leite-condensado-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-leite-condensado:256",
+        "path": "assets/world-hd/retrato-leite-condensado-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-leite-condensado:512",
+        "path": "assets/world-hd/retrato-leite-condensado-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-maco.webp": {
+    "id": "retrato-maco",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-maco:128",
+        "path": "assets/world-hd/retrato-maco-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-maco:256",
+        "path": "assets/world-hd/retrato-maco-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-maco:512",
+        "path": "assets/world-hd/retrato-maco-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-maleta.webp": {
+    "id": "retrato-maleta",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-maleta:128",
+        "path": "assets/world-hd/retrato-maleta-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-maleta:256",
+        "path": "assets/world-hd/retrato-maleta-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-maleta:512",
+        "path": "assets/world-hd/retrato-maleta-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-megafone.webp": {
+    "id": "retrato-megafone",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-megafone:128",
+        "path": "assets/world-hd/retrato-megafone-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-megafone:256",
+        "path": "assets/world-hd/retrato-megafone-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-megafone:512",
+        "path": "assets/world-hd/retrato-megafone-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-modulador.webp": {
+    "id": "retrato-modulador",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-modulador:128",
+        "path": "assets/world-hd/retrato-modulador-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-modulador:256",
+        "path": "assets/world-hd/retrato-modulador-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-modulador:512",
+        "path": "assets/world-hd/retrato-modulador-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-nestor-cervero.webp": {
+    "id": "retrato-nestor-cervero",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-nestor-cervero:128",
+        "path": "assets/world-hd/retrato-nestor-cervero-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-nestor-cervero:256",
+        "path": "assets/world-hd/retrato-nestor-cervero-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-nestor-cervero:512",
+        "path": "assets/world-hd/retrato-nestor-cervero-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-pao-mortadela.webp": {
+    "id": "retrato-pao-mortadela",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-pao-mortadela:128",
+        "path": "assets/world-hd/retrato-pao-mortadela-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-pao-mortadela:256",
+        "path": "assets/world-hd/retrato-pao-mortadela-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-pao-mortadela:512",
+        "path": "assets/world-hd/retrato-pao-mortadela-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-picanha.webp": {
+    "id": "retrato-picanha",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-picanha:128",
+        "path": "assets/world-hd/retrato-picanha-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-picanha:256",
+        "path": "assets/world-hd/retrato-picanha-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-picanha:512",
+        "path": "assets/world-hd/retrato-picanha-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-pinga.webp": {
+    "id": "retrato-pinga",
+    "kind": "image",
+    "width": 512,
+    "height": 512,
+    "variants": [
+      {
+        "key": "hires:retrato-pinga:128",
+        "path": "assets/world-hd/retrato-pinga-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-pinga:256",
+        "path": "assets/world-hd/retrato-pinga-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-pinga:512",
+        "path": "assets/world-hd/retrato-pinga-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-pizza.webp": {
+    "id": "retrato-pizza",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-pizza:128",
+        "path": "assets/world-hd/retrato-pizza-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-pizza:256",
+        "path": "assets/world-hd/retrato-pizza-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-pizza:512",
+        "path": "assets/world-hd/retrato-pizza-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-placa-vip.webp": {
+    "id": "retrato-placa-vip",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-placa-vip:128",
+        "path": "assets/world-hd/retrato-placa-vip-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-placa-vip:256",
+        "path": "assets/world-hd/retrato-placa-vip-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-placa-vip:512",
+        "path": "assets/world-hd/retrato-placa-vip-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-poltrona.webp": {
+    "id": "retrato-poltrona",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-poltrona:128",
+        "path": "assets/world-hd/retrato-poltrona-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-poltrona:256",
+        "path": "assets/world-hd/retrato-poltrona-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-poltrona:512",
+        "path": "assets/world-hd/retrato-poltrona-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-porrete.webp": {
+    "id": "retrato-porrete",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-porrete:128",
+        "path": "assets/world-hd/retrato-porrete-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-porrete:256",
+        "path": "assets/world-hd/retrato-porrete-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-porrete:512",
+        "path": "assets/world-hd/retrato-porrete-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-primeiros-socorros.webp": {
+    "id": "retrato-primeiros-socorros",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-primeiros-socorros:128",
+        "path": "assets/world-hd/retrato-primeiros-socorros-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-primeiros-socorros:256",
+        "path": "assets/world-hd/retrato-primeiros-socorros-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-primeiros-socorros:512",
+        "path": "assets/world-hd/retrato-primeiros-socorros-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-raio-x.webp": {
+    "id": "retrato-raio-x",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-raio-x:128",
+        "path": "assets/world-hd/retrato-raio-x-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-raio-x:256",
+        "path": "assets/world-hd/retrato-raio-x-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-raio-x:512",
+        "path": "assets/world-hd/retrato-raio-x-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-rastreador-maletas.webp": {
+    "id": "retrato-rastreador-maletas",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-rastreador-maletas:128",
+        "path": "assets/world-hd/retrato-rastreador-maletas-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-rastreador-maletas:256",
+        "path": "assets/world-hd/retrato-rastreador-maletas-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-rastreador-maletas:512",
+        "path": "assets/world-hd/retrato-rastreador-maletas-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-roberto-justus.webp": {
+    "id": "retrato-roberto-justus",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-roberto-justus:128",
+        "path": "assets/world-hd/retrato-roberto-justus-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-roberto-justus:256",
+        "path": "assets/world-hd/retrato-roberto-justus-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-roberto-justus:512",
+        "path": "assets/world-hd/retrato-roberto-justus-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-seguro-antiarrombamento.webp": {
+    "id": "retrato-seguro-antiarrombamento",
+    "kind": "image",
+    "width": 384,
+    "height": 384,
+    "variants": [
+      {
+        "key": "hires:retrato-seguro-antiarrombamento:128",
+        "path": "assets/world-hd/retrato-seguro-antiarrombamento-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-seguro-antiarrombamento:256",
+        "path": "assets/world-hd/retrato-seguro-antiarrombamento-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-seguro-antiarrombamento:512",
+        "path": "assets/world-hd/retrato-seguro-antiarrombamento-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-tapete.webp": {
+    "id": "retrato-tapete",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-tapete:128",
+        "path": "assets/world-hd/retrato-tapete-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-tapete:256",
+        "path": "assets/world-hd/retrato-tapete-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-tapete:512",
+        "path": "assets/world-hd/retrato-tapete-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-tenis.webp": {
+    "id": "retrato-tenis",
+    "kind": "image",
+    "width": 180,
+    "height": 120,
+    "variants": [
+      {
+        "key": "hires:retrato-tenis:128",
+        "path": "assets/world-hd/retrato-tenis-128.webp",
+        "width": 128,
+        "height": 85,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-tenis:256",
+        "path": "assets/world-hd/retrato-tenis-256.webp",
+        "width": 256,
+        "height": 171,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-tenis:512",
+        "path": "assets/world-hd/retrato-tenis-512.webp",
+        "width": 512,
+        "height": 341,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-tv.webp": {
+    "id": "retrato-tv",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:retrato-tv:128",
+        "path": "assets/world-hd/retrato-tv-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-tv:256",
+        "path": "assets/world-hd/retrato-tv-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-tv:512",
+        "path": "assets/world-hd/retrato-tv-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "retrato-visao-noturna.webp": {
+    "id": "retrato-visao-noturna",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:retrato-visao-noturna:128",
+        "path": "assets/world-hd/retrato-visao-noturna-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:retrato-visao-noturna:256",
+        "path": "assets/world-hd/retrato-visao-noturna-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:retrato-visao-noturna:512",
+        "path": "assets/world-hd/retrato-visao-noturna-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "roberto-justus.webp": {
+    "id": "roberto-justus",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:roberto-justus:128",
+        "path": "assets/world-hd/roberto-justus-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:roberto-justus:256",
+        "path": "assets/world-hd/roberto-justus-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:roberto-justus:512",
+        "path": "assets/world-hd/roberto-justus-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "silvio-santos.webp": {
+    "id": "silvio-santos",
+    "kind": "image",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:silvio-santos:128",
+        "path": "assets/world-hd/silvio-santos-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:silvio-santos:256",
+        "path": "assets/world-hd/silvio-santos-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:silvio-santos:512",
+        "path": "assets/world-hd/silvio-santos-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "terminal-seguranca.webp": {
+    "id": "terminal-seguranca",
+    "kind": "image",
+    "width": 180,
+    "height": 136,
+    "variants": [
+      {
+        "key": "hires:terminal-seguranca:128",
+        "path": "assets/world-hd/terminal-seguranca-128.webp",
+        "width": 128,
+        "height": 97,
+        "size": 128
+      },
+      {
+        "key": "hires:terminal-seguranca:256",
+        "path": "assets/world-hd/terminal-seguranca-256.webp",
+        "width": 256,
+        "height": 193,
+        "size": 256
+      },
+      {
+        "key": "hires:terminal-seguranca:512",
+        "path": "assets/world-hd/terminal-seguranca-512.webp",
+        "width": 512,
+        "height": 387,
+        "size": 512
+      }
+    ]
+  },
+  "office-hd.png": {
+    "id": "office",
+    "kind": "atlas",
+    "width": 192,
+    "height": 112,
+    "variants": [
+      {
+        "key": "hires:office:384",
+        "path": "assets/world-hd/office-384.webp",
+        "width": 384,
+        "height": 224,
+        "size": 384
+      },
+      {
+        "key": "hires:office:768",
+        "path": "assets/world-hd/office-768.webp",
+        "width": 768,
+        "height": 448,
+        "size": 768
+      }
+    ]
+  },
+  "retratos-elenco.webp": {
+    "id": "retratos-elenco",
+    "kind": "atlas",
+    "width": 256,
+    "height": 256,
+    "variants": [
+      {
+        "key": "hires:installed-portraits:512",
+        "path": "assets/world-hd/retratos-elenco-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n16.webp": {
+    "id": "project-proj-n16",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n16:128",
+        "path": "assets/world-hd/project-proj-n16-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n16:256",
+        "path": "assets/world-hd/project-proj-n16-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n16:512",
+        "path": "assets/world-hd/project-proj-n16-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/wifi-na-praca.webp": {
+    "id": "project-wifi-na-praca",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-wifi-na-praca:128",
+        "path": "assets/world-hd/project-wifi-na-praca-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-wifi-na-praca:256",
+        "path": "assets/world-hd/project-wifi-na-praca-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-wifi-na-praca:512",
+        "path": "assets/world-hd/project-wifi-na-praca-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n17.webp": {
+    "id": "project-proj-n17",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n17:128",
+        "path": "assets/world-hd/project-proj-n17-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n17:256",
+        "path": "assets/world-hd/project-proj-n17-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n17:512",
+        "path": "assets/world-hd/project-proj-n17-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/teto-do-cafezinho.webp": {
+    "id": "project-teto-do-cafezinho",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-teto-do-cafezinho:128",
+        "path": "assets/world-hd/project-teto-do-cafezinho-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-teto-do-cafezinho:256",
+        "path": "assets/world-hd/project-teto-do-cafezinho-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-teto-do-cafezinho:512",
+        "path": "assets/world-hd/project-teto-do-cafezinho-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n10.webp": {
+    "id": "project-proj-n10",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n10:128",
+        "path": "assets/world-hd/project-proj-n10-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n10:256",
+        "path": "assets/world-hd/project-proj-n10-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n10:512",
+        "path": "assets/world-hd/project-proj-n10-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n11.webp": {
+    "id": "project-proj-n11",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n11:128",
+        "path": "assets/world-hd/project-proj-n11-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n11:256",
+        "path": "assets/world-hd/project-proj-n11-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n11:512",
+        "path": "assets/world-hd/project-proj-n11-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n07.webp": {
+    "id": "project-proj-n07",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n07:128",
+        "path": "assets/world-hd/project-proj-n07-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n07:256",
+        "path": "assets/world-hd/project-proj-n07-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n07:512",
+        "path": "assets/world-hd/project-proj-n07-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n08.webp": {
+    "id": "project-proj-n08",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n08:128",
+        "path": "assets/world-hd/project-proj-n08-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n08:256",
+        "path": "assets/world-hd/project-proj-n08-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n08:512",
+        "path": "assets/world-hd/project-proj-n08-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n12.webp": {
+    "id": "project-proj-n12",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n12:128",
+        "path": "assets/world-hd/project-proj-n12-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n12:256",
+        "path": "assets/world-hd/project-proj-n12-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n12:512",
+        "path": "assets/world-hd/project-proj-n12-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n04.webp": {
+    "id": "project-proj-n04",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n04:128",
+        "path": "assets/world-hd/project-proj-n04-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n04:256",
+        "path": "assets/world-hd/project-proj-n04-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n04:512",
+        "path": "assets/world-hd/project-proj-n04-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n05.webp": {
+    "id": "project-proj-n05",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n05:128",
+        "path": "assets/world-hd/project-proj-n05-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n05:256",
+        "path": "assets/world-hd/project-proj-n05-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n05:512",
+        "path": "assets/world-hd/project-proj-n05-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n13.webp": {
+    "id": "project-proj-n13",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n13:128",
+        "path": "assets/world-hd/project-proj-n13-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n13:256",
+        "path": "assets/world-hd/project-proj-n13-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n13:512",
+        "path": "assets/world-hd/project-proj-n13-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n09.webp": {
+    "id": "project-proj-n09",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n09:128",
+        "path": "assets/world-hd/project-proj-n09-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n09:256",
+        "path": "assets/world-hd/project-proj-n09-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n09:512",
+        "path": "assets/world-hd/project-proj-n09-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n02.webp": {
+    "id": "project-proj-n02",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n02:128",
+        "path": "assets/world-hd/project-proj-n02-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n02:256",
+        "path": "assets/world-hd/project-proj-n02-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n02:512",
+        "path": "assets/world-hd/project-proj-n02-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/auxilio-churrasco.webp": {
+    "id": "project-auxilio-churrasco",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-auxilio-churrasco:128",
+        "path": "assets/world-hd/project-auxilio-churrasco-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-auxilio-churrasco:256",
+        "path": "assets/world-hd/project-auxilio-churrasco-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-auxilio-churrasco:512",
+        "path": "assets/world-hd/project-auxilio-churrasco-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n03.webp": {
+    "id": "project-proj-n03",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n03:128",
+        "path": "assets/world-hd/project-proj-n03-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n03:256",
+        "path": "assets/world-hd/project-proj-n03-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n03:512",
+        "path": "assets/world-hd/project-proj-n03-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  },
+  "projetos/proj-n15.webp": {
+    "id": "project-proj-n15",
+    "kind": "image",
+    "width": 192,
+    "height": 192,
+    "variants": [
+      {
+        "key": "hires:project-proj-n15:128",
+        "path": "assets/world-hd/project-proj-n15-128.webp",
+        "width": 128,
+        "height": 128,
+        "size": 128
+      },
+      {
+        "key": "hires:project-proj-n15:256",
+        "path": "assets/world-hd/project-proj-n15-256.webp",
+        "width": 256,
+        "height": 256,
+        "size": 256
+      },
+      {
+        "key": "hires:project-proj-n15:512",
+        "path": "assets/world-hd/project-proj-n15-512.webp",
+        "width": 512,
+        "height": 512,
+        "size": 512
+      }
+    ]
+  }
+}

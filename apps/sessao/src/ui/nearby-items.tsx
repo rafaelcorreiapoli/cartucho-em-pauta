@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {HudHelp} from './hud-help';
 import type {ContextKey} from './context-action-keys';
 import {isGear} from '../equipment';
@@ -18,7 +19,7 @@ export function NearbyItems({items,keys}:{items:readonly NearbyItem[];keys?:read
     return <HudHelp key={key} className="item-tile context-item" data-kind={kind}
       help={`${verb} ${name}.`} aria-label={`${verb} ${name}`} aria-keyshortcuts={keys?.[index]?.key} onClick={activate}>
       {symbol ? <span className="item-art-symbol" aria-hidden="true">{symbol}</span> :
-        <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+objects[kind].portrait} alt="" draggable={false}/>}
+        <img className="item-portrait" {...assetImageSources(objects[kind].portrait)} alt="" draggable={false}/>}
       <span className="item-caption">{name}</span>
     </HudHelp>;
   });

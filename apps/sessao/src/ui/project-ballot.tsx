@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {HudHelp} from './hud-help';
 import {billVoteKeys,projectVoteLabels} from './ballot-shortcuts';
 import {formatImpact,impactTone} from './impact-value';
@@ -54,7 +55,7 @@ export function ProjectBallot({gameMode,round,project,proposer,remaining,budget,
     <div className="project-ballot-body" id="project-ballot-body" hidden={!expanded}>
       <div className="project-ballot-project">
         <header className="project-ballot-banner">
-          <img className="project-ballot-art" src={import.meta.env.BASE_URL+'assets/'+bill.icon} width="72" height="72" alt=""/>
+          <img className="project-ballot-art" {...assetImageSources(bill.icon, '96px')} width="72" height="72" alt=""/>
           <div className="project-ballot-title"><small>Projeto {String(index+1).padStart(2,'0')}</small><h2>{bill.name}</h2>{proposer && <small>Protocolado por {proposer}</small>}<p>{bill.description}</p></div>
           <ProjectImpact stabilityEnabled={gameMode!=='calote'} impact={yes} budget={budget} approved detail={bill.effect?.kind==='allowance' ? 'Pagamento único por mandato' :
             bill.effect?.kind==='treasury-xp' ? `Até +${bill.effect.bonus} XP por entrega · ${bill.effect.duration/1000} s` :

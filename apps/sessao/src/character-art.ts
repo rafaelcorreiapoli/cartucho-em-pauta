@@ -85,7 +85,7 @@ function combatSheet(character:string, action:(typeof combatActions)[number]) {
 }
 
 export function characterArt(character:number,visitor?:VisitorId) {
-  if (visitor) return {sheet:{key:`${visitor}-walk`,path:`assets/${visitor}-walk.png`},row:0,frame:0};
+  if (visitor) return {sheet:{key:`${visitor}-walk`,path:visitor==='japones-federal' ? 'assets/japones-federal-walk.png' : `assets/world-hd/${visitor}-walk-128.webp`},row:0,frame:0};
   const expansion = character>=originalCount;
   const sheet = characterSheets[expansion ? 1 : 0];
   const row = (expansion ? character-originalCount : character)*3;

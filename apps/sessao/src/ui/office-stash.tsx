@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import {useDialogKeys} from './use-dialog-keys';
 import type {ShortcutEntry} from '../action-shortcuts';
 import {officeRules} from '../private-offices';
@@ -40,7 +41,7 @@ export function OfficeStash({stash,inventory,send,close}:Props) {
           }
           return <button type="button" key={index} className="item-tile" disabled={blocked} title={label}
             aria-label={label} aria-keyshortcuts={key} onClick={activate}>
-            <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+definition.portrait} alt="" draggable={false}/>
+            <img className="item-portrait" {...assetImageSources(definition.portrait)} alt="" draggable={false}/>
             <span className="item-caption">{name}</span>
             <kbd className="action-key" aria-hidden="true">{key}</kbd>
           </button>;

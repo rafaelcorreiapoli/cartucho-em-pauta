@@ -1,3 +1,4 @@
+import {assetImageSources} from '../world-assets';
 import type {ShortcutEntry} from '../action-shortcuts';
 import {objects,type GameplayAction,type GameplayView} from '../gameplay';
 import {useDialogKeys} from './use-dialog-keys';
@@ -26,7 +27,7 @@ export function EquipmentPanel({state,available,send,close}:{
       if (gear.kind==='voiceModulator' && state.modulator) entries.push({name:modulatorLabel,activate:toggleModulator});
     }
     return <li key={gear.id}>
-      <img className="item-portrait" src={import.meta.env.BASE_URL+'assets/'+item.portrait} alt="" draggable={false}/>
+      <img className="item-portrait" {...assetImageSources(item.portrait)} alt="" draggable={false}/>
       <strong>{item.name}</strong>
       {available && <>
         <button type="button" className="hud-button hud-button--secondary" onClick={unequip}>Desequipar</button>

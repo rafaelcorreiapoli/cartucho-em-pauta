@@ -1,3 +1,4 @@
+import {worldArtKey} from './adaptive-world-art';
 import type Phaser from 'phaser';
 import { corridorFloors, doors, floorDecor } from './congress-layout';
 import { officeFixtures, privateOffices, type OfficeLayout } from './private-offices';
@@ -126,6 +127,6 @@ export function drawMap(scene: Phaser.Scene,
 export function updateSafeArt(art:Phaser.GameObjects.Image,open:boolean) {
   const {texture,openTexture,width,openWidth,height,openOriginX} = officeFixtures.safe;
   const key = open ? openTexture : texture;
-  if (art.texture.key!==key) art.setTexture(key).setOrigin(open ? openOriginX : .5,1)
+  if (worldArtKey(art)!==key) art.setTexture(key).setOrigin(open ? openOriginX : .5,1)
     .setDisplaySize(open ? openWidth : width,height);
 }

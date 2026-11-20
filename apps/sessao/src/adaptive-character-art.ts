@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import {worldAssets} from './world-assets';
 import {characterArt, characterSlugs} from './character-art';
 import {NAMES} from './map';
 import type {VisitorId} from './visitors';
@@ -10,10 +11,12 @@ type Variant = {key: string; path: string; size: Exclude<SpriteResolution, 128>}
 // Unique action texture keys can also register variants with identical frame ordering.
 const castActions = ['walk', 'attack', 'hit', 'fall', 'phone', 'safe-breach', 'safe-deposit', 'npc-robbery'] as const;
 export const actorTextureVariants: Readonly<Record<string, readonly Variant[] | undefined>> = Object.fromEntries(
-  Object.entries(characterSlugs).flatMap(([name, slug]) => castActions.map(action => [
+  [...Object.entries(characterSlugs).flatMap(([name, slug]) => castActions.map(action => [
     action === 'walk' ? `walk:${name}` : `${slug}-${action}`,
     ([256, 512] as const).map(size => ({key: `${slug}-${action}-${size}`, path: `assets/characters-hd/${slug}-${action}-${size}.webp`, size})),
-  ])),
+  ])), ...Object.values(worldAssets).filter(asset => asset?.kind === 'animation').map(asset => [
+    asset!.id, asset!.variants.filter(variant => variant.size === 256 || variant.size === 512).map(variant => ({...variant, size: variant.size as 256 | 512})),
+  ])],
 );
 type Loads = {pending: Set<string>; failed: Set<string>};
 const loads = new WeakMap<Phaser.Game, Loads>();
@@ -22,14 +25,14 @@ export function actorTextureResolution(pixelScale: number) {
   // Camera zoom already includes canvas density; multiplying by devicePixelRatio again would double it.
   return spriteResolution(actorFrameWorldSize * pixelScale, 1);
 }
-function requestVariant(scene: Phaser.Scene, variant: Variant) {
+export function requestArtTexture(scene: Phaser.Scene, variant: {key: string; path: string}, frameSize?: {width: number; height: number}) {
   let state = loads.get(scene.game);
   if (!state) { state = {pending: new Set(), failed: new Set()}; loads.set(scene.game, state); }
   if (state.pending.has(variant.key) || state.failed.has(variant.key)) return;
   state.pending.add(variant.key);
   const current = state;
   const loader = scene.load;
-  const event = `filecomplete-spritesheet-${variant.key}`;
+  const event = `filecomplete-${frameSize ? 'spritesheet' : 'image'}-${variant.key}`;
   const complete = () => { current.pending.delete(variant.key); loader.off('loaderror', failed); };
   const failed = (file: Phaser.Loader.File) => {
     if (file.key !== variant.key) return;
@@ -38,7 +41,8 @@ function requestVariant(scene: Phaser.Scene, variant: Variant) {
   };
   loader.once(event, complete);
   loader.on('loaderror', failed);
-  loader.spritesheet(variant.key, import.meta.env.BASE_URL + variant.path, {frameWidth: variant.size, frameHeight: variant.size});
+  if (frameSize) loader.spritesheet(variant.key, import.meta.env.BASE_URL + variant.path, {frameWidth: frameSize.width, frameHeight: frameSize.height});
+  else loader.image(variant.key, import.meta.env.BASE_URL + variant.path);
   if (!loader.isLoading()) loader.start();
 }
 function variantFor(scene: Phaser.Scene, art: string, pixelScale: number): Variant | undefined {
@@ -49,7 +53,7 @@ function variantFor(scene: Phaser.Scene, art: string, pixelScale: number): Varia
   // Reuse a larger cached texture instead of downloading a second file for a smaller demand.
   const cached = variants.find(variant => variant.size >= desired.size && scene.textures.exists(variant.key));
   if (cached) return cached;
-  requestVariant(scene, desired);
+  requestArtTexture(scene, desired, {width: desired.size, height: desired.size});
   // Keep drawing a loaded lower tier while the requested one loads or after a failure.
   for (let index = variants.length - 1; index >= 0; index--) {
     const variant = variants[index];

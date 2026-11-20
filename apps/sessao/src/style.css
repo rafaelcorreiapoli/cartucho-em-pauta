@@ -118,6 +118,7 @@ p { margin:.5rem 0; }
   --portrait-size:46px;
   width:var(--portrait-size); height:var(--portrait-size);
   background:url('/assets/retratos-elenco.webp') no-repeat;
+  background-image: image-set(url('/assets/retratos-elenco.webp') 1x, url('/assets/world-hd/retratos-elenco-512.webp') 2x);
   background-size:calc(var(--portrait-size) * 2) calc(var(--portrait-size) * 4);
   background-position:calc(-1 * var(--portrait-size) * var(--portrait-column)) calc(-1 * var(--portrait-size) * var(--portrait-row));
 }

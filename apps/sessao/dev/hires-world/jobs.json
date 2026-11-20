@@ -1,0 +1,93 @@
+[
+  {
+    "id": "luciano-hang-walk",
+    "input": "inputs/luciano-hang-walk.png",
+    "name": "luciano-hang-walk.png",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "luciano-hang-hit",
+    "input": "inputs/luciano-hang-hit.png",
+    "name": "luciano-hang-hit.webp",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "luciano-hang-fall",
+    "input": "inputs/luciano-hang-fall.png",
+    "name": "luciano-hang-fall.webp",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "nestor-cervero-hit",
+    "input": "inputs/nestor-cervero-hit.png",
+    "name": "nestor-cervero-hit.webp",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "nestor-cervero-fall",
+    "input": "inputs/nestor-cervero-fall.png",
+    "name": "nestor-cervero-fall.webp",
+    "grid": [
+      4,
+      3
+    ]
+  },
+  {
+    "id": "japones-federal-door-breach",
+    "input": "inputs/japones-federal-door-breach.png",
+    "name": "japones-federal-door-breach.png",
+    "grid": [
+      4,
+      4
+    ]
+  },
+  {
+    "id": "extintor",
+    "input": "inputs/extintor.png",
+    "name": "extintor.webp",
+    "grid": [
+      1,
+      1
+    ]
+  },
+  {
+    "id": "retrato-incendiario",
+    "input": "inputs/retrato-incendiario.png",
+    "name": "retrato-incendiario.webp",
+    "grid": [
+      1,
+      1
+    ]
+  },
+  {
+    "id": "terminal-seguranca",
+    "input": "inputs/terminal-seguranca.png",
+    "name": "terminal-seguranca.webp",
+    "grid": [
+      1,
+      1
+    ]
+  },
+  {
+    "id": "marcos-valerio-fall",
+    "input": "inputs/marcos-valerio-fall.png",
+    "reference": "inputs/marcos-valerio-reference.png",
+    "name": "marcos-valerio-fall.webp",
+    "grid": [
+      4,
+      3
+    ]
+  }
+]

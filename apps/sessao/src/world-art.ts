@@ -1,3 +1,4 @@
+import {loadWorldImage, registerWorldArt} from './adaptive-world-art';
 import type Phaser from 'phaser';
 import {spriteOriginX} from './sprite-alignment';
 import {adaptiveWalkArt, adaptivePoseArt, actorFrameWorldSize} from './adaptive-character-art';
@@ -79,11 +80,11 @@ const briefcaseGrip = {
 
 export function preloadWorldArt(scene: Phaser.Scene) {
   for (const { texture, sprite } of Object.values(installationArt)) {
-    scene.load.image(texture, import.meta.env.BASE_URL + 'assets/' + sprite);
+    loadWorldImage(scene, texture, sprite);
   }
-  scene.load.image('cash-briefcase', import.meta.env.BASE_URL + 'assets/maleta-social.png');
+  loadWorldImage(scene, 'cash-briefcase', 'maleta-social.png');
   for (const [key, weapon] of Object.entries(weapons)) {
-    scene.load.image(`weapon-${key}`, import.meta.env.BASE_URL + 'assets/' + weapon.sprite);
+    loadWorldImage(scene, `weapon-${key}`, weapon.sprite);
   }
   for (const { key, path } of [
     ...characterSheets,
@@ -97,27 +98,29 @@ export function preloadWorldArt(scene: Phaser.Scene) {
   ])
     scene.load.spritesheet(key, import.meta.env.BASE_URL + path, { frameWidth: 128, frameHeight: 128 });
   for (const [id, npc] of Object.entries(mapNpcs)) {
-    scene.load.image(`npc-${id}`, import.meta.env.BASE_URL + 'assets/' + npc.sprite);
+    loadWorldImage(scene, `npc-${id}`, npc.sprite);
   }
   for (const [kind, { sprite }] of Object.entries(officeFurniture)) {
-    scene.load.image(`furniture-${kind}`, import.meta.env.BASE_URL + 'assets/' + sprite);
+    loadWorldImage(scene, `furniture-${kind}`, sprite);
   }
   for (const [kind, { portrait }] of Object.entries(objects)) {
-    scene.load.image(`item-${kind}`, `${import.meta.env.BASE_URL}assets/${portrait}`);
+    loadWorldImage(scene, `item-${kind}`, portrait);
   }
+  registerWorldArt('installed-portraits', 'retratos-elenco.webp');
+  registerWorldArt('office', 'office-hd.png');
   scene.load.spritesheet('installed-portraits', `${import.meta.env.BASE_URL}assets/retratos-elenco.webp`, {
     frameWidth: 256,
     frameHeight: 256,
   });
-  scene.load.image(officeFixtures.safe.openTexture, `${import.meta.env.BASE_URL}assets/gabinete-cofre-aberto.webp`);
-  scene.load.image(officeFixtures.safe.texture, `${import.meta.env.BASE_URL}assets/gabinete-cofre.webp`);
-  scene.load.image(officeFixtures.cabinet.texture, `${import.meta.env.BASE_URL}assets/gabinete-armario.webp`);
-  scene.load.image('infirmary-stretcher', import.meta.env.BASE_URL + 'assets/' + 'maca-enfermaria.webp');
-  scene.load.image('technical-shelf', import.meta.env.BASE_URL + 'assets/' + 'estante-apoio-tecnico.webp');
-  scene.load.image('snack-counter', import.meta.env.BASE_URL + 'assets/' + 'balcao-lanchonete.webp');
-  scene.load.image('coffee-maker', import.meta.env.BASE_URL + 'assets/cafeteira.webp');
-  scene.load.image('security-terminal', import.meta.env.BASE_URL + 'assets/terminal-seguranca.webp');
-  scene.load.image('power-panel', import.meta.env.BASE_URL + 'assets/painel-eletrico.webp');
+  loadWorldImage(scene, officeFixtures.safe.openTexture, 'gabinete-cofre-aberto.webp');
+  loadWorldImage(scene, officeFixtures.safe.texture, 'gabinete-cofre.webp');
+  loadWorldImage(scene, officeFixtures.cabinet.texture, 'gabinete-armario.webp');
+  loadWorldImage(scene, 'infirmary-stretcher', 'maca-enfermaria.webp');
+  loadWorldImage(scene, 'technical-shelf', 'estante-apoio-tecnico.webp');
+  loadWorldImage(scene, 'snack-counter', 'balcao-lanchonete.webp');
+  loadWorldImage(scene, 'coffee-maker', 'cafeteira.webp');
+  loadWorldImage(scene, 'security-terminal', 'terminal-seguranca.webp');
+  loadWorldImage(scene, 'power-panel', 'painel-eletrico.webp');
   scene.load.spritesheet('office', import.meta.env.BASE_URL + 'assets/office-hd.png', { frameWidth: 192, frameHeight: 112 });
 }
 

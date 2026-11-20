@@ -1,3 +1,4 @@
+import {worldAssets} from './world-assets';
 import {NAMES} from './map';
 import {characterArt, characterSheets, combatSheets, phoneSheets, safeBreachSheets, safeDepositSheets, npcRobberySheets, attackArt, phoneArt, safeBreachArt, safeDepositArt, npcRobberyArt} from './character-art';
 import {visitorRoster, visitorSheets} from './visitors';
@@ -61,6 +62,11 @@ export const spriteCatalog: SpriteSubject[] = [
     id: `tiririca-test-${size}`, name: `Tiririca · teste ${size} px`, group: 'Experimento de nitidez',
     clips: [1, 4].map(count => ({id: count === 1 ? 'idle' : 'walk', name: count === 1 ? 'Parado' : 'Caminhar', path: `assets/tiririca-walk-${size}.png`, size, start: 0, count, fps: 9, directions, loop: true})),
   })),
+  ...Object.entries(worldAssets).filter(([filename]) => !Object.values(mapNpcs).some(npc => npc.sprite === filename)).filter(([,asset]) => asset?.kind !== 'animation').map(([filename,asset]): SpriteSubject => ({
+    id: `asset:${asset!.id}`, name: asset!.id.replaceAll('-', ' '), group: 'Objetos e interface', clips: [
+      {id: 'idle', name: asset!.kind === 'atlas' ? 'Atlas completo' : 'Imagem', path: `assets/${filename}`, size: 0, start: 0, count: 1, fps: 1, directions: fixed('Original'), loop: true},
+    ],
+  })),
   ...Object.entries(mapNpcs).map(([id, npc]): SpriteSubject => ({id: `npc-${id}`, name: npc.name, group: 'NPCs fixos', clips: [
     {id: 'idle', name: 'Pose única', path: `assets/${npc.sprite}`, size: 0, start: 0, count: 1, fps: 1, directions: fixed('Original'), loop: true},
   ]})),
@@ -74,7 +80,14 @@ export function spriteFrame(clip: SpriteClip, direction: number, frame: number) 
 /** Inspect the exact shipped tier while retaining legacy art for visual comparison. */
 export function spriteSubjectResolution(subject: SpriteSubject, resolution: string): SpriteSubject {
   const character = players.findIndex(player => player.id === subject.id);
-  if (character < 0) return subject;
+  if (character < 0) return {...subject, clips: subject.clips.map(clip => {
+    const entry = Object.entries(worldAssets).find(([filename,asset]) => clip.path === `assets/${filename}` || asset?.variants.some(variant => variant.path === clip.path));
+    if (!entry) return clip;
+    const [filename,asset] = entry;
+    if (resolution === 'original') return {...clip, path: `assets/${filename}`, size: asset!.kind === 'animation' ? 128 : clip.size};
+    const variant = asset!.variants.find(variant => variant.size === (asset!.id === 'office' ? Number(resolution)*1.5 : Number(resolution)));
+    return variant ? {...clip, path: variant.path, size: clip.size ? variant.width : 0, start: 0} : clip;
+  })};
   return {...subject, clips: players[character].clips.map(clip => {
     const walk = clip.id === 'walk' || clip.id === 'idle';
     if (resolution === 'original') return {...clip,
@@ -82,4 +95,8 @@ export function spriteSubjectResolution(subject: SpriteSubject, resolution: stri
     const size = Number(resolution);
     return {...clip, path: `assets/characters-hd/${subject.id}-${walk ? 'walk' : clip.id}-${size}.webp`, size, start: 0};
   })};
+}
+
+export function spriteSubjectHasResolutions(subject: SpriteSubject) {
+  return subject.group === 'Jogadores' || subject.clips.some(clip => Object.entries(worldAssets).some(([filename,asset]) => clip.path === `assets/${filename}` || asset?.variants.some(variant => variant.path === clip.path)));
 }
