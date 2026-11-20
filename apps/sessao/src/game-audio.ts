@@ -4,6 +4,7 @@ import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/a
 const files = {
   victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', firstBlood:'first-blood.mp3',
   music:'corredores-de-brasilia.mp3',
+  covertAffair:'covert-affair.mp3', spyGlass:'spy-glass.mp3', lobbyMusic:'bass-walker.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
   caloteMusic:'hitman.mp3',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
@@ -19,9 +20,12 @@ const files = {
 } as const;
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
-type Score = 'music'|'hearingMusic'|'caloteMusic'|'victory'|'defeat';
-const isFinalScore = (score:Score) => score==='victory' || score==='defeat';
-export type Cue = Exclude<Sample,Score | `foot${number}`>;
+type Score = 'lobbyMusic'|'music'|'hearingMusic'|'caloteMusic'|'victory'|'defeat';
+const matchTracks = ['music','covertAffair','spyGlass'] as const;
+type MatchTrack = typeof matchTracks[number];
+type MusicTrack = Score | MatchTrack;
+const isFinalScore = (score:MusicTrack) => score==='victory' || score==='defeat';
+export type Cue = Exclude<Sample,MusicTrack | `foot${number}`>;
 const footsteps = ['foot1','foot2','foot3','foot4'] as const;
 
 export class GameAudio {
@@ -29,8 +33,9 @@ export class GameAudio {
   private context?: AudioContext;
   private musicGain?: GainNode;
   private effectsGain?: GainNode;
-  private score:Score = 'music';
-  private music?: {score:Score;source:AudioBufferSourceNode;gain:GainNode;started:number};
+  private score:Score = 'lobbyMusic';
+  private matchTrack?:MatchTrack;
+  private music?: {score:MusicTrack;source:AudioBufferSourceNode;gain:GainNode;started:number};
   private fading = new Set<AudioBufferSourceNode>();
   private buffers = new Map<Sample,AudioBuffer>();
   private loading?:Promise<void>;
@@ -84,7 +89,7 @@ export class GameAudio {
         const response = await fetch(`${import.meta.env.BASE_URL}assets/audio/${files[key]}`);
         if (!response.ok) return;
         this.buffers.set(key,await context.decodeAudioData(await response.arrayBuffer()));
-        if (key==='music' || key==='hearingMusic' || key==='caloteMusic' || key==='victory' || key==='defeat') this.startMusic();
+        this.startMusic();
       } catch {}
     })).then(() => {});
     this.startMusic();
@@ -93,6 +98,8 @@ export class GameAudio {
 
   setScore(score:Score) {
     if (this.score===score) return;
+    if (score==='lobbyMusic' || isFinalScore(score)) this.matchTrack = undefined;
+    else this.matchTrack ??= matchTracks[Math.floor(Math.random()*matchTracks.length)];
     this.score = score;
     this.startMusic();
   }
@@ -112,7 +119,8 @@ export class GameAudio {
     this.lastCashCue = -Infinity;
     this.stopMusic(0);
     for (const source of this.fading) source.stop();
-    this.score = 'music';
+    this.score = 'lobbyMusic';
+    this.matchTrack = undefined;
     this.caloteDanger = 0;
     this.setSpeaking(false);
   }
@@ -130,9 +138,11 @@ export class GameAudio {
   }
 
   private startMusic() {
-    const requested = isFinalScore(this.score) ? this.score : this.caloteDanger ? 'caloteMusic' : this.score;
-    const score = this.buffers.has(requested) || isFinalScore(requested) ? requested : 'music';
-    if (isFinalScore(requested) && !this.buffers.has(requested)) this.stopMusic(.7);
+    const requested = this.score==='lobbyMusic' || isFinalScore(this.score) ? this.score :
+      this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'music' : this.score;
+    // Wait for the selected track instead of briefly playing a different one while loading.
+    const score = requested;
+    if (!this.buffers.has(requested) && this.music?.score!==requested) this.stopMusic(.7);
     const buffer = this.buffers.get(score);
     if (!this.playing || this.music?.score===score || !buffer || !this.context || !this.musicGain) return;
     const now = this.context.currentTime;

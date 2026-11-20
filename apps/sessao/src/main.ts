@@ -478,7 +478,7 @@ async function connect(join: () => Promise<Room>,restorePreferences=false) {
       else if (view.phase==='ballot' || view.phase==='hearing') audio.cue('ballot');
       else if (view.phase==='finished' && !sessionVerdict(view)) audio.cue('end');
       phase = view.phase;
-      audio.setScore(phase==='finished' ? sessionVerdict(view) ?? 'music' : phase==='hearing' ? 'hearingMusic' : 'music');
+      audio.setScore(phase==='lobby' ? 'lobbyMusic' : phase==='finished' ? sessionVerdict(view) ?? 'music' : phase==='hearing' ? 'hearingMusic' : 'music');
       closeDetails();
       session.dataset.phase = phase;
       const negotiating = phase==='negotiation';
