@@ -86,7 +86,7 @@ export class SessionRoom extends Room {
 
   private sees(state:ControlState,player:Player,now:number) {
     return player===state.player || (!state.plenary || inPlenary(player)) &&
-      (state.plenary && !this.match.powerOut || characterVisible(state.player,player,this.gameplay.vision(state.player,this.clock.currentTime)));
+      (state.plenary && (!this.match.powerOut || this.gameplay.nightVisionActive(state.player.id)) || characterVisible(state.player,player,this.gameplay.vision(state.player,this.clock.currentTime)));
   }
 
   private gameplayWorld() {

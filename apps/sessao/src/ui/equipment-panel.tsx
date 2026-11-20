@@ -2,7 +2,7 @@ import type {ShortcutEntry} from '../action-shortcuts';
 import {objects,type GameplayAction,type GameplayView} from '../gameplay';
 import {useDialogKeys} from './use-dialog-keys';
 
-type EquipmentState = Pick<GameplayView,'equipped'|'megaphoneSeconds'|'modulator'|'equipmentCooldowns'>;
+type EquipmentState = Pick<GameplayView,'equipped'|'megaphoneSeconds'|'modulator'|'nightVision'|'equipmentCooldowns'>;
 
 export function EquipmentPanel({state,available,send,close}:{
   state:EquipmentState;available:boolean;send:(action:GameplayAction)=>void;close:()=>void;
@@ -13,11 +13,14 @@ export function EquipmentPanel({state,available,send,close}:{
     const item = objects[gear.kind];
     const unequip = ()=>send({kind:'unequip',item:gear.id});
     const toggleMegaphone = ()=>send({kind:'toggle-megaphone'});
+    const toggleNightVision = ()=>send({kind:'toggle-night-vision'});
+    const nightVisionLabel = state.nightVision ? 'Desligar visão noturna' : 'Ligar visão noturna';
     const toggleModulator = ()=>send({kind:'toggle-modulator'});
     const cooldown = state.equipmentCooldowns?.[gear.id];
     const megaphoneLabel = state.megaphoneSeconds ? 'Encerrar megafone' : 'Ativar megafone';
     const modulatorLabel = state.modulator?.active ? 'Desligar modulador' : 'Ligar modulador';
     if (available) {
+      if (gear.kind==='nightVision') entries.push({name:nightVisionLabel,activate:toggleNightVision});
       entries.push({name:'Desequipar '+item.name,activate:unequip});
       if (gear.kind==='megaphone' && !cooldown) entries.push({name:megaphoneLabel,activate:toggleMegaphone});
       if (gear.kind==='voiceModulator' && state.modulator) entries.push({name:modulatorLabel,activate:toggleModulator});
@@ -30,6 +33,8 @@ export function EquipmentPanel({state,available,send,close}:{
         {gear.kind==='megaphone' && <button type="button" className="hud-button hud-button--secondary" disabled={!!cooldown}
           onClick={toggleMegaphone}>{state.megaphoneSeconds ? `Encerrar · ${state.megaphoneSeconds}s` :
             cooldown ? `Recarga · ${cooldown}s` : megaphoneLabel}</button>}
+        {gear.kind==='nightVision' && <button type="button" className="hud-button hud-button--secondary"
+          aria-pressed={!!state.nightVision} onClick={toggleNightVision}>{nightVisionLabel}</button>}
         {gear.kind==='voiceModulator' && state.modulator && <button type="button" className="hud-button hud-button--secondary"
           onClick={toggleModulator}>{modulatorLabel}</button>}
       </>}

@@ -133,7 +133,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
     private fogEdge!:Phaser.GameObjects.Image;
     private fogTexture!:Phaser.Textures.CanvasTexture;
     private fogInSession = false;
-    private fogGeometry?: {x:number;y:number;radius:number;barriers:string;points:ReturnType<typeof wallVision>};
+    private fogGeometry?: {x:number;y:number;radius:number;powerOut:boolean;barriers:string;points:ReturnType<typeof wallVision>};
     private roomFires!:ReturnType<typeof createRoomFires>;
     extinguishEffect!:ReturnType<typeof createExtinguishEffect>;
     private fuseSmoke!:ReturnType<typeof createFuseSmoke>;
@@ -460,7 +460,10 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       }
       const now = performance.now();
       const ownPlayer = local.state?.player;
-      const powerOut = !!plenaryView?.outage;
+      const nightVision = running && !!plenaryView?.outage && !!plenaryView?.gameplay?.nightVision;
+      const powerOut = !!plenaryView?.outage && !nightVision;
+      const filter = nightVision ? 'grayscale(1)' : '';
+      if (this.game.canvas.style.filter!==filter) this.game.canvas.style.filter = filter;
       const visionRadius = playerVisionRadius(ownPlayer)*(plenaryView?.gameplay?.binocularSeconds ? binoculars.multiplier : 1)*
         (powerOut ? powerRules.visionFactor : 1);
       const cooldowns = plenaryView?.gameplay?.stationCooldowns;
@@ -604,6 +607,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           showStatus:running || worldSnapshot.officeHolders.has(id),
         });
         if (own) {
+          if (powerOut) sprite.setDepth(HEIGHT+91);
           if (this.marker.depth!==y-1) this.marker.setDepth(y-1);
           this.marker.setPosition(spriteX,latest.carried ? y-2 : spriteY-2).setVisible(true);
           if (inSession) {
@@ -615,7 +619,9 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           for (const part of [view.items,label,office]) {
             if (part.depth!==HEIGHT+91) part.setDepth(HEIGHT+91);
           }
-          this.fog.setVisible(running);
+          const fogDepth = powerOut ? HEIGHT+90 : 3;
+          this.fog.setDepth(fogDepth).setVisible(running);
+          this.fogEdge.setDepth(fogDepth);
           const roomFog = inSession && !powerOut;
           this.fogEdge.setVisible(running && !roomFog);
           if (running && roomFog && !this.fogInSession) {
@@ -634,8 +640,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             const wallX = Math.round(x), wallY = Math.round(y), radius = Math.round(this.drawnVisionRadius);
             const barriers = JSON.stringify(ownPlayer?.barriers ?? []);
             const cached = this.fogGeometry;
-            if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.barriers!==barriers) {
-              this.fogGeometry = {x:wallX,y:wallY,radius,barriers,
+            if (!cached || cached.x!==wallX || cached.y!==wallY || cached.radius!==radius || cached.powerOut!==powerOut || cached.barriers!==barriers) {
+              this.fogGeometry = {x:wallX,y:wallY,radius,powerOut,barriers,
                 points:wallVision({x:wallX,y:wallY,barriers:ownPlayer?.barriers},radius)};
               const {points} = this.fogGeometry;
               const size = this.fogTexture.width;
@@ -644,7 +650,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
               const scale = center/half;
               const ctx = this.fogTexture.context;
               ctx.clearRect(0,0,size,size);
-              ctx.fillStyle = 'rgba(0,0,0,.62)';
+              const fogOpacity = powerOut ? 1 : .62;
+              ctx.fillStyle = `rgba(0,0,0,${fogOpacity})`;
               ctx.fillRect(0,0,size,size);
               ctx.save();
               ctx.globalCompositeOperation = 'destination-out';
@@ -663,7 +670,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
 
               const left = wallX-half, top = wallY-half, right = wallX+half, bottom = wallY+half;
               const extent = 4000;
-              this.fog.clear().fillStyle(0x000000,.62)
+              this.fog.clear().fillStyle(0x000000,fogOpacity)
                 .fillRect(-extent,-extent,extent*2,top+extent)
                 .fillRect(-extent,top,left+extent,half*2)
                 .fillRect(right,top,extent-right,half*2)
@@ -751,6 +758,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
       negotiating = phase==='negotiation';
       running = negotiating || phase==='ballot' || phase==='hearing';
       if (!running) {
+        scene.game.canvas.style.filter = '';
         scene.fog?.setVisible(false);
         scene.hideFogEdge();
       }
