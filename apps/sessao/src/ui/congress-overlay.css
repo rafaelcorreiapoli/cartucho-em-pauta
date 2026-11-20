@@ -943,6 +943,7 @@
 .market-product-caption { z-index: 1; }
 .market-product-empty { color: #91a58d; }
 .market-detail {
+  contain: size;
   display: grid;
   grid-template-rows: minmax(0,1fr) auto;
   min-height: 0;
