@@ -29,7 +29,7 @@ import { PlayerHistory, PredictedMovement } from './network-movement';
 import { restMovement, STEP_MS, type ControlState, type MovementInput } from './movement';
 import { furnishings, HEIGHT, inPlenary, localPerception, characterVisible, worldVisible, NAMES, PLENARY_BOUNDS, PLENARY_DOORS, sprintMultiplier, VISION_RADIUS, WIDTH, type Motion, type Player } from './map';
 
-type View = { sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number; depositStarted?:number; robberyStarted?:number };
+type View = { speedIcon:Phaser.GameObjects.Graphics; sprite: Phaser.GameObjects.Sprite; label: Phaser.GameObjects.Text; office: Phaser.GameObjects.Text; items:Phaser.GameObjects.Container; itemsKey?:string; nextStep:number; lastHit?:number; flashUntil?:number; hitAt?:number; fallAt?:number; weapon:Phaser.GameObjects.Image; briefcase?:Phaser.GameObjects.Image; swingAt?:number; swingStarted?:number; depositStarted?:number; robberyStarted?:number };
 // Grip coordinates in the original 128 px frames, ordered front, profile, back.
 type Grip = readonly [x:number,y:number];
 type WalkGrips = readonly [Grip,Grip,Grip,Grip];
@@ -644,6 +644,7 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view.office.destroy();
           view.items.destroy();
           view.weapon.destroy();
+          view.speedIcon.destroy();
           view.briefcase?.destroy();
           this.views.delete(id);
         }
@@ -666,11 +667,16 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
           view?.office.setVisible(false);
           view?.items.setVisible(false);
           view?.weapon.setVisible(false);
+          view?.speedIcon.setVisible(false);
           view?.briefcase?.setVisible(false);
           continue;
         }
         if (!view) {
           view = {
+            speedIcon:this.add.graphics().lineStyle(1.5,0xffdc73,1)
+              .beginPath().moveTo(-5,-3).lineTo(-2,0).lineTo(-5,3)
+              .moveTo(1,-3).lineTo(4,0).lineTo(1,3).strokePath()
+              .setDepth(HEIGHT+30).setVisible(false),
             nextStep:0,
             weapon:this.add.image(0,0,'weapon-baton').setVisible(false),
             items:this.add.container().setDepth(HEIGHT+26),
@@ -770,6 +776,8 @@ export function createGame(parent: HTMLElement, ownId: string, send: (input: Mov
             .setScale(profile.size/view.weapon.width).setPosition(x+pose.handX,y+pose.handY)
             .setRotation(pose.angle).setDepth(y+(facing===2 ? -.1 : .1));
         }
+        view.speedIcon.setVisible((latest.speedModifier?.factor ?? 1)>1 && (latest.speedModifier?.remainingMs ?? 0)>0)
+          .setPosition(x,spriteY-43);
         const name = player.nick;
         label.setVisible(true).setPosition(x,labelY).setText(latest.pocketing ? `▣ ${name}` : phone==='game' ? `🎮 ${name}` : phone==='call' ? `☎ ${name}` : name);
         const nameColor = player.npc ? '#b8c0bf' : latest.knockedOut ? '#ffbf9f' : '#fff7df';
