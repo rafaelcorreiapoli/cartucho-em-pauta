@@ -411,8 +411,8 @@ arte do jogo: jogadores (parado, caminhada, ataque, golpe, queda, celular,
 arrombamento de cofre, dinheiro e saque), visitantes (parado, caminhada, golpe e
 queda), Federal (parado, caminhada e arrombamento de porta) e poses dos NPCs fixos.
 Mostra somente direções existentes, identificando as espelhadas. Parado usa o
-primeiro quadro da caminhada, assim como no jogo. A grade expõe todos os quadros
-sem alinhar/recolorir artificialmente a arte, para revelar inconsistências.
+primeiro quadro da caminhada, assim como no jogo. A grade expõe todos os quadros com os recortes originais e a mesma ancoragem
+do jogo, para revelar inconsistências.
 
 Selecione personagem, pose e direção; pause, avance quadro a quadro, reduza a
 velocidade ou sobreponha o quadro anterior. O controle Repetir pode ser desligado
@@ -437,12 +437,18 @@ quadro, compartilhada pelo Phaser e pelo laboratório. A medição dos 12 quadro
 alinha o eixo da cabeça em x=64 sem alterar pintura, posição no mundo ou movimento
 vertical. Inclui a direção espelhada e os renders de foto/câmera.
 
-Em **Lula · cofre ajustado**, a imagem candidata é comparada à original em sincronia.
-O arquivo `lula-safe-breach-fit-tool.png` mantém os três primeiros quadros e todos
-os pixels fora de um pequeno trecho da ferramenta no quadro 4. A ferramenta
-intacta do quadro 1 foi reorientada em torno da empunhadura e recolocada atrás da
-mão, com 4 px de margem direita. Corpo e mão não foram deslocados; não há ajuste
-de coordenadas no jogo para esta candidata. A receita offline reproduzível está
-em `dev/lula-safe-breach-fit.py` (`uv run --with pillow python
- dev/lula-safe-breach-fit.py`). Continua só no laboratório, aguardando validação
-visual antes de aplicar ao elenco. Links com `frame` abrem pausados nesse quadro.
+Em **Lula · cofre ImageGen**, a imagem candidata é comparada à original em sincronia.
+O arquivo `lula-safe-breach-imagegen.png` preserva os três primeiros quadros e
+substitui somente a região do braço direito, mão e ferramenta do quadro 4 com
+ImageGen. Foram usadas as artes originais do Lula, Bolsonaro e Clodovil como
+referência para o padrão da ferramenta. Cabeça, tronco, braço esquerdo e pernas
+fora dessa região vêm da imagem original, sem novo desenho. A candidata tem 22 px de margem direita e ainda aguarda avaliação visual
+do gesto e da consistência da ferramenta e pintura com o elenco.
+
+O master da geração está em `dev/assets/lula-safe-breach-frame4-imagegen.png`.
+A integração offline é reproduzível com
+`uv run --with pillow python dev/lula-safe-breach-fit.py`; ela redimensiona o
+master e aplica uma máscara apenas ao braço/ferramenta, preservando os demais
+pixels e todos os outros quadros. A alteração é na imagem, sem compensação de
+coordenadas no renderer para o Lula. Continua só no laboratório antes de aplicar
+ao elenco. Links com `frame` abrem pausados nesse quadro.

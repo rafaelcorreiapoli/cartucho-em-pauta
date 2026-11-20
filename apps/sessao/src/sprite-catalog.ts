@@ -54,8 +54,8 @@ export const spriteCatalog: SpriteSubject[] = [
     ...walking(`${federalPatrolRules.skin}-walk`),
     clip('door-breach', 'Arrombar porta', `${federalPatrolRules.skin}-door-breach`, {fps: 5, directions: directions.map((direction, row) => ({label: row === 3 ? 'Esquerda' : direction.label, row}))}),
   ]},
-  {id: 'lula-safe-breach-fit', name: 'Lula · cofre ajustado', group: 'Experimento de enquadramento', clips: [
-    {...players[0].clips.find(clip => clip.id === 'safe-breach')!, path: 'assets/lula-safe-breach-fit-tool.png'},
+  {id: 'lula-safe-breach-imagegen', name: 'Lula · cofre ImageGen', group: 'Experimento de enquadramento', clips: [
+    {...players[0].clips.find(clip => clip.id === 'safe-breach')!, path: 'assets/lula-safe-breach-imagegen.png'},
   ]},
   ...([256, 512] as const).map((size): SpriteSubject => ({
     id: `tiririca-test-${size}`, name: `Tiririca · teste ${size} px`, group: 'Experimento de nitidez',

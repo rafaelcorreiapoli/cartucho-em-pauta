@@ -16,8 +16,9 @@ const verdict = element<HTMLSelectElement>('verdict');
 const note = element<HTMLTextAreaElement>('note');
 const play = element<HTMLButtonElement>('play');
 const error = element<HTMLParagraphElement>('error');
+const subjectId = (id: string | null) => id === 'lula-safe-breach-fit' ? 'lula-safe-breach-imagegen' : id;
 const params = new URLSearchParams(location.hash.slice(1));
-let subject = spriteCatalog.find(subject => subject.id === params.get('subject')) ?? spriteCatalog[0];
+let subject = spriteCatalog.find(subject => subject.id === subjectId(params.get('subject'))) ?? spriteCatalog[0];
 let clip = subject.clips.find(clip => clip.id === params.get('pose')) ?? subject.clips[0];
 let facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(params.get('direction'))) || 0));
 let frame = Math.max(0, Math.min(clip.count - 1, Math.floor(Number(params.get('frame'))) || 0));
@@ -115,16 +116,16 @@ async function showSubject() {
   const current = ++generation;
   setError('');
   reference = undefined;
-  element('reference').hidden = subject.id !== 'lula-safe-breach-fit';
-  element('preview-label').textContent = subject.id === 'lula-safe-breach-fit' ? 'Imagem candidata' : 'Pose selecionada';
-  if (subject.id === 'lula-safe-breach-fit') void spriteImage('assets/lula-safe-breach.webp').then(loaded => { if (generation === current) reference = loaded; }).catch(reason => { if (generation === current) setError(String(reason)); });
+  element('reference').hidden = subject.id !== 'lula-safe-breach-imagegen';
+  element('preview-label').textContent = subject.id === 'lula-safe-breach-imagegen' ? 'Imagem candidata' : 'Pose selecionada';
+  if (subject.id === 'lula-safe-breach-imagegen') void spriteImage('assets/lula-safe-breach.webp').then(loaded => { if (generation === current) reference = loaded; }).catch(reason => { if (generation === current) setError(String(reason)); });
   subjectList();
   element('name').textContent = subject.name;
   element('group').textContent = subject.group;
   document.querySelector<HTMLParagraphElement>('.intro')!.textContent = subject.group === 'Experimento de nitidez'
     ? 'Variante experimental do Tiririca: ganho de nitidez validado. O master tem 362 px por quadro, normalizados para 256/512. Pintura, contornos e proporções entre quadros ainda precisam de revisão. Não é a arte usada na partida.'
-    : subject.id === 'lula-safe-breach-fit'
-      ? 'Experimento na imagem: quadros 1–3 preservados; no quadro 4, a ferramenta foi reaproveitada do quadro 1 e reorientada para caber. Corpo e mão não foram deslocados. Compare a original com a candidata. Ainda não aplicado à partida ou aos outros personagens.'
+    : subject.id === 'lula-safe-breach-imagegen'
+      ? 'Experimento na imagem: quadros 1–3 preservados; somente o braço direito, a mão e a ferramenta do quadro 4 foram refeitos com ImageGen, usando as artes do elenco como referência. A pintura fora dessa região foi preservada. Compare a original com a candidata. Ainda não aplicado à partida ou aos outros personagens.'
     : 'Compare contornos, pintura, sombras e proporções entre os quadros. Estas são as artes usadas no jogo. Direções espelhadas estão identificadas; parado usa o primeiro quadro da caminhada.';
   element('sheets').replaceChildren();
   void loadPose();
@@ -244,7 +245,7 @@ function render(time: number) {
 }
 window.addEventListener('hashchange', () => {
   const values = new URLSearchParams(location.hash.slice(1));
-  subject = spriteCatalog.find(subject => subject.id === values.get('subject')) ?? spriteCatalog[0];
+  subject = spriteCatalog.find(subject => subject.id === subjectId(values.get('subject'))) ?? spriteCatalog[0];
   clip = subject.clips.find(clip => clip.id === values.get('pose')) ?? subject.clips[0];
   facing = Math.max(0, Math.min(clip.directions.length - 1, Math.floor(Number(values.get('direction'))) || 0));
   frame = Math.max(0, Math.min(clip.count - 1, Math.floor(Number(values.get('frame'))) || 0));

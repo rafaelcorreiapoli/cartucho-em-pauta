@@ -58,14 +58,14 @@ async (page) => {
   await page.screenshot({path: '/tmp/infiltrados-sprite-review-mobile.png'});
   if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Mobile horizontal overflow');
   if (errors.length) throw new Error(errors.join('\n'));
-  await page.goto(new URL('/sprites.html#subject=lula-safe-breach-fit&pose=safe-breach&direction=0&frame=3', base).href);
-  await page.waitForFunction(() => document.querySelector('#reference').hidden === false && document.querySelector('#asset').textContent.includes('lula-safe-breach-fit-tool'));
+  await page.goto(new URL('/sprites.html#subject=lula-safe-breach-imagegen&pose=safe-breach&direction=0&frame=3', base).href);
+  await page.waitForFunction(() => document.querySelector('#reference').hidden === false && document.querySelector('#asset').textContent.includes('lula-safe-breach-imagegen'));
   const imageExperiment = await page.evaluate(async () => {
     const {frameEdges, paintFrame} = await import('/src/sprite-review-renderer.ts');
     const {spriteCatalog} = await import('/src/sprite-catalog.ts');
     const {spriteFrameOffsetX} = await import('/src/sprite-alignment.ts');
     const original = new Image(); original.src = '/assets/lula-safe-breach.webp'; await original.decode();
-    const candidate = new Image(); candidate.src = '/assets/lula-safe-breach-fit-tool.png'; await candidate.decode();
+    const candidate = new Image(); candidate.src = '/assets/lula-safe-breach-imagegen.png'; await candidate.decode();
     const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 128;
     const ctx = canvas.getContext('2d');
     const pixels = image => { ctx.clearRect(0, 0, 512, 128); ctx.drawImage(image, 0, 0); return ctx.getImageData(0, 0, 512, 128).data; };
@@ -74,7 +74,7 @@ async (page) => {
     for (let y = 0; y < 128; y++) for (let x = 0; x < 512; x++) for (let channel = 0; channel < 4; channel++) {
       const i = (y * 512 + x) * 4 + channel;
       if (a[i] !== b[i]) {
-        const protectedPixel = x < 384 || x - 384 < 98 || y < 40 || y > 69;
+        const protectedPixel = x < 384 || x - 384 < 84 || y < 35 || y > 88 || (y < 61 && x - 384 < 94);
         // WEBP and PNG decoders round premultiplied translucent edges differently.
         const alpha = a[(y * 512 + x) * 4 + 3];
         const effectiveDelta = channel === 3 ? Math.abs(a[i] - b[i]) : Math.abs(a[i] - b[i]) * alpha / 255;
@@ -82,7 +82,7 @@ async (page) => {
         if (!protectedPixel) changed++;
       }
     }
-    const clip = spriteCatalog.find(subject => subject.id === 'lula-safe-breach-fit').clips[0];
+    const clip = spriteCatalog.find(subject => subject.id === 'lula-safe-breach-imagegen').clips[0];
     if (!changed) throw new Error('Candidate is identical to original');
     if (!frameEdges(original, {...clip, path: 'assets/lula-safe-breach.webp'}, 0, 3).includes('direita')) throw new Error('Original right-edge clipping not detected');
     if (frameEdges(candidate, clip, 0, 3).includes('direita')) throw new Error('Candidate still touches right edge');
