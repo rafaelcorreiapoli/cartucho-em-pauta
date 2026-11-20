@@ -20,6 +20,12 @@ export function createSurveillanceViewport(parent: HTMLElement, onFirstDraw?: ()
     }
     update(time: number) {
       if (!latest?.camera) return;
+      const area=latest.camera.area;
+      const width=(area?.[2] ?? spyRules.range*2)*density;
+      const height=(area?.[3] ?? spyRules.range*2)*density;
+      if (this.scale.width!==width || this.scale.height!==height) this.scale.resize(width,height);
+      parent.style.aspectRatio=String(width/height);
+      parent.style.setProperty('--camera-aspect',String(width/height));
       this.cameras.main.setVisible(true).centerOn(latest.camera.x, latest.camera.y);
       this.world.render(latest, time);
       if (waitingForFrame) {

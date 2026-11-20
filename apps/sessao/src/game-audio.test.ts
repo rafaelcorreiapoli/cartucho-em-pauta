@@ -9,14 +9,15 @@ function fixture() {
   Reflect.set(audio,'context',{
     currentTime:1,createGain:gain,
     createBufferSource() {
-      const source = {loop:false,connect(node:unknown){return node;},disconnect(){},start(){},stop(){}};
+      const source = {loop:false,playbackRate:{value:1},stops:0,connect(node:unknown){return node;},disconnect(){},start(){},stop(){this.stops++;}};
       sources.push(source);
       return source;
     },
   });
   Reflect.set(audio,'musicGain',gain());
+  Reflect.set(audio,'effectsGain',gain());
   Reflect.set(audio,'playing',true);
-  const buffers = new Map(['music','caloteMusic','victory','defeat'].map(key=>[key,{key}]));
+  const buffers = new Map(['music','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key}]));
   Reflect.set(audio,'buffers',buffers);
   return {audio,sources,buffers};
 }
@@ -45,6 +46,25 @@ test('a missing finale track does not resume the gameplay music',()=>{
   audio.setScore('victory');
   expect(sources).toHaveLength(1);
   expect(Reflect.get(audio,'music')).toBeUndefined();
+});
+
+test('the Federal siren stops before the trombone and sounds are cleared on leaving',()=>{
+  const {audio,sources,buffers}=fixture();
+  audio.federal('caught');
+  expect(sources[0].buffer).toBe(buffers.get('federalCaught'));
+  audio.federal('isolated');
+  expect(Reflect.get(sources[0],'stops')).toBe(1);
+  expect(sources[1].buffer).toBe(buffers.get('federalIsolation'));
+  audio.leave();
+  expect(Reflect.get(sources[1],'stops')).toBe(1);
+});
+
+test('cancelling a Federal transfer stops the siren without playing arrival audio',()=>{
+  const {audio,sources}=fixture();
+  audio.federal('caught');
+  audio.federal('cancelled');
+  expect(sources).toHaveLength(1);
+  expect(Reflect.get(sources[0],'stops')).toBe(1);
 });
 
 test('campaign applause plays as an effect and respects mute and SFX volume',()=>{

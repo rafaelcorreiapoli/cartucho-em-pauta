@@ -41,9 +41,9 @@ export class PrivateOffices {
     return [...this.offices.values()].filter(office=>office.door!=='open' && office.doorUntil<=now).map(office=>office.layout.door);
   }
 
-  view(now:number,player:Player):OfficeView[] {
+  view(now:number,player:Player,visible=(point:Motion)=>localPerception(player,point).visible):OfficeView[] {
     return [...this.offices.values()].map(({layout,nick,door,doorUntil,cabinetUntil})=>({
-      id:layout.id,owner:nick,door:doorUntil>now ? 'breached' : door,cabinetBreached:cabinetUntil>now && localPerception(player,layout.cabinet).visible ? true : undefined,
+      id:layout.id,owner:nick,door:doorUntil>now ? 'breached' : door,cabinetBreached:cabinetUntil>now && visible(layout.cabinet) ? true : undefined,
     }));
   }
 

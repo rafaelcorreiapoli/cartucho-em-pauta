@@ -15,7 +15,7 @@ import { foodDefinition, isFood, type FoodEffect } from '../src/food';
 import { MAX_STAMINA } from '../src/movement';
 import { npcs, type DialogueCondition } from '../src/npcs';
 import { BRIEFCASE_LIMIT, canStackItem, itemQuantity, canReachObject, canVerifyDocumentAt, isPhoneAction, cashAmount, treasuryPartialAmount, documentTemplates, hasInventorySpace, occupiesInventorySlot, objects, terminals, type Terminal, type GameplayAction, type GameplayEvent, type GameplayView, type ObjectKind, type WorldItem } from '../src/gameplay';
-import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, playerVisionRadius, WIDTH, inPlenary, type Motion, type Player } from '../src/map';
+import { blockedBy, canStand, HEIGHT, localPerception, roomAt, worldVisible, playerVisionRadius, WIDTH, inPlenary, type Motion, type Player, type Rect } from '../src/map';
 import { cashSpriteFits } from '../src/map-props';
 import { findRoute } from '../src/navigation';
 import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, inPhotoFrame, photoPerson, type Decoration, type Photo, type PhotoPerson, type PhotoScene } from '../src/photography';
@@ -35,7 +35,7 @@ import { publishGameplay, type GameplayWorld } from './gameplay-world';
 
 import { Surveillance } from "./Surveillance";
 import { securityCameraSees, type SecurityCamera } from "../src/security";
-import { isSpyProduct, cameraSees, spyRules, type SpyView, type SpyDevice } from "../src/surveillance";
+import { isSpyProduct, cameraSees, cameraRegion, spyRules, type SpyView, type SpyDevice } from "../src/surveillance";
 
 type GroundPlace = {ground:Motion; expires?:number};
 type Place = {holder:string} | {equipped:string} | GroundPlace | {storage:string} | {filed:true};
@@ -515,7 +515,7 @@ export class Gameplay {
         if (channel?.kind!=='office-cash' || channel.ends<=world.now || channel.office.layout.id!==office.id ||
             roomAt(player)!==office.name || player.moving || player.knockedOut || player.carried ||
             player.x!==channel.origin.x || player.y!==channel.origin.y || world.present?.(player.id)===false) continue;
-        if (!world.detain?.(player.id,federalPatrolRules.detentionMs)) continue;
+        if (!world.detain?.(player.id,federalPatrolRules.detentionMs,world.now,federalPatrolRules.flagrantPauseMs)) continue;
         this.privateOffices.channels.delete(player.id);
         player.pocketing = undefined;
         for (const item of this.inventory(player.id)) {
@@ -978,7 +978,7 @@ export class Gameplay {
     if (!device || !('channel' in raw) || raw.channel!==device.id) return 'O canal da câmera mudou.';
     const frame = this.spyFrame(player,world);
     if (!frame) return;
-    const inBounds = (point:Motion)=>Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
+    const inBounds = (point:Motion)=>!!frame.camera?.area || Math.abs(point.x-frame.center.x)<PHOTO_WIDTH/2 &&
       Math.abs(point.y-frame.center.y+PHOTO_LOOK_UP)<PHOTO_HEIGHT/2;
     const result = this.album.capture(player.id,world.now,id=>({
       ...frame,people:frame.people.filter(inBounds),ground:frame.ground.filter(inBounds),
@@ -1004,25 +1004,25 @@ export class Gameplay {
   }
 
   securityFrame(player:Player, camera:SecurityCamera, world:GameplayWorld) {
-    return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point));
+    return this.cameraScene(player,camera,world,(origin,point)=>securityCameraSees(camera,origin,point),camera.area);
   }
 
   private photoWorldState(observer:Player,world:GameplayWorld,visible=(point:Motion)=>localPerception(observer,point).visible) {
     return {time:world.now,
       features:{surveillance:this.surveillanceEnabled,projectVoting:this.projectVotingEnabled,
         decorations:this.decorationsEnabled,portraitsAndVip:this.portraitsAndVipEnabled},
-      offices:this.privateOffices.view(world.now,observer).map(({id,door,cabinetBreached})=>({id,door,cabinetBreached})),
+      offices:this.privateOffices.view(world.now,observer,visible).map(({id,door,cabinetBreached})=>({id,door,cabinetBreached})),
       openSafes:privateOffices.filter(office=>visible(office.safe) && depositingAtSafe(office,world.players)).map(office=>office.id),
     };
   }
 
   private cameraScene(player:Player, position:Motion, world:GameplayWorld,
-    sees:(origin:Motion,point:Motion)=>boolean):PhotoScene {
+    sees:(origin:Motion,point:Motion)=>boolean,area:Rect=cameraRegion(position)):PhotoScene {
     const barriers = player.barriers?.filter(([x,y,w,h])=>
-      Math.hypot(x+w/2-position.x,y+h/2-position.y)<=spyRules.range+Math.hypot(w,h)/2);
-    const camera = {x:position.x,y:position.y,barriers};
+      x<area[0]+area[2] && x+w>area[0] && y<area[1]+area[3] && y+h>area[1]);
+    const camera = {x:area[0]+area[2]/2,y:area[1]+area[3]/2,barriers,area};
     const center = {...camera,y:camera.y+PHOTO_LOOK_UP};
-    const visible = (point:Motion)=>sees(camera,point);
+    const visible = (point:Motion)=>sees({...position,barriers},point);
     return {center,camera,...this.photoWorldState({...player,...camera},world,visible),
       people:world.players.filter(person=>world.present?.(person.id)!==false && visible(person)).map(person=>({
         ...photoPerson(person),cashInHand:this.hasVisibleCash(person.id,world.now,'camera') ? true : undefined,

@@ -1,7 +1,7 @@
 import { infirmary } from './medical';
 import type { PhotoScene } from './photography';
 import { privateOffices } from './private-offices';
-import { obstacleBetween, securityRoom, type Motion } from './map';
+import { rooms, securityRoom, type Rect, type Motion } from './map';
 
 export const spyProducts = {
   wiretap:{name:'Grampo',price:2,portrait:'retrato-grampo.webp',description:'Escuta remota ao redor de um esconderijo.'},
@@ -23,8 +23,15 @@ export const hideouts = [
 ];
 export type Hideout = {id:string;name:string;room:string;x:number;y:number;accepts:readonly SpyDevice[]};
 
-export function cameraSees(origin:Motion,subject:Motion) {
-  return Math.hypot(subject.x-origin.x,subject.y-origin.y)<=spyRules.range && !obstacleBetween(origin,subject);
+// Cameras cover a region; the range limit belongs to listening devices.
+export function cameraRegion(origin:Motion):Rect {
+  return rooms.find(({bounds:[x,y,w,h]})=>origin.x>=x && origin.x<x+w && origin.y>=y && origin.y<y+h)?.bounds
+    ?? [origin.x-spyRules.range,origin.y-spyRules.range,spyRules.range*2,spyRules.range*2];
+}
+
+export function cameraSees(origin:Motion,subject:Motion,area:Rect=cameraRegion(origin)) {
+  const [x,y,w,h] = area;
+  return subject.x>=x && subject.x<x+w && subject.y>=y && subject.y<y+h;
 }
 export type SpyChannel = {id:number; name:string; room:string; kind:SpyDevice; active:boolean; removed:boolean; alerts:boolean};
 export type SpyOption = {label:string; kind:'install'|'inspect'|'remove'|'recover'|'keep'|'cancel'; site?:string; item?:number; blocked?:string};

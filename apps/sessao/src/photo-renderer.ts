@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { WorldView } from './world-view';
-import { PHOTO_HEIGHT, PHOTO_LOOK_UP, PHOTO_WIDTH, type PhotoScene, type Photo } from './photography';
+import { PHOTO_HEIGHT, PHOTO_WIDTH, photoBounds, type PhotoScene, type Photo } from './photography';
 import { VISION_RADIUS } from './map';
 import { wallVision } from './visibility';
 
@@ -37,8 +37,9 @@ export class PhotoRenderer {
 
   draw(canvas: HTMLCanvasElement, frame: PhotoScene, scale = 4) {
     // Snapshot legacy callers too: nothing in the asynchronous renderer may observe later mutations.
-    if (canvas.width!==PHOTO_WIDTH*scale) canvas.width=PHOTO_WIDTH*scale;
-    if (canvas.height!==PHOTO_HEIGHT*scale) canvas.height=PHOTO_HEIGHT*scale;
+    const [,,width,height]=photoBounds(frame);
+    if (canvas.width!==width*scale) canvas.width=width*scale;
+    if (canvas.height!==height*scale) canvas.height=height*scale;
     const captured = structuredClone(frame);
     captured.features ??= {
       surveillance: this.surveillanceEnabled,
@@ -56,10 +57,8 @@ export class PhotoRenderer {
     const [canvas, request] = entry;
     this.pending.delete(canvas);
     const { frame, scale } = request;
-    const width = PHOTO_WIDTH * scale,
-      height = PHOTO_HEIGHT * scale;
-    const left = frame.center.x - PHOTO_WIDTH / 2;
-    const top = frame.center.y - PHOTO_HEIGHT / 2 - PHOTO_LOOK_UP;
+    const [left,top,worldWidth,worldHeight]=photoBounds(frame);
+    const width=worldWidth*scale,height=worldHeight*scale;
     const photo = frame as Photo;
     const subjects = photo.selfie ? { ...frame, people: frame.people.filter((person) => person.id !== photo.author.id) } : frame;
     this.world.render(subjects, frame.time ?? photo.at ?? 0, true);

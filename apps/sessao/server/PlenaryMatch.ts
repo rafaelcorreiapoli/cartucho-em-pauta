@@ -32,7 +32,7 @@ const clamp = (value:number) => Math.max(0,Math.min(stabilityRules.maximum,value
 
 export class PlenaryMatch {
   training = false;
-  private federalDetentions = new Map<string,{gameUntil:number;realUntil:number}>();
+  private federalDetentions = new Map<string,{gameUntil:number;realUntil:number;transferAt:number}>();
   onTrainingEvent?:(event:GameplayEvent)=>void;
   clearTrainingCrisis(now:number) {
     if (!this.training) return;
@@ -604,10 +604,10 @@ export class PlenaryMatch {
       projectFilingError:(id,project)=>current() ? this.projectFilingError(id,project,now) : 'Partida encerrada.',
       projectSignatures:Math.max(0,Math.min(2,this.initialPlayers-1)),
       hasMandate:id=>!!this.election.office(id),
-      detain:(id,duration,realNow=now+this.pausedDuration)=>{
+      detain:(id,duration,realNow=now+this.pausedDuration,arrivalDelay=0)=>{
         if (!current() || !this.electorate.has(id) || this.isolated(id)) return false;
-        this.economy.detain(id,now+duration);
-        this.federalDetentions.set(id,{gameUntil:now+duration,realUntil:realNow+duration});
+        this.economy.detain(id,now+arrivalDelay+duration);
+        this.federalDetentions.set(id,{gameUntil:now+arrivalDelay+duration,realUntil:realNow+arrivalDelay+duration,transferAt:realNow+arrivalDelay});
         this.refreshAgendaEligibility(now);
         return true;
       },
@@ -658,6 +658,10 @@ export class PlenaryMatch {
   allocateAttribute(player:Player, request:AttributeRequest, now:number) {
     return this.phase==='negotiation' && this.canHandleObjects(player.id,now) && this.ballotCountdown(now)===undefined &&
       !player.knockedOut && !player.carrying && !player.carried && this.economy.allocate(player.id,request);
+  }
+
+  federalTransferPending(id:string,realNow:number) {
+    return this.isolated(id) && (this.federalDetentions.get(id)?.transferAt ?? 0)>realNow;
   }
 
   isolated(id:string) { return this.running && (this.expelled.has(id) || this.economy.suspended(id)); }
@@ -1324,7 +1328,7 @@ export class PlenaryMatch {
       fires:this.running ? this.fire.view(this.phase==='negotiation')?.map(fire=>({...fire,budget:this.gameMode==='calote'})) : undefined,
       isolationReason:this.isolated(id) && (this.federalDetentions.get(id)?.realUntil ?? 0)>realNow ? 'federal' : undefined,
       isolationSeconds:this.isolated(id) ? this.federalDetentions.has(id)
-        ? Math.max(0,Math.ceil((this.federalDetentions.get(id)!.realUntil-realNow)/1000))
+        ? Math.max(0,Math.ceil((this.federalDetentions.get(id)!.realUntil-Math.max(realNow,this.federalDetentions.get(id)!.transferAt))/1000))
         : this.economy.suspensionRemaining(id,now) : undefined,
       auditNote:this.auditNotes.get(id),
       hearing:this.hearingTarget && hearing ? {target:this.economy.name(this.hearingTarget),voted:hearing.voted,quorum:hearing.quorum,vote:this.hearingVote(id)} : undefined,

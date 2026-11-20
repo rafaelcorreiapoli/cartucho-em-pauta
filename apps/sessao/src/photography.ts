@@ -1,7 +1,7 @@
 import type { OfficeView, OfficeGood } from './private-offices';
 import type { Office } from './elections';
 import type { ExposedItem, GroundItem, ObjectKind } from './gameplay';
-import { localPerception, type Motion, type Player } from './map';
+import { localPerception, type Motion, type Player, type Rect } from './map';
 import type { Contact } from './politics';
 
 export const PHOTO_WIDTH = 152;
@@ -20,7 +20,7 @@ export type PhotoScene = {
   openSafes?:string[];
   offices?:Pick<OfficeView,'id'|'door'|'cabinetBreached'>[];
   time?:number; features?:{surveillance:boolean;projectVoting:boolean;decorations:boolean;portraitsAndVip:boolean};
-  center:Motion; camera?:Motion; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
+  center:Motion; camera?:Motion & {area?:Rect}; breaches?:Motion[]; people:PhotoPerson[]; ground:GroundItem[]; decorations:Decoration[];
 };
 export type Photo = PhotoScene & {
   id:number; source?:{kind:"surveillance"; channel:string}; author:Contact; at:number; location:string; selfie:boolean;
@@ -53,4 +53,8 @@ export function photoPerson(person:Player):PhotoPerson {
     swing:person.swing ? {...person.swing} : undefined,recoveryProtected:person.recoveryProtected,
     knockedOut:person.knockedOut,carried:person.carried,
   };
+}
+
+export function photoBounds(scene:PhotoScene):Rect {
+  return scene.camera?.area ?? [scene.center.x-PHOTO_WIDTH/2,scene.center.y-PHOTO_HEIGHT/2-PHOTO_LOOK_UP,PHOTO_WIDTH,PHOTO_HEIGHT];
 }

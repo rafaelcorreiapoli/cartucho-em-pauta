@@ -51,6 +51,13 @@ async (page) => {
       ],
     };
     comparisons.push(await compare(furnished));
+    for (const area of [[824,270,126,122],[480,172,223,87],[326,270,266,122]]) {
+      const [x,y,w,h]=area;
+      const rectangle={...base,center:{x:x+w/2,y:y+h/2+19},camera:{x:x+w/2,y:y+h/2,area},people:[],ground:[]};
+      comparisons.push(await compare(rectangle));
+      const live=document.querySelector('#surveillance canvas');
+      if(live.width!==w*4 || live.height!==h*4 || photo.width!==w*4 || photo.height!==h*4) throw new Error('Camera region was cropped or padded');
+    }
     const frozen = structuredClone({ ...base, people: [{ ...base.people[0], moving: true }] });
     qa.renderer.draw(photo, frozen);
     await wait(180);
