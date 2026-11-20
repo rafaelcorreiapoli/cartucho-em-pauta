@@ -194,7 +194,10 @@ async function connect(join: () => Promise<Room>) {
     const audioReady = audio.enter();
     let assetsReady = false;
     const security = createSecurityPanel(action=>sendCommand('security-camera',action));
-    const sendGameplay = (action:GameplayAction) => sendCommand('gameplay',{action});
+    const sendGameplay = (action:GameplayAction) => {
+      if (action.kind==='talk' && action.target==='campaignVendor') { hud.openCampaign(); return; }
+      sendCommand('gameplay',{action});
+    };
     game = createGame(map,joined.sessionId,input => joined.send('input',input),
       (level,pan) => audio.footstep(level,pan),(cue,level,pan)=>audio.combat(cue,level,pan),
       sendGameplay,action=>sendCommand('fire-action',action),action=>sendCommand('power-action',action),id=>gameplay.inspectDecoration(id),()=>gameplay.openStash(),security.open,progress=>{
@@ -324,7 +327,7 @@ async function connect(join: () => Promise<Room>) {
       else if (market.isOpen()) hud.notify(previousView?.gameplay?.dialogue?.npc==='protocol' ? 'Protocolo' : previousView?.gameplay?.dialogue?.npc==='secretary' ? 'Secretaria' : 'Loja',message);
       else gameplay.feedback(message);
     });
-    const campaignTv = createCampaignTv(session,joined.sessionId);
+    const campaignTv = createCampaignTv(session,joined.sessionId,()=>audio.cue('applause'));
     joined.onMessage('campaign-advertisement',(ad:CampaignBroadcast)=>{
       campaignTv.enqueue(ad);
       if (ad.advertiserId===joined.sessionId) {
