@@ -32,17 +32,15 @@ Arquivo: https://www.myinstants.com/media/sounds/firstblood.mp3
 Original, sem edição. A página não informa licença de redistribuição;
 este crédito não atribui licença CC0 ao sample.
 
-# Lobby and match music
+# Match music
 
 Original recordings by Kevin MacLeod (incompetech.com), without modifications:
 
-- `bass-walker.mp3`: “Bass Walker” — lobby, https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1200071
 - `covert-affair.mp3`: “Covert Affair” — random match selection, https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100795
 - `spy-glass.mp3`: “Spy Glass” — random match selection, https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1500058
 
 Licensed under Creative Commons: By Attribution 4.0 License.
 https://creativecommons.org/licenses/by/4.0/
 
-Sources: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Bass%20Walker.mp3,
-https://incompetech.com/music/royalty-free/mp3-royaltyfree/Covert%20Affair.mp3,
+Sources: https://incompetech.com/music/royalty-free/mp3-royaltyfree/Covert%20Affair.mp3,
 https://incompetech.com/music/royalty-free/mp3-royaltyfree/Spy%20Glass.mp3.

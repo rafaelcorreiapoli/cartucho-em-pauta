@@ -18,7 +18,7 @@ function fixture() {
   Reflect.set(audio,'effectsGain',gain());
   Reflect.set(audio,'playing',true);
   Reflect.set(audio,'score','music');
-  Reflect.set(audio,'matchTrack','music');
+  Reflect.set(audio,'matchTrack','covertAffair');
   const buffers = new Map(['music','covertAffair','spyGlass','lobbyMusic','hearingMusic','caloteMusic','victory','defeat','federalCaught','federalIsolation'].map(key=>[key,{key}]));
   Reflect.set(audio,'buffers',buffers);
   return {audio,sources,buffers};
@@ -96,10 +96,10 @@ test('lobby music is separate and a match keeps its random track across phases a
   const {audio,sources,buffers} = fixture();
   const random = Math.random;
   try {
-    for (const [index,track] of ['music','covertAffair','spyGlass'].entries()) {
+    for (const [index,track] of ['covertAffair','spyGlass'].entries()) {
       audio.setScore('lobbyMusic');
       expect(sources.at(-1)?.buffer).toBe(buffers.get('lobbyMusic'));
-      Math.random = ()=> (index+.5)/3;
+      Math.random = ()=> (index+.5)/2;
       audio.setScore('music');
       expect(sources.at(-1)?.buffer).toBe(buffers.get(track));
       expect(sources.at(-1)?.loop).toBe(true);

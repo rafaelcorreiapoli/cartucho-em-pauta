@@ -3,8 +3,8 @@ import { createAudioPreferences, effectiveVolume } from '../../../packages/hud/a
 
 const files = {
   victory:'vitoria.mp3', defeat:'derrota.mp3', rescue:'salvou-a-patria.wav', firstBlood:'first-blood.mp3',
-  music:'corredores-de-brasilia.mp3',
-  covertAffair:'covert-affair.mp3', spyGlass:'spy-glass.mp3', lobbyMusic:'bass-walker.mp3',
+  lobbyMusic:'corredores-de-brasilia.mp3',
+  covertAffair:'covert-affair.mp3', spyGlass:'spy-glass.mp3',
   hearingMusic:'plenario-em-ebulicao.m4a',
   caloteMusic:'hitman.mp3',
   session:'sessao.wav', ballot:'votacao.wav', vote:'voto.wav',
@@ -21,7 +21,7 @@ const files = {
 type Sample = keyof typeof files;
 export type CombatCue = 'swing'|'impact'|'fall';
 type Score = 'lobbyMusic'|'music'|'hearingMusic'|'caloteMusic'|'victory'|'defeat';
-const matchTracks = ['music','covertAffair','spyGlass'] as const;
+const matchTracks = ['covertAffair','spyGlass'] as const;
 type MatchTrack = typeof matchTracks[number];
 type MusicTrack = Score | MatchTrack;
 const isFinalScore = (score:MusicTrack) => score==='victory' || score==='defeat';
@@ -139,7 +139,7 @@ export class GameAudio {
 
   private startMusic() {
     const requested = this.score==='lobbyMusic' || isFinalScore(this.score) ? this.score :
-      this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'music' : this.score;
+      this.caloteDanger ? 'caloteMusic' : this.score==='music' ? this.matchTrack ?? 'covertAffair' : this.score;
     // Wait for the selected track instead of briefly playing a different one while loading.
     const score = requested;
     if (!this.buffers.has(requested) && this.music?.score!==requested) this.stopMusic(.7);
