@@ -1,3 +1,4 @@
+import './lobby-motion.css';
 import {createCenterAlert,caloteAlertLevel,lastInElection} from './ui/center-alert';
 import {mountTutorial} from './ui/tutorial';
 import {investmentAreas,type InvestmentAnnouncement} from './public-investments';
